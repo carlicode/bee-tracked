@@ -1,0 +1,11 @@
+{
+  "name": "bee-tracked",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:all": "cd frontend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build:frontend": "cd frontend && npm run build",
+    "lint:frontend": "cd frontend && npm run lint"
+  }
+}

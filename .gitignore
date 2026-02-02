@@ -1,24 +1,37 @@
+# ===========================
 # Dependencies
+# ===========================
 node_modules/
 .pnp
 .pnp.js
+.yarn/
+bower_components/
 
-# Testing
-coverage/
-
-# Production
+# ===========================
+# Build & Distribution
+# ===========================
 dist/
+dist-ssr/
 build/
+*.local
 
-# Environment variables
+# ===========================
+# Environment Variables
+# ===========================
 .env
 .env.local
+.env.development
 .env.development.local
+.env.test
 .env.test.local
+.env.production
 .env.production.local
+.env*.local
 
+# ===========================
 # Logs
-logs
+# ===========================
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -26,19 +39,104 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Editor
+# ===========================
+# Testing
+# ===========================
+coverage/
+.nyc_output/
+*.lcov
+.jest/
+
+# ===========================
+# Editor & IDE
+# ===========================
+# VS Code
 .vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# IntelliJ / WebStorm
 .idea/
+*.iml
+*.iws
+*.ipr
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
 *.swp
 *.swo
 *~
+.*.sw[a-p]
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# ===========================
+# OS Generated Files
+# ===========================
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
 
-# OS
+# Windows
 Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
 
-# Temporary files
+# Linux
+*~
+.directory
+.Trash-*
+
+# ===========================
+# Temporary Files
+# ===========================
 *.tmp
 *.temp
 .cache/
+.parcel-cache/
+.next/
+.nuxt/
+.vuepress/dist
+.serverless/
+.fusebox/
 
+# ===========================
+# Service Worker
+# ===========================
+sw.js.map
+workbox-*.js
+workbox-*.js.map
+
+# ===========================
+# AWS & Cloud
+# ===========================
+.aws/
+.vercel/
+.netlify/
+
+# ===========================
+# Package Manager Locks (opcional)
+# ===========================
+# Descomenta si prefieres no versionar lockfiles
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# ===========================
+# Misc
+# ===========================
+*.bak
+*.orig
+.vite/
+.turbo/
+storybook-static/

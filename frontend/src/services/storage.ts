@@ -1,29 +1,60 @@
-const TOKEN_KEY = 'eco_drivers_token';
-const USER_KEY = 'eco_drivers_user';
+import type { User } from '../types';
+import { APP_CONFIG } from '../config/constants';
 
+/**
+ * LocalStorage service with type safety
+ */
 export const storage = {
-  setToken: (token: string) => {
-    localStorage.setItem(TOKEN_KEY, token);
+  setToken: (token: string): void => {
+    localStorage.setItem(APP_CONFIG.STORAGE_KEYS.TOKEN, token);
   },
+
   getToken: (): string | null => {
-    return localStorage.getItem(TOKEN_KEY);
+    return localStorage.getItem(APP_CONFIG.STORAGE_KEYS.TOKEN);
   },
-  removeToken: () => {
-    localStorage.removeItem(TOKEN_KEY);
+
+  removeToken: (): void => {
+    localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.TOKEN);
   },
-  setUser: (user: any) => {
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
+
+  setUser: (user: User): void => {
+    localStorage.setItem(APP_CONFIG.STORAGE_KEYS.USER, JSON.stringify(user));
   },
-  getUser: (): any | null => {
-    const user = localStorage.getItem(USER_KEY);
-    return user ? JSON.parse(user) : null;
+
+  getUser: (): User | null => {
+    try {
+      const user = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.USER);
+      return user ? (JSON.parse(user) as User) : null;
+    } catch {
+      return null;
+    }
   },
-  removeUser: () => {
-    localStorage.removeItem(USER_KEY);
+
+  removeUser: (): void => {
+    localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.USER);
   },
-  clear: () => {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
-  }
+
+  clear: (): void => {
+    localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.TOKEN);
+    localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.USER);
+  },
+
+  // Additional storage helpers
+  setItem: <T>(key: string, value: T): void => {
+    localStorage.setItem(key, JSON.stringify(value));
+  },
+
+  getItem: <T>(key: string): T | null => {
+    try {
+      const item = localStorage.getItem(key);
+      return item ? (JSON.parse(item) as T) : null;
+    } catch {
+      return null;
+    }
+  },
+
+  removeItem: (key: string): void => {
+    localStorage.removeItem(key);
+  },
 };
 

@@ -1,4 +1,5 @@
-import type { Carrera, ApiResponse, User } from '../types';
+import type { Carrera, ApiResponse, User, Delivery } from '../types';
+import type { TurnoSimple } from '../types/turno';
 import { storage } from './storage';
 
 // Datos mock para demo
@@ -47,6 +48,7 @@ const MOCK_USER: User = {
   email: 'demo@ecoapp.com',
   name: 'Demo Driver',
   driverName: 'Demo',
+  userType: 'beezero',
 };
 
 // Simular delay de red
@@ -54,7 +56,7 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const mockApiService = {
   // Verificar token y obtener usuario (modo demo)
-  verifyAuth: async (idToken?: string): Promise<ApiResponse<User>> => {
+  verifyAuth: async (_idToken?: string): Promise<ApiResponse<User>> => {
     await delay(500);
     return {
       success: true,
@@ -63,7 +65,7 @@ export const mockApiService = {
   },
 
   // Crear nueva carrera (simula guardar en localStorage)
-  createCarrera: async (carrera: Carrera, idToken?: string): Promise<ApiResponse<Carrera>> => {
+  createCarrera: async (carrera: Carrera, _idToken?: string): Promise<ApiResponse<Carrera>> => {
     await delay(800);
     
     // Guardar en localStorage para persistencia
@@ -115,6 +117,49 @@ export const mockApiService = {
     return {
       success: true,
       data: resultados,
+    };
+  },
+
+  // EcoDelivery Mock endpoints
+  iniciarTurnoBiker: async (turno: TurnoSimple): Promise<ApiResponse<TurnoSimple>> => {
+    await delay(500);
+    return {
+      success: true,
+      data: turno,
+    };
+  },
+
+  cerrarTurnoBiker: async (turno: TurnoSimple): Promise<ApiResponse<TurnoSimple>> => {
+    await delay(500);
+    return {
+      success: true,
+      data: turno,
+    };
+  },
+
+  crearDelivery: async (delivery: Delivery): Promise<ApiResponse<Delivery>> => {
+    await delay(500);
+    return {
+      success: true,
+      data: delivery,
+    };
+  },
+
+  obtenerDeliveriesBiker: async (): Promise<ApiResponse<Delivery[]>> => {
+    await delay(500);
+    const deliveries = storage.getItem<Delivery[]>('historial_deliveries') || [];
+    return {
+      success: true,
+      data: deliveries,
+    };
+  },
+
+  obtenerTurnosBiker: async (): Promise<ApiResponse<TurnoSimple[]>> => {
+    await delay(500);
+    const turnos = storage.getItem<TurnoSimple[]>('historial_turnos_biker') || [];
+    return {
+      success: true,
+      data: turnos,
     };
   },
 };

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../services/auth';
-import { LoadingSpinner } from '../components/LoadingSpinner';
-import type { Turno } from '../types/turno';
+import { useAuth } from '../../services/auth';
+import { LoadingSpinner } from '../../components/LoadingSpinner';
+import type { Turno } from '../../types/turno';
 
 export const IniciarTurno = () => {
   const navigate = useNavigate();
@@ -106,7 +106,7 @@ export const IniciarTurno = () => {
       localStorage.setItem('turno_actual', JSON.stringify(turnoData));
       
       alert('Turno iniciado exitosamente');
-      navigate('/dashboard');
+      navigate('/beezero/dashboard');
     } catch (error) {
       console.error('Error iniciando turno:', error);
       alert('Error al iniciar el turno. Intenta nuevamente.');

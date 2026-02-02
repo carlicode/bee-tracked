@@ -7,9 +7,19 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true,
-    host: true, // Permite acceso desde la red local
+    host: '0.0.0.0', // Escucha en todas las interfaces de red
+    strictPort: false, // Permite usar otro puerto si 3000 está ocupado
+    // Permite hosts de ngrok y otros servicios de túnel
+    allowedHosts: [
+      '.ngrok-free.app',
+      '.ngrok.io',
+      '.ngrok.app',
+      'localhost',
+    ],
     // Para acceso desde celular en la misma WiFi:
-    // Usa la IP de tu computadora: http://192.168.x.x:3000
+    // Usa la IP de tu computadora: http://192.168.0.81:3000
+    // Para acceso desde cualquier red:
+    // Usa ngrok: npm run dev:tunnel
   }
 })
 

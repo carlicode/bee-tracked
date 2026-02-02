@@ -1,10 +1,9 @@
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { storage } from './storage';
-import type { User } from '../types';
+import type { User, UserType } from '../types';
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'demo-client-id';
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
-// Solo exportar si está disponible (modo demo no lo necesita)
 export { GoogleOAuthProvider, GOOGLE_CLIENT_ID };
 
 export const useAuth = () => {
@@ -21,10 +20,16 @@ export const useAuth = () => {
     return storage.getUser();
   };
 
+  const getUserType = (): UserType | null => {
+    const user = storage.getUser();
+    return user?.userType || null;
+  };
+
   return {
     logout,
     isAuthenticated,
     getCurrentUser,
+    getUserType,
   };
 };
 

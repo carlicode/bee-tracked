@@ -1,25 +1,38 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../services/auth';
-import { LoadingSpinner } from '../components/LoadingSpinner';
-import type { Turno } from '../types/turno';
+import { LoadingSpinner } from '../../components/LoadingSpinner';
+import type { Turno } from '../../types/turno';
 
-export const IniciarTurno = () => {
+export const CerrarTurno = () => {
   const navigate = useNavigate();
-  const { getCurrentUser } = useAuth();
-  const user = getCurrentUser();
   const [loading, setLoading] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [turnoInicio, setTurnoInicio] = useState<Partial<Turno> | null>(null);
 
   const [formData, setFormData] = useState<Partial<Turno>>({
-    abejita: user?.driverName || '',
-    aperturaCaja: 0,
-    auto: '',
+    cierreCaja: 0,
+    qr: 0,
     danosAuto: 'ninguno',
     fotoPantalla: '',
     fotoExterior: '',
   });
+
+  useEffect(() => {
+    // Cargar datos del turno iniciado
+    const turnoGuardado = localStorage.getItem('turno_actual');
+    if (turnoGuardado) {
+      const turno = JSON.parse(turnoGuardado);
+      setTurnoInicio(turno);
+      setFormData((prev) => ({
+        ...prev,
+        abejita: turno.abejita,
+        auto: turno.auto,
+        aperturaCaja: turno.aperturaCaja,
+        danosAuto: turno.danosAuto || 'ninguno',
+      }));
+    }
+  }, []);
 
   const handleGetLocation = () => {
     if (!navigator.geolocation) {
@@ -68,89 +81,157 @@ export const IniciarTurno = () => {
     reader.readAsDataURL(file);
   };
 
+  const calcularDiferencia = () => {
+    const apertura = formData.aperturaCaja || 0;
+    const cierre = formData.cierreCaja || 0;
+    const qr = formData.qr || 0;
+    return cierre - apertura - qr;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.abejita || !formData.auto || !formData.aperturaCaja || formData.aperturaCaja <= 0) {
-      alert('Por favor completa todos los campos requeridos');
+    if (!formData.cierreCaja || formData.cierreCaja <= 0) {
+      alert('Por favor ingresa el cierre de caja');
       return;
     }
 
     if (!location) {
-      alert('Por favor obtén tu ubicación antes de iniciar el turno');
+      alert('Por favor obtén tu ubicación antes de cerrar el turno');
       return;
     }
 
     try {
       setLoading(true);
       
-      // Registrar hora de inicio automáticamente
+      // Registrar hora de cierre automáticamente
       const ahora = new Date();
-      const horaInicio = ahora.toTimeString().slice(0, 5); // HH:MM
+      const horaCierre = ahora.toTimeString().slice(0, 5); // HH:MM
       
-      // Aquí iría la llamada al API
-      // Por ahora simulamos guardado
-      const turnoData = {
+      const turnoCompleto = {
+        ...turnoInicio,
         ...formData,
-        horaInicio: horaInicio,
-        ubicacionInicio: {
+        horaCierre: horaCierre,
+        ubicacionFin: {
           ...location,
           timestamp: ahora.toISOString(),
         },
-        turnoIniciado: true,
-        turnoCerrado: false,
-        createdAt: ahora.toISOString(),
+        turnoCerrado: true,
+        updatedAt: ahora.toISOString(),
       };
 
       // Guardar en localStorage para demo
-      localStorage.setItem('turno_actual', JSON.stringify(turnoData));
+      const turnosHistorial = JSON.parse(localStorage.getItem('turnos_historial') || '[]');
+      turnosHistorial.push(turnoCompleto);
+      localStorage.setItem('turnos_historial', JSON.stringify(turnosHistorial));
+      localStorage.removeItem('turno_actual');
       
-      alert('Turno iniciado exitosamente');
-      navigate('/dashboard');
+      alert('Turno cerrado exitosamente');
+      navigate('/beezero/dashboard');
     } catch (error) {
-      console.error('Error iniciando turno:', error);
-      alert('Error al iniciar el turno. Intenta nuevamente.');
+      console.error('Error cerrando turno:', error);
+      alert('Error al cerrar el turno. Intenta nuevamente.');
     } finally {
       setLoading(false);
     }
   };
 
+  if (!turnoInicio) {
+    return (
+      <div className="bg-white rounded-lg shadow-md p-8 text-center">
+        <p className="text-gray-700 mb-4">No hay un turno iniciado para cerrar</p>
+        <button
+          onClick={() => navigate('/beezero/iniciar-turno')}
+          className="bg-beezero-yellow text-black px-6 py-2 rounded-lg hover:bg-beezero-yellow-dark transition font-semibold"
+        >
+          Ir a Iniciar Turno
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div>
-      <h2 className="text-2xl font-bold text-black mb-6">Iniciar Turno</h2>
+      <h2 className="text-2xl font-bold text-black mb-6">Cerrar Turno</h2>
+
+      {/* Resumen del Turno */}
+      <div className="bg-beezero-yellow rounded-lg shadow-md p-6 mb-6">
+        <h3 className="font-bold text-black mb-4">Resumen del Turno</h3>
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <p className="text-black/70">Abejita:</p>
+            <p className="font-semibold text-black">{formData.abejita}</p>
+          </div>
+          <div>
+            <p className="text-black/70">Auto:</p>
+            <p className="font-semibold text-black">{formData.auto}</p>
+          </div>
+          <div>
+            <p className="text-black/70">Apertura Caja:</p>
+            <p className="font-semibold text-black">Bs {formData.aperturaCaja}</p>
+          </div>
+        </div>
+      </div>
 
       <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-6 space-y-6">
-        {/* Abejita */}
+        {/* Cierre de Caja */}
         <div>
-          <label htmlFor="abejita" className="block text-sm font-medium text-black mb-1">
-            Abejita *
-          </label>
-          <input
-            type="text"
-            id="abejita"
-            required
-            value={formData.abejita}
-            onChange={(e) => setFormData((prev) => ({ ...prev, abejita: e.target.value }))}
-            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
-          />
-        </div>
-
-        {/* Apertura de Caja */}
-        <div>
-          <label htmlFor="aperturaCaja" className="block text-sm font-medium text-black mb-1">
-            Apertura de Caja (Bs) *
+          <label htmlFor="cierreCaja" className="block text-sm font-medium text-black mb-1">
+            Cierre de Caja (Bs) *
           </label>
           <input
             type="number"
-            id="aperturaCaja"
+            id="cierreCaja"
             required
             min="0"
             step="0.01"
-            value={formData.aperturaCaja}
-            onChange={(e) => setFormData((prev) => ({ ...prev, aperturaCaja: parseFloat(e.target.value) || 0 }))}
+            value={formData.cierreCaja}
+            onChange={(e) => setFormData((prev) => ({ ...prev, cierreCaja: parseFloat(e.target.value) || 0 }))}
             className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
           />
         </div>
+
+        {/* QR */}
+        <div>
+          <label htmlFor="qr" className="block text-sm font-medium text-black mb-1">
+            QR (Bs)
+          </label>
+          <input
+            type="number"
+            id="qr"
+            min="0"
+            step="0.01"
+            value={formData.qr}
+            onChange={(e) => setFormData((prev) => ({ ...prev, qr: parseFloat(e.target.value) || 0 }))}
+            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
+          />
+        </div>
+
+        {/* Resumen de Caja */}
+        {formData.cierreCaja && formData.cierreCaja > 0 && (
+          <div className="bg-gray-50 rounded-lg p-4">
+            <div className="flex justify-between mb-2">
+              <span className="text-gray-700">Apertura:</span>
+              <span className="font-semibold">Bs {formData.aperturaCaja}</span>
+            </div>
+            {formData.qr && formData.qr > 0 && (
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-700">QR:</span>
+                <span className="font-semibold">Bs {formData.qr}</span>
+              </div>
+            )}
+            <div className="flex justify-between mb-2">
+              <span className="text-gray-700">Cierre:</span>
+              <span className="font-semibold">Bs {formData.cierreCaja}</span>
+            </div>
+            <div className="border-t pt-2 mt-2 flex justify-between">
+              <span className="font-bold text-black">Diferencia:</span>
+              <span className={`font-bold ${calcularDiferencia() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                Bs {calcularDiferencia().toFixed(2)}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Auto */}
         <div>
@@ -162,9 +243,8 @@ export const IniciarTurno = () => {
             id="auto"
             required
             value={formData.auto}
-            onChange={(e) => setFormData((prev) => ({ ...prev, auto: e.target.value.toUpperCase() }))}
-            placeholder="Ej: 6265 LYR"
-            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow uppercase"
+            readOnly
+            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 bg-gray-100"
           />
         </div>
 
@@ -253,7 +333,7 @@ export const IniciarTurno = () => {
         <div className="flex gap-4 pt-4">
           <button
             type="button"
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate('/beezero/dashboard')}
             className="flex-1 border-2 border-gray-300 text-black px-4 py-2 rounded-lg hover:bg-gray-50 transition font-medium"
           >
             Cancelar
@@ -263,7 +343,7 @@ export const IniciarTurno = () => {
             disabled={loading || !location}
             className="flex-1 bg-beezero-yellow text-black px-4 py-2 rounded-lg hover:bg-beezero-yellow-dark transition disabled:opacity-50 font-semibold shadow-md"
           >
-            {loading ? 'Iniciando...' : 'Iniciar Turno'}
+            {loading ? 'Cerrando...' : 'Cerrar Turno'}
           </button>
         </div>
       </form>
