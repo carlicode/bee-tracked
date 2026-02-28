@@ -1,26 +1,70 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { storage } from '../../services/storage';
+import { ecodeliveryApi, isEcodeliveryApiEnabled } from '../../services/ecodeliveryApi';
+import { useAuth } from '../../services/auth';
 import type { Delivery } from '../../types';
 
 export const MisDeliveries = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadDeliveries = () => {
+    const loadDeliveries = async () => {
       try {
-        const historial = storage.getItem<Delivery[]>('historial_deliveries') || [];
-        setDeliveries(historial);
+        setLoading(true);
+        setError(null);
+
+        // Si el backend está habilitado, obtener deliveries desde el Google Sheet
+        if (isEcodeliveryApiEnabled() && user?.driverName) {
+          try {
+            const { deliveries: sheetDeliveries } = await ecodeliveryApi.getDeliveriesByBiker(
+              user.driverName
+            );
+
+            // Convertir los deliveries del sheet al formato de la app
+            const formattedDeliveries: Delivery[] = sheetDeliveries.map((d) => ({
+              id: d.id,
+              bikerName: d.biker,  // Mapear 'biker' a 'bikerName'
+              fecha: d.fecha,
+              hora: d.hora,
+              cliente: d.cliente,
+              lugarOrigen: d.lugarOrigen,
+              lugarDestino: d.lugarDestino,
+              distancia: d.distancia,
+              horaInicio: d.horaInicio,
+              horaFin: d.horaFin,
+              porHora: d.porHora,
+              notas: d.notas,
+              foto: d.foto,
+            }));
+
+            setDeliveries(formattedDeliveries);
+          } catch (err) {
+            console.error('Error obteniendo deliveries del sheet:', err);
+            // Si falla el backend, usar localStorage como respaldo
+            const historial = storage.getItem<Delivery[]>('historial_deliveries') || [];
+            setDeliveries(historial);
+            setError('No se pudieron cargar los deliveries del servidor. Mostrando solo los locales.');
+          }
+        } else {
+          // Si no hay backend, usar localStorage
+          const historial = storage.getItem<Delivery[]>('historial_deliveries') || [];
+          setDeliveries(historial);
+        }
       } catch (error) {
         console.error('Error cargando deliveries:', error);
+        setError('Error al cargar deliveries');
       } finally {
         setLoading(false);
       }
     };
 
     loadDeliveries();
-  }, []);
+  }, [user]);
 
   if (loading) {
     return (
@@ -32,10 +76,37 @@ export const MisDeliveries = () => {
 
   return (
     <div>
+      <div className="mb-4">
+        <button
+          type="button"
+          onClick={() => navigate('/ecodelivery/dashboard')}
+          className="flex items-center gap-2 text-gray-600 hover:text-black font-medium"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Volver atrás
+        </button>
+      </div>
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-black mb-2">Mis Deliveries</h2>
         <p className="text-gray-600">Historial de todos tus deliveries registrados</p>
       </div>
+
+      {error && (
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-yellow-700">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {deliveries.length === 0 ? (
         <div className="bg-white rounded-lg shadow-md p-8 text-center">
@@ -57,7 +128,7 @@ export const MisDeliveries = () => {
         <div className="space-y-4">
           {deliveries.map((delivery, index) => (
             <div
-              key={index}
+              key={delivery.id || index}
               className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition border-l-4 border-ecodelivery-green"
             >
               <div className="flex justify-between items-start mb-4">
@@ -100,6 +171,34 @@ export const MisDeliveries = () => {
                     <p className="text-sm font-medium text-black">{delivery.lugarDestino}</p>
                   </div>
                 </div>
+
+                {delivery.porHora && (
+                  <div className="mt-2 inline-block">
+                    <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                      Por hora
+                    </span>
+                  </div>
+                )}
+
+                {delivery.notas && (
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    <p className="text-xs text-gray-600 mb-1">Notas</p>
+                    <p className="text-sm text-gray-700">{delivery.notas}</p>
+                  </div>
+                )}
+
+                {/* Fotos ocultas temporalmente (S3 sin acceso público) */}
+                {/* {delivery.foto && (
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    <p className="text-xs text-gray-600 mb-2">Foto</p>
+                    <img
+                      src={delivery.foto}
+                      alt="Foto del delivery"
+                      className="w-full max-w-xs rounded-lg shadow-sm"
+                      loading="lazy"
+                    />
+                  </div>
+                )} */}
               </div>
             </div>
           ))}

@@ -1,0 +1,86 @@
+service: bee-tracked-backend
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-east-1
+  stage: prod
+  timeout: 30
+  memorySize: 512
+  environment:
+    NODE_ENV: production
+    FRONTEND_URL: ${file(./.deploy-info):CLOUDFRONT_URL, 'https://d19ls0k7de9u6w.cloudfront.net'}
+    GOOGLE_SHEET_ID: '1L69tZzVSHlhuKGP9MCdcezOGPsYyjC2Mm-i03Hm5tM8'
+    CARRERAS_BIKERS_SHEET_ID: '1OkM4FLSe0CsLo8w4o50xcVdzsUcHVzpaYRqhGBwJRcs'
+    AWS_S3_BUCKET: bee-tracked-photos
+    AWS_REGION_CUSTOM: us-east-1
+    COGNITO_USER_POOL_ID: us-east-1_REsVOVqcY
+    COGNITO_REGION: us-east-1
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - secretsmanager:GetSecretValue
+          Resource:
+            - arn:aws:secretsmanager:us-east-1:*:secret:bee-tracked/*
+        - Effect: Allow
+          Action:
+            - ssm:GetParameter
+            - ssm:GetParameters
+          Resource:
+            - arn:aws:ssm:us-east-1:*:parameter/bee-tracked/*
+        - Effect: Allow
+          Action:
+            - s3:PutObject
+            - s3:GetObject
+          Resource:
+            - arn:aws:s3:::bee-tracked-photos/*
+
+functions:
+  api:
+    handler: lambda.handler
+    events:
+      - http:
+          path: /
+          method: ANY
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+              - X-Session-Id
+            allowCredentials: true
+      - http:
+          path: /{proxy+}
+          method: ANY
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+              - X-Session-Id
+            allowCredentials: true
+
+package:
+  exclude:
+    - node_modules/**
+    - .git/**
+    - .env
+    - test/**
+    - scripts/**
+  include:
+    - lambda.js
+    - src/**
+    - node_modules/**
+
+plugins:
+  - serverless-offline

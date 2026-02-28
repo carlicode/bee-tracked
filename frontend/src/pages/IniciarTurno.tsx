@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../services/auth';
 import { LoadingSpinner } from '../components/LoadingSpinner';
+import { formatters } from '../utils/formatters';
 import type { Turno } from '../types/turno';
 
 export const IniciarTurno = () => {
@@ -86,7 +87,7 @@ export const IniciarTurno = () => {
       
       // Registrar hora de inicio automáticamente
       const ahora = new Date();
-      const horaInicio = ahora.toTimeString().slice(0, 5); // HH:MM
+      const horaInicio = formatters.timeToHHmm(ahora);
       
       // Aquí iría la llamada al API
       // Por ahora simulamos guardado
@@ -201,17 +202,17 @@ export const IniciarTurno = () => {
                 Obteniendo ubicación...
               </span>
             ) : location ? (
-              `📍 Ubicación: ${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`
+              '✓ Ubicación obtenida'
             ) : (
               '📍 Obtener Mi Ubicación'
             )}
           </button>
         </div>
 
-        {/* Foto de Pantalla */}
+        {/* Foto del tablero */}
         <div>
           <label className="block text-sm font-medium text-black mb-2">
-            Foto de Pantalla *
+            Foto del tablero *
           </label>
           <input
             type="file"
@@ -223,7 +224,7 @@ export const IniciarTurno = () => {
           {formData.fotoPantalla && (
             <img
               src={formData.fotoPantalla}
-              alt="Foto pantalla"
+              alt="Foto del tablero"
               className="mt-2 w-full max-w-xs rounded-lg shadow-md"
             />
           )}

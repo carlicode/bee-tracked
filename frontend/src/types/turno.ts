@@ -5,6 +5,7 @@ export interface Turno {
   cierreCaja?: number;
   qr?: number;
   auto: string; // Placa del auto
+  kilometraje?: number; // Km del odómetro
   danosAuto: string;
   fotoPantalla?: string; // URL o base64
   fotoExterior?: string; // URL o base64
@@ -22,6 +23,7 @@ export interface Turno {
   };
   turnoIniciado: boolean;
   turnoCerrado: boolean;
+  observaciones?: string; // Información extra al cerrar turno
   createdAt?: string;
   updatedAt?: string;
 }
@@ -43,6 +45,8 @@ export interface TurnoSimple {
   };
   turnoIniciado: boolean;
   turnoCerrado: boolean;
+  fotoInicio?: string; // URL en S3 (Registros_BeeTracked/Ecodelivery/)
+  fotoCierre?: string;
   createdAt?: string;
   updatedAt?: string;
 }

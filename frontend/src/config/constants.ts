@@ -14,6 +14,9 @@ export const APP_CONFIG = {
     USER: 'eco_drivers_user',
     TURNO_ACTUAL: 'turno_actual',
     MOCK_CARRERAS: 'mock_carreras',
+    SESSION_ID: 'eco_drivers_session_id',
+    REFRESH_TOKEN: 'eco_drivers_refresh_token',
+    USERNAME: 'eco_drivers_username',
   },
 } as const;
 
@@ -31,3 +34,17 @@ export const SUCCESS_MESSAGES = {
   TURNO_INICIADO: 'Turno iniciado exitosamente',
   TURNO_CERRADO: 'Turno cerrado exitosamente',
 } as const;
+
+/** Placas de autos disponibles para conductores BeeZero (Abejita). Formato: número + espacio + letras. Orden alfabético. */
+export const PLACAS_AUTO_ABEJITA = [
+  '6265 LYR',
+  '6265 LUH',
+  '6419 DKG',
+  '6419 DLK',
+  '6422 DLK',
+  '6423 DLK',
+  '6430 CKX',
+  '6445 SLA',
+  '6788 GXD',
+  '6788 NRT',
+] as const;

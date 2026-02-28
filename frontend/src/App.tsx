@@ -1,8 +1,12 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { GoogleOAuthProvider, GOOGLE_CLIENT_ID, useAuth } from './services/auth';
+import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './components/ThemeProvider';
 import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
+import { useInactivityTimeout } from './hooks/useInactivityTimeout';
+import { setupAxiosInterceptors } from './services/axiosInterceptor';
 
 // BeeZero pages
 import { DashboardBeezero } from './pages/beezero/DashboardBeezero';
@@ -34,17 +38,20 @@ const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
 const DashboardRouter = () => {
   const { getUserType } = useAuth();
   const userType = getUserType();
-  
+
   if (userType === 'ecodelivery') {
     return <Navigate to="/ecodelivery/dashboard" replace />;
   }
-  
+  // BeeZero y Operador entran al dashboard BeeZero
   return <Navigate to="/beezero/dashboard" replace />;
 };
 
 function AppContent() {
   const { isAuthenticated, getUserType } = useAuth();
   const userType = getUserType() || 'beezero';
+  
+  // Activar control de inactividad para cerrar sesión automáticamente
+  useInactivityTimeout();
   
   return (
     <BrowserRouter>
@@ -252,13 +259,29 @@ function AppContent() {
 }
 
 function App() {
-  if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID === 'demo-client-id') {
-    console.error('VITE_GOOGLE_CLIENT_ID no está configurado. Por favor, configura la variable de entorno.');
+  const hasGoogleClientId =
+    GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID !== 'demo-client-id';
+
+  // Setup axios interceptors una vez al iniciar la app
+  useEffect(() => {
+    setupAxiosInterceptors();
+  }, []);
+
+  // AuthProvider debe envolver AppContent para que useAuth() esté disponible en las rutas.
+  const content = (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+
+  // Modo demo: login con usuario/contraseña (eco, beezero). Sin Google OAuth.
+  if (!hasGoogleClientId) {
+    return content;
   }
-  
+
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-      <AppContent />
+      {content}
     </GoogleOAuthProvider>
   );
 }

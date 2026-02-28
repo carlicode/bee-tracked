@@ -4,6 +4,10 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  // amazon-cognito-identity-js (y buffer) usan "global", que existe en Node pero no en el navegador
+  define: {
+    global: 'globalThis',
+  },
   server: {
     port: 3000,
     open: true,

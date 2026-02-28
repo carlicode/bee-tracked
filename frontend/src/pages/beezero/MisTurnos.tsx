@@ -68,6 +68,18 @@ export const MisTurnos = () => {
 
   return (
     <div>
+      <div className="mb-4">
+        <button
+          type="button"
+          onClick={() => navigate('/beezero/dashboard')}
+          className="flex items-center gap-2 text-gray-600 hover:text-black font-medium"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Volver atrás
+        </button>
+      </div>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-black">Mis Turnos</h2>
         {!turnoActual && (
@@ -199,15 +211,6 @@ export const MisTurnos = () => {
                         <p className="text-xs text-gray-600">QR</p>
                         <p className="font-semibold text-black">Bs {turno.qr}</p>
                       </div>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <span>📍 Ubicación registrada</span>
-                    {turno.ubicacionInicio && (
-                      <span className="text-xs">
-                        {turno.ubicacionInicio.lat.toFixed(4)}, {turno.ubicacionInicio.lng.toFixed(4)}
-                      </span>
                     )}
                   </div>
                 </div>

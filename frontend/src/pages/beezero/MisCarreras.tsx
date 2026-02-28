@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../services/auth';
 import { CarreraCard } from '../../components/CarreraCard';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { apiService } from '../../services/api';
+import { beezeroApi, isBeezeroApiEnabled } from '../../services/beezeroApi';
 import type { Carrera } from '../../types';
 
 export const MisCarreras = () => {
+  const navigate = useNavigate();
+  const { getCurrentUser } = useAuth();
   const [carreras, setCarreras] = useState<Carrera[]>([]);
   const [loading, setLoading] = useState(true);
   const [fecha, setFecha] = useState(() => {
@@ -20,12 +24,24 @@ export const MisCarreras = () => {
   const loadCarreras = async () => {
     try {
       setLoading(true);
-      const response = await apiService.getCarreras(fecha);
-      if (response.success && response.data) {
-        setCarreras(response.data);
+      if (isBeezeroApiEnabled()) {
+        const user = getCurrentUser();
+        const driverName = user?.name || user?.driverName || '';
+        if (driverName) {
+          const { carreras: data } = await beezeroApi.getCarreras(driverName, fecha);
+          setCarreras(data);
+        } else {
+          setCarreras([]);
+        }
+      } else {
+        const response = await apiService.getCarreras(fecha);
+        if (response.success && response.data) {
+          setCarreras(response.data);
+        }
       }
     } catch (error) {
       console.error('Error cargando carreras:', error);
+      setCarreras([]);
     } finally {
       setLoading(false);
     }
@@ -36,13 +52,25 @@ export const MisCarreras = () => {
 
   return (
     <div>
+      <div className="mb-4">
+        <button
+          type="button"
+          onClick={() => navigate('/beezero/dashboard')}
+          className="flex items-center gap-2 text-gray-600 hover:text-black font-medium"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Volver atrás
+        </button>
+      </div>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-black">Mis Carreras</h2>
         <Link
           to="/beezero/nueva-carrera"
           className="bg-beezero-yellow text-black px-6 py-2 rounded-lg hover:bg-beezero-yellow-dark transition font-semibold shadow-md"
         >
-          + Nueva Carrera
+          + Registrar carrera
         </Link>
       </div>
 

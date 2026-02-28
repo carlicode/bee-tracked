@@ -78,14 +78,20 @@ export const DetalleTurno = () => {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-black">Detalle del Turno</h2>
+      <div className="mb-4">
         <button
+          type="button"
           onClick={() => navigate('/beezero/mis-turnos')}
-          className="text-gray-600 hover:text-black transition"
+          className="flex items-center gap-2 text-gray-600 hover:text-black font-medium"
         >
-          ← Volver
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Volver atrás
         </button>
+      </div>
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-black">Detalle del Turno</h2>
       </div>
 
       {/* Información General */}
@@ -158,21 +164,19 @@ export const DetalleTurno = () => {
             {turno.ubicacionInicio && (
               <div>
                 <p className="text-sm text-gray-600">📍 Ubicación de Inicio</p>
-                <p className="text-xs text-gray-500 font-mono">
-                  {turno.ubicacionInicio.lat.toFixed(6)}, {turno.ubicacionInicio.lng.toFixed(6)}
-                </p>
                 <p className="text-xs text-gray-500 mt-1">
                   {formatFecha(turno.ubicacionInicio.timestamp)}
                 </p>
               </div>
             )}
 
-            {turno.fotoPantalla && (
+            {/* Fotos ocultas temporalmente (S3 sin acceso público) */}
+            {/* {turno.fotoPantalla && (
               <div>
-                <p className="text-sm text-gray-600 mb-2">Foto de Pantalla</p>
+                <p className="text-sm text-gray-600 mb-2">Foto del tablero</p>
                 <img
                   src={turno.fotoPantalla}
-                  alt="Foto pantalla inicio"
+                  alt="Foto del tablero inicio"
                   className="w-full rounded-lg shadow-md"
                 />
               </div>
@@ -187,7 +191,7 @@ export const DetalleTurno = () => {
                   className="w-full rounded-lg shadow-md"
                 />
               </div>
-            )}
+            )} */}
           </div>
         </div>
 
@@ -247,21 +251,19 @@ export const DetalleTurno = () => {
               {turno.ubicacionFin && (
                 <div>
                   <p className="text-sm text-gray-600">📍 Ubicación de Cierre</p>
-                  <p className="text-xs text-gray-500 font-mono">
-                    {turno.ubicacionFin.lat.toFixed(6)}, {turno.ubicacionFin.lng.toFixed(6)}
-                  </p>
                   <p className="text-xs text-gray-500 mt-1">
                     {formatFecha(turno.ubicacionFin.timestamp)}
                   </p>
                 </div>
               )}
 
-              {turno.fotoPantalla && (
+              {/* Fotos ocultas temporalmente (S3 sin acceso público) */}
+              {/* {turno.fotoPantalla && (
                 <div>
-                  <p className="text-sm text-gray-600 mb-2">Foto de Pantalla (Cierre)</p>
+                  <p className="text-sm text-gray-600 mb-2">Foto del tablero (Cierre)</p>
                   <img
                     src={turno.fotoPantalla}
-                    alt="Foto pantalla cierre"
+                    alt="Foto del tablero cierre"
                     className="w-full rounded-lg shadow-md"
                   />
                 </div>
@@ -276,7 +278,7 @@ export const DetalleTurno = () => {
                     className="w-full rounded-lg shadow-md"
                   />
                 </div>
-              )}
+              )} */}
             </div>
           </div>
         ) : (

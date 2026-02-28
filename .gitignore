@@ -28,9 +28,20 @@ build/
 .env.production.local
 .env*.local
 
-# ===========================
-# Logs
-# ===========================
+# AWS & Credentials
+BeeTracked_credentials.csv
+*DEPLOY*.md
+RAILWAY_DEPLOY.md
+
+# Google Cloud Credentials
+google-credentials.json
+service-account.json
+*-service-account.json
+credentials.json
+beezero-*.json
+
+# Credenciales Ecodelivery (usuarios + contraseñas)
+data/ecodelivery-credentials.csv
 logs/
 *.log
 npm-debug.log*
@@ -123,9 +134,11 @@ workbox-*.js.map
 .aws/
 .vercel/
 .netlify/
+.deploy-info
+**/lambda-deployment.zip
 
 # ===========================
-# Package Manager Locks (opcional)
+# Logs
 # ===========================
 # Descomenta si prefieres no versionar lockfiles
 # package-lock.json

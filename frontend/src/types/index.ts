@@ -9,12 +9,13 @@ export interface Carrera {
   distancia: number;
   precio: number;
   observaciones?: string;
+  foto?: string;
   email?: string;
   createdAt?: string;
   rowNumber?: number;
 }
 
-export type UserType = 'beezero' | 'ecodelivery';
+export type UserType = 'beezero' | 'operador' | 'ecodelivery';
 
 export interface User {
   email: string;
@@ -31,6 +32,16 @@ export interface Delivery {
   lugarOrigen: string;
   lugarDestino: string;
   distancia: number;
+  /** Hora de inicio de la carrera (opcional, ej: "14:30") */
+  horaInicio?: string;
+  /** Hora de fin de la carrera (opcional, ej: "15:45") */
+  horaFin?: string;
+  /** Si la carrera es cobrada por hora */
+  porHora?: boolean;
+  /** Notas opcionales del delivery */
+  notas?: string;
+  /** URL o dataUrl de foto opcional */
+  foto?: string;
   email?: string;
   createdAt?: string;
   rowNumber?: number;

@@ -7,38 +7,105 @@ Aplicación web móvil (PWA) que soporta dos tipos de usuarios con interfaces di
 ## ✨ Funcionalidades por Plataforma
 
 ### 🚗 BeeZero (Conductores de Auto)
-- 🔐 **Login con usuario/password simple**
-- 🚗 **Registro de Carreras** - Carreras completas con cliente, precio, distancia
+- 🔐 **Autenticación con AWS Cognito**
+- 🚗 **Registro de Carreras** - Carreras completas con cliente, precio, distancia, tiempo
 - ⏰ **Gestión de Turnos** - Control de caja, fotos de auto, daños
-- 📸 **Fotos** - Pantalla y exterior del vehículo
+- 📸 **Fotos** - Pantalla y exterior del vehículo (opcional)
 - 📍 **Geolocalización** - GPS automático en inicio/cierre
 - 💰 **Control de Caja** - Apertura, cierre, QR, diferencia
 - 📊 **Historial Completo** - Turnos y carreras detalladas
+- 📝 **Google Sheets** - Todos los datos se guardan automáticamente
 
 ### 🚴 EcoDelivery (Bikers de Delivery)
-- 🔐 **Login con usuario/password simple**
-- 📦 **Registro de Deliveries** - Cliente, origen, destino, distancia
-- ⚡ **Turnos Simplificados** - Un botón para iniciar/cerrar (auto-captura ubicación y hora)
-- 📍 **Geolocalización Automática** - Sin formularios complejos
-- 📊 **Historial de Deliveries** - Vista simple de entregas
+- 🔐 **Autenticación con AWS Cognito**
+- 📦 **Registro de Deliveries** - Cliente, origen, destino, distancia, por hora, notas
+- 🕐 **Hora Inicio/Fin** - Selección fácil con selectores HH:mm
+- 📸 **Foto opcional** - Para deliveries y turnos
+- ⚡ **Turnos Simplificados** - Inicio/cierre con ubicación automática
+- 📍 **Geolocalización Automática** - GPS en todos los registros
+- 📊 **Historial de Deliveries** - Vista desde Google Sheet sincronizada
+- 📝 **Google Sheets** - Cada biker tiene su propia pestaña en "Carreras_bikers"
+- 💾 **Almacenamiento S3** - Fotos organizadas por tipo (Turnos/Deliveries)
 
-## 🚀 Inicio Rápido (Demo Local)
+## 🚀 Inicio Rápido
 
-### Modo Demo - Sin Backend
+### Prerrequisitos
+- Node.js 18+ y npm
+- Variables de entorno configuradas (ver sección de configuración)
 
-El frontend funciona sin backend con datos de demostración:
+### 1. Instalación
 
 ```bash
+# Instalar dependencias del frontend
 cd frontend
 npm install
+
+# Instalar dependencias del backend
+cd ../backend
+npm install
+```
+
+### 2. Configuración
+
+#### Frontend (`frontend/.env`)
+```env
+VITE_API_URL=http://localhost:3001
+VITE_COGNITO_USER_POOL_ID=us-east-1_REsVOVqcY
+VITE_COGNITO_CLIENT_ID=29rgiplrp6t3aq2b58ee91i54v
+```
+
+#### Backend (`backend/.env`)
+```env
+# Server
+PORT=3001
+NODE_ENV=development
+FRONTEND_URL=http://localhost:3000
+
+# AWS Cognito
+COGNITO_USER_POOL_ID=us-east-1_REsVOVqcY
+COGNITO_REGION=us-east-1
+
+# AWS S3
+AWS_S3_BUCKET=bee-tracked-photos
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=tu-access-key
+AWS_SECRET_ACCESS_KEY=tu-secret-key
+
+# Google Sheets
+GOOGLE_SHEET_ID=1L69tZzVSHlhuKGP9MCdcezOGPsYyjC2Mm-i03Hm5tM8
+CARRERAS_BIKERS_SHEET_ID=1OkM4FLSe0CsLo8w4o50xcVdzsUcHVzpaYRqhGBwJRcs
+GOOGLE_CREDENTIALS_PATH=./google-credentials.json
+```
+
+### 3. Ejecutar la Aplicación
+
+```bash
+# Terminal 1 - Backend
+cd backend
+npm run dev
+
+# Terminal 2 - Frontend
+cd frontend
 npm run dev
 ```
 
-Abre http://localhost:3000 
+Abre http://localhost:3000
 
-**Accesos:**
-- Usuario: `eco` (sin password) → EcoDelivery Biker 🚴
-- Usuario: `beezero` (sin password) → BeeZero Driver 🚗
+### 4. Crear estructura en S3 (primera vez)
+
+```bash
+cd backend
+node scripts/create-s3-registros.js
+```
+
+Esto creará:
+```
+Registros_BeeTracked/
+├── Ecodelivery/
+│   ├── Turnos/
+│   └── Deliveries/
+└── Beezero/
+```
 
 ### Compartir desde Celular
 
@@ -66,40 +133,82 @@ npm run dev
 
 Comparte: `http://TU_IP:3000` (ej: http://192.168.0.6:3000)
 
-**Opción 3: Deploy a Vercel (Producción)**
-```bash
-cd frontend
-npm install -g vercel
-vercel --prod
-```
+**Opción 3: Producción (AWS)**  
+El frontend en producción se despliega con GitHub Actions (ver [docs/GITHUB_ACTIONS_AWS.md](docs/GITHUB_ACTIONS_AWS.md)). Comparte la URL de CloudFront.
 
 ## 🏗️ Stack Tecnológico
 
-- **Frontend**: React 18 + TypeScript + Vite
+### Frontend
+- **Framework**: React 18 + TypeScript + Vite
 - **Estilos**: TailwindCSS con sistema de temas dinámicos
 - **Estado**: Context API + React Hooks personalizados
 - **PWA**: Service Worker + Manifest para instalación
-- **Backend**: Google Apps Script (opcional) o API Mock
-- **Base de datos**: Google Sheets (opcional) o localStorage
-- **Autenticación**: Simple usuario/password (demo) o Google OAuth (producción)
-- **Geolocalización**: Geolocation API nativa
-- **Hosting**: Vercel/Netlify (gratis) o AWS S3+CloudFront
+- **HTTP Client**: Axios con interceptores
+- **Routing**: React Router v6
+- **Autenticación**: Amazon Cognito Identity SDK
 
-## 📦 Instalación
+### Backend
+- **Runtime**: Node.js + Express
+- **Lenguaje**: JavaScript (CommonJS)
+- **Autenticación**: AWS Cognito + JWT
+- **Base de datos**: Google Sheets API
+- **Almacenamiento**: AWS S3 (SDK v3)
+- **Sesiones**: In-memory session manager
 
-```bash
-cd frontend
-npm install
+### Infraestructura
+- **Autenticación**: AWS Cognito User Pools
+- **Almacenamiento**: AWS S3 (fotos)
+- **Base de datos**: Google Sheets (2 spreadsheets)
+- **Hosting**: AWS S3 + CloudFront (frontend) + AWS Lambda/API Gateway (backend)
+- **CI/CD**: GitHub Actions (deploy automático a AWS al push a `main`)
+
+### Servicios Externos
+- **AWS Cognito**: Autenticación y gestión de usuarios
+- **AWS S3**: Almacenamiento de fotos de turnos y deliveries
+- **Google Sheets API**: Base de datos en tiempo real
+- **Geolocation API**: Captura de ubicación GPS
+
+## 📦 Estructura de Datos
+
+### Google Sheets
+
+#### 1. Hoja "Ecodelivery" (Turnos)
+**Spreadsheet ID**: `1L69tZzVSHlhuKGP9MCdcezOGPsYyjC2Mm-i03Hm5tM8`
+
+Columnas:
+- TurnoId, Usuario, Fecha Inicio, Hora Inicio, Lat Inicio, Lng Inicio
+- Timestamp Inicio, Foto Inicio, Fecha Cierre, Hora Cierre
+- Lat Cierre, Lng Cierre, Timestamp Cierre, Foto Cierre
+- Estado, Timestamp Creación, Timestamp Actualización
+
+#### 2. Hoja "Carreras_bikers" (Deliveries)
+**Spreadsheet ID**: `1OkM4FLSe0CsLo8w4o50xcVdzsUcHVzpaYRqhGBwJRcs`
+
+Cada biker tiene su propia pestaña con columnas:
+- DeliveryId, Biker, Fecha Registro, Hora Registro
+- Cliente, Lugar Origen, Hora Inicio, Lugar Destino, Hora Fin
+- Distancia (km), Por Hora, Notas, Foto
+
+### AWS S3 - Estructura de Carpetas
+
+```
+bee-tracked-photos/
+└── Registros_BeeTracked/
+    ├── Ecodelivery/
+    │   ├── Turnos/          # Fotos de iniciar/cerrar turno
+    │   │   └── {usuario}_{YYYY-MM-DD}_{HH-mm-ss}_{inicio|cierre}.{ext}
+    │   └── Deliveries/      # Fotos de deliveries
+    │       └── {usuario}_{YYYY-MM-DD}_{HH-mm-ss}.{ext}
+    └── Beezero/             # Fotos de turnos BeeZero
 ```
 
-### Variables de Entorno (Opcional)
+### AWS Cognito - Grupos de Usuarios
 
-Si quieres conectar el backend, crea `.env` en `frontend/`:
+- **beezero**: Acceso a `/beezero/*` (conductores de auto)
+- **operador**: Acceso administrativo
+- **ecodelivery**: Acceso a `/ecodelivery/*` (bikers de delivery)
 
-```env
-VITE_GOOGLE_CLIENT_ID=tu-client-id.apps.googleusercontent.com
-VITE_APPS_SCRIPT_URL=https://script.google.com/macros/s/AKfyc.../exec
-```
+Configurado en User Pool: `us-east-1_REsVOVqcY`
 
 ## 🎯 Estructura del Proyecto
 
@@ -111,132 +220,240 @@ bee-tracked/
 │   │   └── sw.js                     # Service Worker
 │   ├── src/
 │   │   ├── pages/
-│   │   │   ├── Login.tsx             # Login unificado
-│   │   │   ├── beezero/              # 🚗 Páginas BeeZero (conductores)
-│   │   │   │   ├── DashboardBeezero.tsx    # 5 cards: turnos y carreras
-│   │   │   │   ├── IniciarTurno.tsx        # Formulario completo con fotos
-│   │   │   │   ├── CerrarTurno.tsx         # Cierre de caja y cálculos
-│   │   │   │   ├── NuevaCarrera.tsx        # Registro detallado de carrera
-│   │   │   │   ├── MisCarreras.tsx         # Historial de carreras
-│   │   │   │   ├── MisTurnos.tsx           # Historial de turnos
-│   │   │   │   └── DetalleTurno.tsx        # Vista detalle turno
-│   │   │   └── ecodelivery/          # 🚴 Páginas EcoDelivery (bikers)
-│   │   │       ├── DashboardBiker.tsx      # 4 cards simplificadas
-│   │   │       ├── IniciarTurnoBiker.tsx   # 1 botón para iniciar
-│   │   │       ├── CerrarTurnoBiker.tsx    # 1 botón para cerrar
-│   │   │       ├── NuevoDelivery.tsx       # Formulario mínimo
-│   │   │       ├── MisDeliveries.tsx       # Lista de deliveries
-│   │   │       └── MisTurnos.tsx           # Historial simple
-│   │   ├── components/               # Componentes reutilizables
-│   │   │   ├── Layout.tsx            # Layout con theming dinámico
-│   │   │   ├── ThemeProvider.tsx     # Context provider de temas
-│   │   │   ├── LoadingSpinner.tsx    # Spinner de carga
-│   │   │   └── CarreraCard.tsx       # Card de carrera
-│   │   ├── config/                   # Configuración
-│   │   │   ├── constants.ts          # Constantes globales
-│   │   │   ├── routes.ts             # Definición de rutas
-│   │   │   └── themes.ts             # Temas BeeZero/EcoDelivery
-│   │   ├── hooks/                    # React Hooks personalizados
-│   │   │   ├── useTheme.ts           # Hook de sistema de temas
-│   │   │   ├── useGeolocation.ts     # Hook de geolocalización
-│   │   │   └── useImageUpload.ts     # Hook para subir imágenes
-│   │   ├── services/                 # Capa de servicios
-│   │   │   ├── api.ts                # Cliente API principal
-│   │   │   ├── api-mock.ts           # Mock data para demo
-│   │   │   ├── auth.ts               # Servicio de autenticación
-│   │   │   └── storage.ts            # localStorage helpers
-│   │   ├── types/                    # TypeScript types
-│   │   │   ├── index.ts              # Tipos principales
-│   │   │   └── turno.ts              # Tipos de turnos
-│   │   ├── utils/                    # Utilidades
-│   │   │   ├── errors.ts             # Manejo de errores
-│   │   │   ├── formatters.ts         # Formateo de datos
-│   │   │   ├── geolocation.ts        # Helpers GPS
-│   │   │   ├── image.ts              # Procesamiento imágenes
-│   │   │   └── validation.ts         # Validaciones
-│   │   ├── App.tsx                   # Componente principal
-│   │   ├── main.tsx                  # Entry point
-│   │   └── index.css                 # Estilos globales
-│   ├── package.json                  # Dependencias frontend
-│   ├── vite.config.ts                # Configuración Vite
-│   ├── tailwind.config.js            # Configuración TailwindCSS
-│   └── tsconfig.json                 # Configuración TypeScript
-├── apps-script/                      # 📄 Backend opcional (Google Apps Script)
-│   ├── Code.gs                       # Entry point del backend
-│   ├── Auth.gs                       # Autenticación
-│   ├── Carreras.gs                   # CRUD de carreras
-│   ├── Utils.gs                      # Utilidades backend
-│   └── README.md                     # Guía de setup backend
-├── detener-aws.sh                    # 🛑 Script para detener recursos AWS
-├── reactivar-aws.sh                  # ▶️ Script para reactivar AWS
-├── reactivar-cloudfront.sh           # ☁️ Script para CloudFront
-├── package.json                      # Scripts del workspace raíz
-└── README.md                         # Este archivo
+│   │   │   ├── Login.tsx             # Login con Cognito
+│   │   │   ├── beezero/              # 🚗 Páginas BeeZero
+│   │   │   │   ├── DashboardBeezero.tsx
+│   │   │   │   ├── IniciarTurno.tsx
+│   │   │   │   ├── CerrarTurno.tsx
+│   │   │   │   ├── NuevaCarrera.tsx
+│   │   │   │   ├── MisCarreras.tsx
+│   │   │   │   ├── MisTurnos.tsx
+│   │   │   │   └── DetalleTurno.tsx
+│   │   │   └── ecodelivery/          # 🚴 Páginas EcoDelivery
+│   │   │       ├── DashboardBiker.tsx
+│   │   │       ├── IniciarTurnoBiker.tsx
+│   │   │       ├── CerrarTurnoBiker.tsx
+│   │   │       ├── NuevoDelivery.tsx
+│   │   │       ├── MisDeliveries.tsx (sincronizado con Google Sheet)
+│   │   │       └── MisTurnos.tsx
+│   │   ├── components/
+│   │   │   ├── Layout.tsx
+│   │   │   ├── ThemeProvider.tsx
+│   │   │   ├── LoadingSpinner.tsx
+│   │   │   ├── TimeSelect.tsx        # Selector HH:mm
+│   │   │   └── CarreraCard.tsx
+│   │   ├── config/
+│   │   │   ├── constants.ts
+│   │   │   ├── routes.ts
+│   │   │   └── themes.ts
+│   │   ├── hooks/
+│   │   │   ├── useTheme.ts
+│   │   │   ├── useGeolocation.ts
+│   │   │   ├── useImageUpload.ts
+│   │   │   └── useInactivityTimeout.ts
+│   │   ├── services/
+│   │   │   ├── api.ts
+│   │   │   ├── api-mock.ts
+│   │   │   ├── auth.ts
+│   │   │   ├── cognito.ts           # AWS Cognito integration
+│   │   │   ├── ecodeliveryApi.ts    # API específica Ecodelivery
+│   │   │   ├── axiosInterceptor.ts
+│   │   │   └── storage.ts
+│   │   ├── types/
+│   │   │   ├── index.ts
+│   │   │   └── turno.ts
+│   │   ├── utils/
+│   │   │   ├── errors.ts
+│   │   │   ├── formatters.ts        # Formateadores de fecha/hora
+│   │   │   ├── geolocation.ts
+│   │   │   ├── image.ts
+│   │   │   └── validation.ts
+│   │   └── App.tsx
+│   └── package.json
+├── backend/                           # API Node.js + Express
+│   ├── src/
+│   │   ├── middleware/
+│   │   │   └── auth.js              # JWT validation
+│   │   ├── routes/
+│   │   │   ├── auth.js              # Rutas de autenticación
+│   │   │   ├── turnos.js            # Rutas de turnos BeeZero
+│   │   │   └── ecodelivery.js       # Rutas Ecodelivery (turnos + deliveries)
+│   │   ├── services/
+│   │   │   ├── googleSheets.js      # Integración Google Sheets API
+│   │   │   ├── s3Upload.js          # Subida de fotos a S3 (SDK v3)
+│   │   │   └── sessionManager.js    # Control de sesiones concurrentes
+│   │   └── server.js
+│   ├── scripts/
+│   │   ├── create-s3-registros.js   # Crear estructura S3
+│   │   ├── list-sheets.js           # Diagnóstico de sheets
+│   │   └── add-foto-column-carreras.js
+│   └── package.json
+├── data/
+│   ├── usuarios-y-contraseñas-ecodelivery.md  # Roles de usuarios
+│   └── Biker-WhatsApp-unicos.csv              # Lista de bikers
+├── docs/
+│   ├── SHEET_ECODELIVERY.md         # Documentación de Google Sheets
+│   ├── S3_STRUCTURE.md              # Estructura de carpetas S3
+│   └── GITHUB_ACTIONS_AWS.md       # Deploy con GitHub Actions
+├── scripts/
+│   ├── setup-cognito-roles.sh       # Crear grupos en Cognito
+│   ├── update-cognito-roles.sh      # Asignar usuarios a grupos
+│   └── deploy-secrets.sh            # (opcional) Subir secretos a AWS
+├── .github/workflows/
+│   └── deploy-aws.yml              # CI/CD: deploy frontend a S3 + CloudFront
+├── apps-script/                     # ⚠️ Deprecated (usar backend/)
+└── README.md
 ```
 
-## 📱 Funcionalidades por Plataforma
+## 📱 Funcionalidades Detalladas
 
 ### 🚗 BeeZero (Interfaz Completa - Amarillo)
 
 #### 1. Iniciar Turno
-- Formulario completo con múltiples campos
-- Apertura de caja (monto en Bs)
-- Placa del auto
-- Daños al auto (descripción)
-- Fotos: pantalla y exterior del vehículo
-- Captura ubicación GPS
-- Hora de inicio automática
+- Captura automática de ubicación GPS
+- Hora de inicio automática (HH:mm)
+- Formulario con campos opcionales de fotos
+- Guardado en Google Sheet "Ecodelivery"
 
 #### 2. Nueva Carrera
 - Cliente (con autocompletado)
-- Fecha y horarios (inicio/fin)
+- Fecha y horarios de inicio/fin (selectores HH:mm)
 - Lugar de recojo y destino
-- Tiempo de viaje
-- Distancia (km)
-- Precio (Bs)
-- Observaciones
+- Tiempo de viaje y distancia
+- Precio en Bs
+- Observaciones opcionales
 
 #### 3. Cerrar Turno
-- Cierre de caja (monto en Bs)
-- Monto QR
-- Cálculo automático de diferencia
-- Fotos finales
-- Ubicación GPS de cierre
-- Hora de cierre automática
+- Captura automática de ubicación GPS
+- Hora de cierre automática (HH:mm)
+- Fotos opcionales
+- Actualización del registro en Google Sheet
 
 #### 4. Historial
 - Ver turno actual en curso
 - Historial de turnos cerrados
 - Detalles completos de cada turno
 - Lista de carreras por fecha
-- Resumen de totales
 
 ### 🚴 EcoDelivery (Interfaz Simplificada - Verde)
 
 #### 1. Iniciar Turno
-- **¡Un solo botón!** "Obtener Ubicación e Iniciar Turno"
-- Auto-captura: ubicación, hora, nombre
+- **Un solo botón**: "Obtener Ubicación e Iniciar Turno"
+- Auto-captura: ubicación GPS, hora (HH:mm), usuario
+- Foto opcional
+- Guardado en Google Sheet "Ecodelivery"
 - Sin formularios complejos
 
 #### 2. Registrar Delivery
+- Biker (auto-completado con usuario actual)
 - Cliente
-- Lugar de origen
-- Lugar de destino
-- Distancia (km)
-- Campos mínimos, interfaz rápida
+- Lugar de origen y destino
+- Hora Inicio y Hora Fin (selectores HH:mm)
+- Distancia en km
+- **Carrera por hora** (checkbox)
+- **Notas** (textarea opcional)
+- **Foto** (opcional, sube a S3)
+- Se guarda en Google Sheet "Carreras_bikers" (pestaña del biker)
 
 #### 3. Cerrar Turno
-- **¡Un solo botón!** "Obtener Ubicación y Cerrar Turno"
-- Auto-captura: ubicación, hora
-- Sin cálculos de caja
+- **Un solo botón**: "Obtener Ubicación y Cerrar Turno"
+- Auto-captura: ubicación GPS, hora (HH:mm)
+- Foto opcional
+- Actualiza registro en Google Sheet
 
 #### 4. Historial
-- Ver turno actual si está activo
-- Historial de turnos cerrados (simple)
-- Lista de deliveries realizados
-- Vista optimizada para móvil
+- **Mis Deliveries**: Vista sincronizada con Google Sheet
+  - Muestra TODOS los deliveries del biker desde el sheet
+  - Incluye: cliente, origen, destino, distancia, por hora, notas
+  - Fotos ocultas (pendiente configurar acceso público en S3)
+- **Mis Turnos**: Historial de turnos cerrados
 
-## 🎨 Diseño
+## 🔐 Autenticación y Seguridad
+
+### AWS Cognito
+- **User Pool ID**: `us-east-1_REsVOVqcY`
+- **Client ID**: `29rgiplrp6t3aq2b58ee91i54v`
+- **Auth Flows**: `ALLOW_USER_PASSWORD_AUTH`, `ALLOW_REFRESH_TOKEN_AUTH`
+
+### Grupos y Roles
+- **beezero**: Conductores de auto → `/beezero/*`
+- **operador**: Acceso administrativo
+- **ecodelivery**: Bikers de delivery → `/ecodelivery/*`
+
+### Control de Sesiones
+- **Sesiones concurrentes**: Solo 1 sesión activa por usuario
+- **Timeout por inactividad**: 10 minutos
+- **Token refresh**: Automático con interceptores Axios
+- **Session ID**: Incluido en headers de todas las requests
+
+### Seguridad
+- JWT validation en backend
+- Session manager in-memory
+- CORS configurado para frontend específico
+- Credentials nunca en repositorio (.gitignore)
+
+---
+
+## 📊 APIs y Endpoints
+
+### Backend Endpoints
+
+#### Autenticación
+- `POST /api/auth/login` - Login con Cognito
+- `POST /api/auth/logout` - Cerrar sesión
+- `POST /api/auth/refresh` - Refresh token
+
+#### Ecodelivery - Turnos
+- `POST /api/ecodelivery/turnos/iniciar` - Iniciar turno
+- `PUT /api/ecodelivery/turnos/:id/cerrar` - Cerrar turno
+- `GET /api/ecodelivery/turnos/:id` - Obtener turno por ID
+- `GET /api/ecodelivery/turnos` - Listar todos los turnos
+- `POST /api/ecodelivery/upload-photo` - Subir foto de turno
+
+#### Ecodelivery - Deliveries
+- `POST /api/ecodelivery/deliveries/registrar` - Registrar delivery
+- `GET /api/ecodelivery/deliveries/:bikerName` - Obtener deliveries del biker
+- `POST /api/ecodelivery/upload-delivery-photo` - Subir foto de delivery
+
+#### BeeZero - Turnos
+- `POST /api/turnos/iniciar` - Iniciar turno
+- `PUT /api/turnos/:id/cerrar` - Cerrar turno
+- `GET /api/turnos/:id` - Obtener turno por ID
+- `GET /api/turnos` - Listar turnos
+
+---
+
+## 🛠️ Desarrollo y Scripts
+
+### Comandos Disponibles
+
+```bash
+# Frontend
+cd frontend
+npm run dev               # Dev server en http://localhost:3000
+npm run build             # Build para producción
+npm run preview           # Preview del build
+npm run lint              # Linter ESLint
+
+# Backend
+cd backend
+npm run dev               # Dev server con nodemon en puerto 3001
+npm run start             # Producción
+node scripts/create-s3-registros.js    # Crear estructura S3
+node scripts/list-sheets.js            # Diagnóstico Google Sheets
+```
+
+### Scripts de Gestión
+
+```bash
+# Cognito (primera vez)
+bash scripts/setup-cognito-roles.sh      # Crear grupos
+bash scripts/update-cognito-roles.sh     # Asignar usuarios a grupos
+```
+
+---
+
+## 🎨 Diseño y UX
 
 ### Sistema de Temas Dinámicos
 - **BeeZero**: Amarillo (#FFD700) + Negro
@@ -245,134 +462,106 @@ bee-tracked/
 - Responsive: Diseñado móvil primero
 - PWA: Instalable como app nativa
 
-### Experiencia de Usuario
-- **BeeZero**: Dashboard con 5 cards (todas las opciones)
-- **EcoDelivery**: Dashboard con 4 cards (opciones simplificadas)
-- Navegación intuitiva por tipo de usuario
-- Rutas organizadas: `/beezero/*` y `/ecodelivery/*`
+### Componentes Personalizados
+- **TimeSelect**: Selector de hora HH:mm con selectores nativos
+- **Layout**: Sistema de theming dinámico
+- **LoadingSpinner**: Spinner con colores del tema activo
+- **ThemeProvider**: Context provider de temas
 
-## 💰 Costos
-
-- Frontend Hosting: $0 (Vercel/Netlify free tier)
-- Google Apps Script: $0 (opcional)
-- Google Sheets: $0 (opcional)
-- Google OAuth: $0
-
-**Total: $0/mes** (demo sin backend)
-
-## 📝 Notas Técnicas
-
-### Modo Demo (Sin Backend)
-- El frontend funciona completamente standalone con datos mock
-- Los datos se guardan en localStorage del navegador
-- Perfecto para demos, pruebas y desarrollo local
-- No requiere configuración adicional
-
-### Modo Producción (Con Backend)
-- Conecta a Google Apps Script + Google Sheets
-- Requiere configurar variables de entorno (`.env`)
-- Ver `apps-script/README.md` para setup del backend
-- Soporta Google OAuth 2.0
-
-### PWA (Progressive Web App)
-- Instalable en dispositivos móviles
-- Service Worker para funcionamiento offline
-- Manifest configurado para iOS y Android
-- Experiencia similar a app nativa
-
-### Sistema de Temas
-- Cambio dinámico según tipo de usuario
-- BeeZero: Amarillo (#FFD700) + Negro
-- EcoDelivery: Verde (#10B981) + Blanco/Negro
-- Logo y colores sincronizados automáticamente
+### Mobile-First
+- Inputs con `font-size: 16px` para evitar zoom en iOS
+- Selectores nativos para mejor UX en móvil
+- Botones con `min-height: 48px` para touch targets
+- Diseño responsive con TailwindCSS
 
 ---
 
-## 🛠️ Desarrollo
+## 💰 Costos Estimados
 
-### Comandos Disponibles
+### Desarrollo
+- Frontend/Backend: $0 (local)
+- Google Sheets API: $0
+- AWS Cognito: $0 (< 50,000 MAU)
+
+### Producción (estimado)
+- Frontend: S3 + CloudFront (~$1-2/mes)
+- Backend: Lambda + API Gateway (free tier o ~$1-5/mes)
+- AWS Cognito: $0 (< 50,000 MAU)
+- AWS S3 (fotos): ~$0.50-2/mes
+- Google Sheets API: $0
+
+**Total estimado: ~$3-10/mes**
+
+---
+
+## 🚀 Deploy a Producción
+
+### Frontend (automático con GitHub Actions)
+
+Cada **push a `main`** (con cambios en `frontend/`) despliega el frontend a **S3** e invalida **CloudFront**.
+
+- **Configuración**: Ver [docs/GITHUB_ACTIONS_AWS.md](docs/GITHUB_ACTIONS_AWS.md) (secretos y variables en GitHub).
+- **URL de producción**: La que tenga tu distribución CloudFront (ej. `https://d19ls0k7de9u6w.cloudfront.net`).
+
+### Backend
+
+- **AWS Lambda + API Gateway**: Ya configurado; actualizar código con `aws lambda update-function-code`.
+- **Railway**: Ver [RAILWAY_DEPLOY.md](RAILWAY_DEPLOY.md).
+- **Manual (AWS/EC2)**: Ver [DEPLOY_AWS.md](DEPLOY_AWS.md) si aplica.
+
+### Configurar S3 para acceso público a fotos (opcional)
 
 ```bash
-# Desde la raíz del proyecto
-npm run dev:frontend       # Inicia dev server
-npm run build:frontend     # Build para producción
-npm run lint:frontend      # Linter ESLint
-
-# Desde /frontend
-npm run dev               # Dev server en http://localhost:3000
-npm run build             # Build optimizado
-npm run preview           # Preview del build
-npm run lint              # Linter
-```
-
-### Variables de Entorno
-
-Crear `.env` en `/frontend/` (opcional):
-
-```env
-# Google Apps Script (si usas backend)
-VITE_APPS_SCRIPT_URL=https://script.google.com/macros/s/YOUR_ID/exec
-
-# Google OAuth (si usas autenticación real)
-VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
-
-# Configuración
-VITE_API_MODE=mock          # 'mock' o 'production'
+aws s3api put-bucket-policy --bucket bee-tracked-photos --policy '{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Sid": "PublicReadGetObject",
+    "Effect": "Allow",
+    "Principal": "*",
+    "Action": "s3:GetObject",
+    "Resource": "arn:aws:s3:::bee-tracked-photos/*"
+  }]
+}'
 ```
 
 ---
 
-## 🚀 Deploy
+## 📞 Documentación Adicional
 
-### Deploy Rápido con Vercel (Recomendado)
+- **Backend**: `backend/README.md`
+- **Google Sheets**: `docs/SHEET_ECODELIVERY.md`
+- **S3**: `docs/S3_STRUCTURE.md`
+- **Deploy con GitHub Actions**: `docs/GITHUB_ACTIONS_AWS.md`
+- **Ejecutar local**: `RUN.md`
 
-```bash
-cd frontend
-npm install -g vercel
-vercel --prod
-```
+## 🔧 Troubleshooting
 
-Te dará un link como: `https://bee-tracked.vercel.app`
+### Error: "The requested module does not provide an export named 'useAuth'"
+- **Solución**: Importar desde `services/auth.ts` en lugar de `contexts/AuthContext.tsx`
 
-### Deploy a AWS S3 + CloudFront
+### Error 403 en fotos de S3
+- **Causa**: Bucket sin acceso público configurado
+- **Solución**: Las fotos están ocultas en el UI. Configurar bucket policy para habilitar.
 
-```bash
-# Reactivar recursos AWS
-./reactivar-aws.sh
+### Error: "EADDRINUSE: address already in use :::3001"
+- **Solución**: `lsof -ti :3001 | xargs kill -9`
 
-# Deploy frontend
-cd frontend
-npm run build
-aws s3 sync dist/ s3://tu-bucket/ --delete
-
-# Invalidar cache de CloudFront
-./reactivar-cloudfront.sh
-
-# Detener recursos para ahorrar costos
-./detener-aws.sh
-```
-
-### Scripts de Gestión AWS
-
-- `./reactivar-aws.sh` - Reactiva recursos AWS que están detenidos
-- `./detener-aws.sh` - Detiene recursos AWS para ahorrar costos
-- `./reactivar-cloudfront.sh` - Invalida caché de CloudFront tras deploy
+### Deliveries no aparecen en "Mis Deliveries"
+- **Solución**: Ahora se sincronizan con Google Sheet. Verificar que el backend esté corriendo.
 
 ---
 
-## 🔐 Accesos para Demo
+## 🎯 Próximas Mejoras
 
-**Usuario:** `eco` (sin password)  
-→ Interfaz EcoDelivery (verde, simplificada) 🚴
-
-**Usuario:** `beezero` (sin password)  
-→ Interfaz BeeZero (amarilla, completa) 🚗
+- [ ] Implementar URLs pre-firmadas para fotos en S3
+- [ ] Dashboard administrativo para operadores
+- [ ] Reportes y estadísticas por biker
+- [ ] Notificaciones push
+- [ ] Modo offline completo con sincronización
+- [ ] Exportar datos a Excel/PDF
+- [ ] Integración con mapas para rutas
+- [ ] Chat de soporte integrado
 
 ---
 
-## 📞 Soporte y Documentación
-
-- **Backend Setup**: Ver `apps-script/README.md`
-- **Estructura del código**: Revisar comentarios en componentes
-- **Tipos TypeScript**: Ver `/frontend/src/types/`
-- **Configuración**: Ver `/frontend/src/config/`
+**Desarrollado con ❤️ para BeeZero y EcoDelivery**

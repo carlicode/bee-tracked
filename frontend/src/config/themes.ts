@@ -33,6 +33,21 @@ export const themes: Record<UserType, Theme> = {
       secondPart: 'zero',
     },
   },
+  operador: {
+    name: 'operador',
+    displayName: 'Operador',
+    colors: {
+      primary: '#FFD700',
+      primaryDark: '#FFC700',
+      black: '#000000',
+      grayDark: '#1F2937',
+      grayLight: '#F9FAFB',
+    },
+    logo: {
+      firstPart: 'bee',
+      secondPart: 'zero',
+    },
+  },
   ecodelivery: {
     name: 'ecodelivery',
     displayName: 'EcoDelivery',

@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiService } from '../services/api';
 import { storage } from '../services/storage';
+import { formatters } from '../utils/formatters';
+import { TimeSelect } from '../components/TimeSelect';
 import type { Carrera } from '../types';
 
 export const NuevaCarrera = () => {
@@ -12,7 +14,7 @@ export const NuevaCarrera = () => {
   const [formData, setFormData] = useState<Partial<Carrera>>({
     fecha: new Date().toISOString().split('T')[0],
     cliente: '',
-    horaInicio: new Date().toTimeString().slice(0, 5),
+    horaInicio: formatters.timeToHHmm(new Date()),
     lugarRecojo: '',
     lugarDestino: '',
     horaFin: '',
@@ -113,31 +115,19 @@ export const NuevaCarrera = () => {
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="horaInicio" className="block text-sm font-medium text-gray-700 mb-1">
-              Hora Inicio *
-            </label>
-            <input
-              type="time"
-              id="horaInicio"
-              required
-              value={formData.horaInicio}
-              onChange={(e) => setFormData((prev) => ({ ...prev, horaInicio: e.target.value }))}
-              className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
-            />
-          </div>
-          <div>
-            <label htmlFor="horaFin" className="block text-sm font-medium text-gray-700 mb-1">
-              Hora Fin
-            </label>
-            <input
-              type="time"
-              id="horaFin"
-              value={formData.horaFin}
-              onChange={(e) => setFormData((prev) => ({ ...prev, horaFin: e.target.value }))}
-              className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
-            />
-          </div>
+          <TimeSelect
+            label="Hora Inicio"
+            required
+            value={formData.horaInicio || ''}
+            onChange={(v) => setFormData((prev) => ({ ...prev, horaInicio: v }))}
+            focusRingClass="focus:ring-beezero-yellow focus:border-beezero-yellow"
+          />
+          <TimeSelect
+            label="Hora Fin"
+            value={formData.horaFin || ''}
+            onChange={(v) => setFormData((prev) => ({ ...prev, horaFin: v }))}
+            focusRingClass="focus:ring-beezero-yellow focus:border-beezero-yellow"
+          />
         </div>
 
         <div>

@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
+import { PLACAS_AUTO_ABEJITA } from '../../config/constants';
+import { turnosApi } from '../../services/turnosApi';
+import { formatters } from '../../utils/formatters';
 import type { Turno } from '../../types/turno';
 
 export const IniciarTurno = () => {
@@ -12,10 +15,12 @@ export const IniciarTurno = () => {
   const [locationLoading, setLocationLoading] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
 
+  const [deseaRegistrarDano, setDeseaRegistrarDano] = useState<boolean | null>(null);
   const [formData, setFormData] = useState<Partial<Turno>>({
     abejita: user?.driverName || '',
     aperturaCaja: 0,
     auto: '',
+    kilometraje: undefined,
     danosAuto: 'ninguno',
     fotoPantalla: '',
     fotoExterior: '',
@@ -71,8 +76,14 @@ export const IniciarTurno = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.abejita || !formData.auto || !formData.aperturaCaja || formData.aperturaCaja <= 0) {
+    const aperturaValida = formData.aperturaCaja != null && formData.aperturaCaja >= 0;
+    if (!formData.abejita || !formData.auto || !aperturaValida) {
       alert('Por favor completa todos los campos requeridos');
+      return;
+    }
+
+    if (deseaRegistrarDano === null) {
+      alert('Por favor indica si desea registrar algún daño al auto (Sí o No)');
       return;
     }
 
@@ -83,16 +94,17 @@ export const IniciarTurno = () => {
 
     try {
       setLoading(true);
-      
-      // Registrar hora de inicio automáticamente
+
       const ahora = new Date();
-      const horaInicio = ahora.toTimeString().slice(0, 5); // HH:MM
-      
-      // Aquí iría la llamada al API
-      // Por ahora simulamos guardado
+      const horaInicio = formatters.timeToHHmm(ahora);
+      const danos = deseaRegistrarDano ? formData.danosAuto || 'ninguno' : 'ninguno';
+      const fotoExt = deseaRegistrarDano ? formData.fotoExterior : '';
+
       const turnoData = {
         ...formData,
-        horaInicio: horaInicio,
+        danosAuto: danos,
+        fotoExterior: fotoExt,
+        horaInicio,
         ubicacionInicio: {
           ...location,
           timestamp: ahora.toISOString(),
@@ -102,14 +114,32 @@ export const IniciarTurno = () => {
         createdAt: ahora.toISOString(),
       };
 
-      // Guardar en localStorage para demo
-      localStorage.setItem('turno_actual', JSON.stringify(turnoData));
-      
+      let id: string | undefined;
+
+      if (turnosApi.isEnabled()) {
+        const res = await turnosApi.iniciar({
+          abejita: turnoData.abejita!,
+          auto: turnoData.auto!,
+          aperturaCaja: turnoData.aperturaCaja!,
+          kilometraje: turnoData.kilometraje,
+          danosAuto: danos,
+          fotoPantalla: turnoData.fotoPantalla,
+          fotoExterior: fotoExt,
+          horaInicio,
+          ubicacionInicio: { lat: location.lat, lng: location.lng },
+        });
+        id = res.id;
+      }
+
+      const toSave = { ...turnoData, id };
+      localStorage.setItem('turno_actual', JSON.stringify(toSave));
+
       alert('Turno iniciado exitosamente');
       navigate('/beezero/dashboard');
     } catch (error) {
       console.error('Error iniciando turno:', error);
-      alert('Error al iniciar el turno. Intenta nuevamente.');
+      const msg = error instanceof Error ? error.message : 'Error al iniciar el turno. Intenta nuevamente.';
+      alert(msg);
     } finally {
       setLoading(false);
     }
@@ -117,10 +147,22 @@ export const IniciarTurno = () => {
 
   return (
     <div>
+      <div className="mb-4">
+        <button
+          type="button"
+          onClick={() => navigate('/beezero/dashboard')}
+          className="flex items-center gap-2 text-gray-600 hover:text-black font-medium"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Volver atrás
+        </button>
+      </div>
       <h2 className="text-2xl font-bold text-black mb-6">Iniciar Turno</h2>
 
       <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-6 space-y-6">
-        {/* Abejita */}
+        {/* Abejita (solo lectura: nombre del usuario logueado) */}
         <div>
           <label htmlFor="abejita" className="block text-sm font-medium text-black mb-1">
             Abejita *
@@ -128,10 +170,10 @@ export const IniciarTurno = () => {
           <input
             type="text"
             id="abejita"
-            required
+            readOnly
+            disabled
             value={formData.abejita}
-            onChange={(e) => setFormData((prev) => ({ ...prev, abejita: e.target.value }))}
-            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
+            className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 bg-gray-50 cursor-not-allowed text-gray-700 font-medium"
           />
         </div>
 
@@ -147,44 +189,37 @@ export const IniciarTurno = () => {
             min="0"
             step="0.01"
             value={formData.aperturaCaja}
-            onChange={(e) => setFormData((prev) => ({ ...prev, aperturaCaja: parseFloat(e.target.value) || 0 }))}
+            onChange={(e) => {
+              const valor = parseFloat(e.target.value);
+              const aperturaCaja = isNaN(valor) ? 0 : Math.max(0, valor);
+              setFormData((prev) => ({ ...prev, aperturaCaja }));
+            }}
             className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
           />
         </div>
 
-        {/* Auto */}
+        {/* Auto (Placa) */}
         <div>
           <label htmlFor="auto" className="block text-sm font-medium text-black mb-1">
             Auto (Placa) *
           </label>
-          <input
-            type="text"
+          <select
             id="auto"
             required
             value={formData.auto}
-            onChange={(e) => setFormData((prev) => ({ ...prev, auto: e.target.value.toUpperCase() }))}
-            placeholder="Ej: 6265 LYR"
-            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow uppercase"
-          />
+            onChange={(e) => setFormData((prev) => ({ ...prev, auto: e.target.value }))}
+            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow bg-white"
+          >
+            <option value="">Selecciona la placa del auto</option>
+            {PLACAS_AUTO_ABEJITA.map((placa) => (
+              <option key={placa} value={placa}>
+                {placa}
+              </option>
+            ))}
+          </select>
         </div>
 
-        {/* Daños al Auto */}
-        <div>
-          <label htmlFor="danosAuto" className="block text-sm font-medium text-black mb-1">
-            Daños al Auto *
-          </label>
-          <textarea
-            id="danosAuto"
-            required
-            value={formData.danosAuto}
-            onChange={(e) => setFormData((prev) => ({ ...prev, danosAuto: e.target.value }))}
-            rows={3}
-            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
-            placeholder="Describe los daños o escribe 'ninguno'"
-          />
-        </div>
-
-        {/* Ubicación */}
+        {/* Ubicación (sin mostrar coordenadas) */}
         <div>
           <label className="block text-sm font-medium text-black mb-2">
             Ubicación *
@@ -198,20 +233,39 @@ export const IniciarTurno = () => {
             {locationLoading ? (
               <span className="flex items-center justify-center gap-2">
                 <LoadingSpinner />
-                Obteniendo ubicación...
+                Cargando
               </span>
             ) : location ? (
-              `📍 Ubicación: ${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`
+              '✓ Información obtenida'
             ) : (
-              '📍 Obtener Mi Ubicación'
+              'Obtener información'
             )}
           </button>
         </div>
 
-        {/* Foto de Pantalla */}
+        {/* Kilometraje */}
+        <div>
+          <label htmlFor="kilometraje" className="block text-sm font-medium text-black mb-1">
+            Kilometraje
+          </label>
+          <input
+            type="number"
+            id="kilometraje"
+            min={0}
+            value={formData.kilometraje ?? ''}
+            onChange={(e) => {
+              const valor = e.target.value === '' ? undefined : Number(e.target.value);
+              setFormData((prev) => ({ ...prev, kilometraje: valor !== undefined && valor >= 0 ? valor : undefined }));
+            }}
+            placeholder="Km"
+            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
+          />
+        </div>
+
+        {/* Foto del tablero */}
         <div>
           <label className="block text-sm font-medium text-black mb-2">
-            Foto de Pantalla *
+            Foto del tablero *
           </label>
           <input
             type="file"
@@ -223,32 +277,82 @@ export const IniciarTurno = () => {
           {formData.fotoPantalla && (
             <img
               src={formData.fotoPantalla}
-              alt="Foto pantalla"
+              alt="Foto del tablero"
               className="mt-2 w-full max-w-xs rounded-lg shadow-md"
             />
           )}
         </div>
 
-        {/* Foto del Exterior */}
+        {/* ¿Desea registrar algún daño al auto? */}
         <div>
-          <label className="block text-sm font-medium text-black mb-2">
-            Foto del Exterior (en caso de golpes o daños) *
-          </label>
-          <input
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={handlePhotoUpload('fotoExterior')}
-            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
-          />
-          {formData.fotoExterior && (
-            <img
-              src={formData.fotoExterior}
-              alt="Foto exterior"
-              className="mt-2 w-full max-w-xs rounded-lg shadow-md"
-            />
-          )}
+          <p className="block text-sm font-medium text-black mb-2">
+            ¿Desea registrar algún daño al auto? *
+          </p>
+          <div className="flex gap-4">
+            <button
+              type="button"
+              onClick={() => setDeseaRegistrarDano(true)}
+              className={`flex-1 px-4 py-3 rounded-lg font-medium border-2 transition ${
+                deseaRegistrarDano === true
+                  ? 'bg-beezero-yellow border-beezero-yellow text-black'
+                  : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              Sí
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeseaRegistrarDano(false)}
+              className={`flex-1 px-4 py-3 rounded-lg font-medium border-2 transition ${
+                deseaRegistrarDano === false
+                  ? 'bg-beezero-yellow border-beezero-yellow text-black'
+                  : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              No
+            </button>
+          </div>
         </div>
+
+        {deseaRegistrarDano === true && (
+          <>
+            {/* Daños al Auto */}
+            <div>
+              <label htmlFor="danosAuto" className="block text-sm font-medium text-black mb-1">
+                Daños al Auto
+              </label>
+              <textarea
+                id="danosAuto"
+                value={formData.danosAuto}
+                onChange={(e) => setFormData((prev) => ({ ...prev, danosAuto: e.target.value }))}
+                rows={3}
+                className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
+                placeholder="Describe los daños o escribe 'ninguno'"
+              />
+            </div>
+
+            {/* Foto del Exterior */}
+            <div>
+              <label className="block text-sm font-medium text-black mb-2">
+                Foto del Exterior (en caso de golpes o daños)
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handlePhotoUpload('fotoExterior')}
+                className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
+              />
+              {formData.fotoExterior && (
+                <img
+                  src={formData.fotoExterior}
+                  alt="Foto exterior"
+                  className="mt-2 w-full max-w-xs rounded-lg shadow-md"
+                />
+              )}
+            </div>
+          </>
+        )}
 
         <div className="flex gap-4 pt-4">
           <button

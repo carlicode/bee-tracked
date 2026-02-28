@@ -1,18 +1,23 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../services/auth';
 import { apiService } from '../../services/api';
+import { beezeroApi, isBeezeroApiEnabled } from '../../services/beezeroApi';
 import { storage } from '../../services/storage';
+import { formatters } from '../../utils/formatters';
+import { TimeSelect } from '../../components/TimeSelect';
 import type { Carrera } from '../../types';
 
 export const NuevaCarrera = () => {
   const navigate = useNavigate();
+  const { getCurrentUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [clientes, setClientes] = useState<string[]>([]);
   
   const [formData, setFormData] = useState<Partial<Carrera>>({
     fecha: new Date().toISOString().split('T')[0],
     cliente: '',
-    horaInicio: new Date().toTimeString().slice(0, 5),
+    horaInicio: formatters.timeToHHmm(new Date()),
     lugarRecojo: '',
     lugarDestino: '',
     horaFin: '',
@@ -42,7 +47,7 @@ export const NuevaCarrera = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.cliente || !formData.lugarRecojo || !formData.lugarDestino) {
+    if (!formData.cliente || !formData.lugarRecojo || !formData.lugarDestino || formData.precio == null) {
       alert('Por favor completa todos los campos requeridos');
       return;
     }
@@ -50,24 +55,34 @@ export const NuevaCarrera = () => {
     try {
       setLoading(true);
       const token = storage.getToken();
-      
       if (!token) {
         alert('Sesión expirada. Por favor inicia sesión nuevamente.');
         navigate('/');
         return;
       }
 
-      const response = await apiService.createCarrera(formData as Carrera, token);
-      
-      if (response.success) {
+      if (isBeezeroApiEnabled()) {
+        const user = getCurrentUser();
+        const abejita = user?.name || user?.driverName || '';
+        if (!abejita) {
+          alert('No se pudo obtener el nombre del conductor. Inicia sesión nuevamente.');
+          return;
+        }
+        await beezeroApi.registrarCarrera(abejita, formData as Carrera);
         alert('Carrera registrada exitosamente');
         navigate('/beezero/dashboard');
       } else {
-        alert(response.error || 'Error al registrar la carrera');
+        const response = await apiService.createCarrera(formData as Carrera, token);
+        if (response.success) {
+          alert('Carrera registrada exitosamente');
+          navigate('/beezero/dashboard');
+        } else {
+          alert(response.error || 'Error al registrar la carrera');
+        }
       }
     } catch (error) {
       console.error('Error guardando carrera:', error);
-      alert('Error al registrar la carrera. Intenta nuevamente.');
+      alert(error instanceof Error ? error.message : 'Error al registrar la carrera. Intenta nuevamente.');
     } finally {
       setLoading(false);
     }
@@ -75,7 +90,19 @@ export const NuevaCarrera = () => {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Nueva Carrera</h2>
+      <div className="mb-4">
+        <button
+          type="button"
+          onClick={() => navigate('/beezero/dashboard')}
+          className="flex items-center gap-2 text-gray-600 hover:text-black font-medium"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Volver atrás
+        </button>
+      </div>
+      <h2 className="text-2xl font-bold text-gray-900 mb-6">Registrar carrera</h2>
 
       <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-4">
         <div>
@@ -113,31 +140,19 @@ export const NuevaCarrera = () => {
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="horaInicio" className="block text-sm font-medium text-gray-700 mb-1">
-              Hora Inicio *
-            </label>
-            <input
-              type="time"
-              id="horaInicio"
-              required
-              value={formData.horaInicio}
-              onChange={(e) => setFormData((prev) => ({ ...prev, horaInicio: e.target.value }))}
-              className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
-            />
-          </div>
-          <div>
-            <label htmlFor="horaFin" className="block text-sm font-medium text-gray-700 mb-1">
-              Hora Fin
-            </label>
-            <input
-              type="time"
-              id="horaFin"
-              value={formData.horaFin}
-              onChange={(e) => setFormData((prev) => ({ ...prev, horaFin: e.target.value }))}
-              className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
-            />
-          </div>
+          <TimeSelect
+            label="Hora Inicio"
+            required
+            value={formData.horaInicio || ''}
+            onChange={(v) => setFormData((prev) => ({ ...prev, horaInicio: v }))}
+            focusRingClass="focus:ring-beezero-yellow focus:border-beezero-yellow"
+          />
+          <TimeSelect
+            label="Hora Fin"
+            value={formData.horaFin || ''}
+            onChange={(v) => setFormData((prev) => ({ ...prev, horaFin: v }))}
+            focusRingClass="focus:ring-beezero-yellow focus:border-beezero-yellow"
+          />
         </div>
 
         <div>

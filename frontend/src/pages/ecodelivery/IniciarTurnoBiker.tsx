@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { storage } from '../../services/storage';
+import { useImageUpload } from '../../hooks/useImageUpload';
+import { ecodeliveryApi, isEcodeliveryApiEnabled } from '../../services/ecodeliveryApi';
+import { formatters } from '../../utils/formatters';
 import type { TurnoSimple } from '../../types/turno';
 
 export const IniciarTurnoBiker = () => {
@@ -11,7 +14,8 @@ export const IniciarTurnoBiker = () => {
   const user = getCurrentUser();
   const [loading, setLoading] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
-  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const { image: photoDataUrl, handleFileChange: handlePhotoChange, clearImage: clearPhoto, error: photoError } = useImageUpload();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleGetLocationAndStart = () => {
     if (!navigator.geolocation) {
@@ -26,7 +30,6 @@ export const IniciarTurnoBiker = () => {
           lat: position.coords.latitude,
           lng: position.coords.longitude,
         };
-        setLocation(newLocation);
         setLocationLoading(false);
 
         // Iniciar turno automáticamente
@@ -48,14 +51,50 @@ export const IniciarTurnoBiker = () => {
   const handleStartShift = async (locationData: { lat: number; lng: number }) => {
     try {
       setLoading(true);
-      
-      // Registrar hora de inicio automáticamente
+
+      let photoUrl: string | undefined;
+      if (photoDataUrl) {
+        try {
+          const { url } = await ecodeliveryApi.uploadPhoto({
+            dataUrl: photoDataUrl,
+            username: user?.driverName || user?.name || 'Biker',
+            momento: 'inicio',
+          });
+          photoUrl = url;
+        } catch (err) {
+          console.error('Error subiendo foto:', err);
+          alert('No se pudo subir la foto. ¿Backend y S3 configurados? Puedes iniciar turno sin foto.');
+        }
+      }
+
       const ahora = new Date();
-      const horaInicio = ahora.toTimeString().slice(0, 5); // HH:MM
-      
+      const horaInicio = formatters.timeToHHmm(ahora);
+      const fechaInicio = ahora.toISOString().slice(0, 10); // YYYY-MM-DD
+      const bikerName = user?.driverName || user?.name || 'Biker';
+
+      let turnoId: string | undefined;
+      if (isEcodeliveryApiEnabled()) {
+        try {
+          const res = await ecodeliveryApi.iniciarTurno({
+            usuario: bikerName,
+            fechaInicio,
+            horaInicio,
+            latInicio: locationData.lat,
+            lngInicio: locationData.lng,
+            timestampInicio: ahora.toISOString(),
+            fotoInicio: photoUrl,
+          });
+          turnoId = res.turnoId;
+        } catch (err) {
+          console.error('Error registrando turno en sheet:', err);
+          alert('Turno guardado localmente. No se pudo registrar en el Sheet (¿backend y GOOGLE_SHEET_ID configurados?).');
+        }
+      }
+
       const turnoData: TurnoSimple = {
-        bikerName: user?.driverName || 'Biker',
-        horaInicio: horaInicio,
+        ...(turnoId && { id: turnoId }),
+        bikerName,
+        horaInicio,
         ubicacionInicio: {
           ...locationData,
           timestamp: ahora.toISOString(),
@@ -63,11 +102,10 @@ export const IniciarTurnoBiker = () => {
         turnoIniciado: true,
         turnoCerrado: false,
         createdAt: ahora.toISOString(),
+        ...(photoUrl && { fotoInicio: photoUrl }),
       };
 
-      // Guardar en localStorage para demo
       storage.setItem('turno_actual_biker', turnoData);
-      
       alert('¡Turno iniciado exitosamente!');
       navigate('/ecodelivery/dashboard');
     } catch (error) {
@@ -80,6 +118,18 @@ export const IniciarTurnoBiker = () => {
 
   return (
     <div className="max-w-2xl mx-auto">
+      <div className="mb-4">
+        <button
+          type="button"
+          onClick={() => navigate('/ecodelivery/dashboard')}
+          className="flex items-center gap-2 text-gray-600 hover:text-black font-medium"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Volver atrás
+        </button>
+      </div>
       <h2 className="text-2xl font-bold text-black mb-6">Iniciar Turno</h2>
 
       <div className="bg-white rounded-lg shadow-md p-8 space-y-6">
@@ -94,18 +144,44 @@ export const IniciarTurnoBiker = () => {
           <h3 className="text-xl font-bold text-black mb-3">
             Presiona el botón para obtener tu ubicación e iniciar turno
           </h3>
-          <p className="text-gray-600 mb-8">
+          <p className="text-gray-600 mb-6">
             Se registrará automáticamente tu ubicación, hora de inicio y nombre
           </p>
 
-          {location && (
-            <div className="bg-ecodelivery-green/10 rounded-lg p-4 mb-6 border border-ecodelivery-green/30">
-              <p className="text-sm text-gray-700">
-                <span className="font-semibold">📍 Ubicación obtenida:</span><br />
-                Lat: {location.lat.toFixed(6)}, Lng: {location.lng.toFixed(6)}
-              </p>
-            </div>
-          )}
+          {/* Foto opcional */}
+          <div className="mb-6 text-left">
+            <p className="text-sm font-medium text-gray-700 mb-2">Foto (opcional)</p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(e) => handlePhotoChange(e.target.files?.[0] ?? null)}
+            />
+            {!photoDataUrl ? (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-ecodelivery-green hover:text-ecodelivery-green transition"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14" />
+                </svg>
+                Subir foto
+              </button>
+            ) : (
+              <div className="flex items-center gap-3">
+                <img src={photoDataUrl} alt="Vista previa" className="h-20 w-20 object-cover rounded-lg border border-gray-200" />
+                <div>
+                  <p className="text-sm text-gray-600">Foto lista para subir a S3</p>
+                  <button type="button" onClick={clearPhoto} className="text-sm text-red-600 hover:underline mt-1">
+                    Quitar foto
+                  </button>
+                </div>
+              </div>
+            )}
+            {photoError && <p className="text-sm text-red-600 mt-1">{photoError}</p>}
+          </div>
 
           <button
             type="button"
@@ -116,7 +192,7 @@ export const IniciarTurnoBiker = () => {
             {locationLoading || loading ? (
               <span className="flex items-center justify-center gap-3">
                 <LoadingSpinner />
-                {locationLoading ? 'Obteniendo ubicación...' : 'Iniciando turno...'}
+                Cargando
               </span>
             ) : (
               <span className="flex items-center justify-center gap-3">
@@ -124,7 +200,7 @@ export const IniciarTurnoBiker = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                Obtener Ubicación e Iniciar Turno
+                Abrir turno
               </span>
             )}
           </button>

@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { storage } from '../../services/storage';
 import type { TurnoSimple } from '../../types/turno';
 
 export const MisTurnos = () => {
+  const navigate = useNavigate();
   const [turnos, setTurnos] = useState<TurnoSimple[]>([]);
   const [turnoActual, setTurnoActual] = useState<TurnoSimple | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,6 +39,18 @@ export const MisTurnos = () => {
 
   return (
     <div>
+      <div className="mb-4">
+        <button
+          type="button"
+          onClick={() => navigate('/ecodelivery/dashboard')}
+          className="flex items-center gap-2 text-gray-600 hover:text-black font-medium"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Volver atrás
+        </button>
+      </div>
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-black mb-2">Mis Turnos</h2>
         <p className="text-gray-600">Historial de inicio y cierre de turnos</p>
@@ -54,14 +68,6 @@ export const MisTurnos = () => {
               <p className="text-sm text-gray-600">Hora de inicio</p>
               <p className="text-lg font-semibold text-black">{turnoActual.horaInicio}</p>
             </div>
-            {turnoActual.ubicacionInicio && (
-              <div>
-                <p className="text-sm text-gray-600">Ubicación inicial</p>
-                <p className="text-xs font-mono text-black">
-                  {turnoActual.ubicacionInicio.lat.toFixed(6)}, {turnoActual.ubicacionInicio.lng.toFixed(6)}
-                </p>
-              </div>
-            )}
           </div>
         </div>
       )}
@@ -106,20 +112,10 @@ export const MisTurnos = () => {
                 <div>
                   <p className="text-xs text-gray-600">Hora de inicio</p>
                   <p className="text-base font-semibold text-black">{turno.horaInicio}</p>
-                  {turno.ubicacionInicio && (
-                    <p className="text-xs font-mono text-gray-600 mt-1">
-                      📍 {turno.ubicacionInicio.lat.toFixed(6)}, {turno.ubicacionInicio.lng.toFixed(6)}
-                    </p>
-                  )}
                 </div>
                 <div>
                   <p className="text-xs text-gray-600">Hora de cierre</p>
                   <p className="text-base font-semibold text-black">{turno.horaCierre || 'N/A'}</p>
-                  {turno.ubicacionFin && (
-                    <p className="text-xs font-mono text-gray-600 mt-1">
-                      📍 {turno.ubicacionFin.lat.toFixed(6)}, {turno.ubicacionFin.lng.toFixed(6)}
-                    </p>
-                  )}
                 </div>
               </div>
             </div>

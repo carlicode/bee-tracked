@@ -7,10 +7,32 @@
     <meta name="description" content="Registro de carreras para drivers" />
     <meta name="theme-color" content="#2563eb" />
     <link rel="manifest" href="/manifest.json" />
-    <title>bee zero - Drivers</title>
+    <title>📍 BeeTracked</title>
   </head>
   <body>
     <div id="root"></div>
+    <div id="cache-error" style="display:none; padding:2rem; text-align:center; font-family:system-ui,sans-serif; max-width:400px; margin:2rem auto;">
+      <h2 style="color:#1e40af;">Actualización disponible</h2>
+      <p>Para ver la última versión, actualiza la página con:</p>
+      <p><strong>Ctrl + Shift + R</strong> (Windows) o <strong>Cmd + Shift + R</strong> (Mac)</p>
+      <p style="margin-top:1.5rem;"><a href="" style="color:#2563eb; font-weight:600;">Recargar ahora</a></p>
+    </div>
+    <script>
+      // Si falla la carga del script por caché antigua (MIME type text/html), mostrar mensaje
+      window.addEventListener('error', function(e) {
+        if (e.message && typeof e.message === 'string' && e.message.includes('MIME type') && e.message.includes('text/html')) {
+          var root = document.getElementById('root');
+          var box = document.getElementById('cache-error');
+          if (root && box) {
+            root.style.display = 'none';
+            box.style.display = 'block';
+            var link = box.querySelector('a');
+            link.href = location.href;
+            link.onclick = function() { location.reload(true); return false; };
+          }
+        }
+      }, true);
+    </script>
     <script type="module" src="/src/main.tsx"></script>
     <script>
       // Register service worker for PWA

@@ -37,6 +37,48 @@ export const storage = {
   clear: (): void => {
     localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.TOKEN);
     localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.USER);
+    localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.SESSION_ID);
+    localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.REFRESH_TOKEN);
+    localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.USERNAME);
+  },
+
+  // Session ID management
+  setSessionId: (sessionId: string): void => {
+    localStorage.setItem(APP_CONFIG.STORAGE_KEYS.SESSION_ID, sessionId);
+  },
+
+  getSessionId: (): string | null => {
+    return localStorage.getItem(APP_CONFIG.STORAGE_KEYS.SESSION_ID);
+  },
+
+  removeSessionId: (): void => {
+    localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.SESSION_ID);
+  },
+
+  // Refresh token management (Cognito)
+  setRefreshToken: (refreshToken: string): void => {
+    localStorage.setItem(APP_CONFIG.STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+  },
+
+  getRefreshToken: (): string | null => {
+    return localStorage.getItem(APP_CONFIG.STORAGE_KEYS.REFRESH_TOKEN);
+  },
+
+  removeRefreshToken: (): void => {
+    localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.REFRESH_TOKEN);
+  },
+
+  // Username management (for refresh)
+  setUsername: (username: string): void => {
+    localStorage.setItem(APP_CONFIG.STORAGE_KEYS.USERNAME, username);
+  },
+
+  getUsername: (): string | null => {
+    return localStorage.getItem(APP_CONFIG.STORAGE_KEYS.USERNAME);
+  },
+
+  removeUsername: (): void => {
+    localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.USERNAME);
   },
 
   // Additional storage helpers
