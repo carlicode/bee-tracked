@@ -48,7 +48,7 @@ export const Layout = ({ children }: LayoutProps) => {
               <div className="flex items-center gap-2 sm:gap-4">
                 <label className="flex items-center gap-2 cursor-pointer" title={largeTextEnabled ? 'Desactivar letras grandes' : 'Activar letras grandes'}>
                   <span className={`text-sm font-medium ${textClass}`}>
-                    {largeTextEnabled ? 'Agrandar letras' : 'No'}
+                    Agrandar letras
                   </span>
                   <button
                     type="button"

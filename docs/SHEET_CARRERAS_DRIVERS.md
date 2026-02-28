@@ -32,6 +32,7 @@ Este documento describe la hoja de Google Sheets para el registro de carreras de
 | L       | Observaciones      | Notas adicionales              | Cliente amable |
 | M       | Foto               | URL de foto en S3 (opcional)   | https://... |
 | N       | Timestamp Creación | Fecha/hora de registro (ISO)   | 2026-02-28T03:17:00.000Z |
+| O       | Por hora           | "si" si es carrera por hora, "no" si no | si, no |
 
 ## Compartir con la cuenta de servicio
 

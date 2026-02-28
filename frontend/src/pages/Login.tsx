@@ -137,7 +137,7 @@ export const Login = () => {
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 flex items-center justify-center px-4 relative">
       <label className="absolute top-4 right-4 flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-gray-200 hover:bg-gray-300 transition text-gray-700" title={largeTextEnabled ? 'Desactivar letras grandes' : 'Activar letras grandes'}>
         <span className="text-sm font-medium">
-          {largeTextEnabled ? 'Agrandar letras' : 'No'}
+          Agrandar letras
         </span>
         <button
           type="button"

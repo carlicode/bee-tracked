@@ -185,37 +185,39 @@ export const NuevaCarrera = () => {
           checkboxClass="text-beezero-yellow focus:ring-beezero-yellow"
         />
 
-        <div>
-          <label htmlFor="lugarRecojo" className={`block text-sm font-medium mb-1 ${porHora ? 'text-gray-500' : 'text-gray-700'}`}>
-            Lugar de Recojo {!porHora && '*'}
-          </label>
-          <input
-            type="text"
-            id="lugarRecojo"
-            required={!porHora}
-            disabled={porHora}
-            value={formData.lugarRecojo}
-            onChange={(e) => setFormData((prev) => ({ ...prev, lugarRecojo: e.target.value }))}
-            className={`w-full border-2 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow ${porHora ? 'border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed' : 'border-gray-300'}`}
-            placeholder="Ej: Tarija, Bolivia"
-          />
-        </div>
+        {!porHora && (
+          <>
+            <div>
+              <label htmlFor="lugarRecojo" className="block text-sm font-medium text-gray-700 mb-1">
+                Lugar de Recojo *
+              </label>
+              <input
+                type="text"
+                id="lugarRecojo"
+                required
+                value={formData.lugarRecojo}
+                onChange={(e) => setFormData((prev) => ({ ...prev, lugarRecojo: e.target.value }))}
+                className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
+                placeholder="Ej: Tarija, Bolivia"
+              />
+            </div>
 
-        <div>
-          <label htmlFor="lugarDestino" className={`block text-sm font-medium mb-1 ${porHora ? 'text-gray-500' : 'text-gray-700'}`}>
-            Lugar de Destino {!porHora && '*'}
-          </label>
-          <input
-            type="text"
-            id="lugarDestino"
-            required={!porHora}
-            disabled={porHora}
-            value={formData.lugarDestino}
-            onChange={(e) => setFormData((prev) => ({ ...prev, lugarDestino: e.target.value }))}
-            className={`w-full border-2 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow ${porHora ? 'border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed' : 'border-gray-300'}`}
-            placeholder="Ej: Capitán ñuflo, Bolivia"
-          />
-        </div>
+            <div>
+              <label htmlFor="lugarDestino" className="block text-sm font-medium text-gray-700 mb-1">
+                Lugar de Destino *
+              </label>
+              <input
+                type="text"
+                id="lugarDestino"
+                required
+                value={formData.lugarDestino}
+                onChange={(e) => setFormData((prev) => ({ ...prev, lugarDestino: e.target.value }))}
+                className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
+                placeholder="Ej: Capitán ñuflo, Bolivia"
+              />
+            </div>
+          </>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
@@ -231,21 +233,22 @@ export const NuevaCarrera = () => {
               placeholder="0:17"
             />
           </div>
-          <div>
-            <label htmlFor="distancia" className={`block text-sm font-medium mb-1 ${porHora ? 'text-gray-500' : 'text-gray-700'}`}>
-              Distancia (km)
-            </label>
-            <input
-              type="number"
-              id="distancia"
-              min="0"
-              step="0.1"
-              disabled={porHora}
-              value={formData.distancia}
-              onChange={(e) => setFormData((prev) => ({ ...prev, distancia: parseFloat(e.target.value) || 0 }))}
-              className={`w-full border-2 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow ${porHora ? 'border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed' : 'border-gray-300'}`}
-            />
-          </div>
+          {!porHora && (
+            <div>
+              <label htmlFor="distancia" className="block text-sm font-medium text-gray-700 mb-1">
+                Distancia (km)
+              </label>
+              <input
+                type="number"
+                id="distancia"
+                min="0"
+                step="0.1"
+                value={formData.distancia}
+                onChange={(e) => setFormData((prev) => ({ ...prev, distancia: parseFloat(e.target.value) || 0 }))}
+                className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
+              />
+            </div>
+          )}
           <div>
             <label htmlFor="precio" className="block text-sm font-medium text-gray-700 mb-1">
               Precio (Bs) *

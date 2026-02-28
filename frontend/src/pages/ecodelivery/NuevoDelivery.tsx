@@ -169,22 +169,25 @@ export const NuevoDelivery = () => {
           checkboxClass="text-ecodelivery-green focus:ring-ecodelivery-green"
         />
 
-        {/* Lugar de Origen */}
-        <div>
-          <label htmlFor="lugarOrigen" className={`block text-sm font-medium mb-1 ${porHora ? 'text-gray-500' : 'text-black'}`}>
-            Lugar de Origen {!porHora && '*'}
-          </label>
-          <input
-            type="text"
-            id="lugarOrigen"
-            required={!porHora}
-            disabled={porHora}
-            value={formData.lugarOrigen}
-            onChange={(e) => setFormData((prev) => ({ ...prev, lugarOrigen: e.target.value }))}
-            placeholder="Ej: Av. 6 de Agosto"
-            className={`w-full border-2 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ecodelivery-green focus:border-ecodelivery-green ${porHora ? 'border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed' : 'border-gray-300'}`}
-          />
-        </div>
+        {!porHora && (
+          <>
+            {/* Lugar de Origen */}
+            <div>
+              <label htmlFor="lugarOrigen" className="block text-sm font-medium text-black mb-1">
+                Lugar de Origen *
+              </label>
+              <input
+                type="text"
+                id="lugarOrigen"
+                required
+                value={formData.lugarOrigen}
+                onChange={(e) => setFormData((prev) => ({ ...prev, lugarOrigen: e.target.value }))}
+                placeholder="Ej: Av. 6 de Agosto"
+                className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ecodelivery-green focus:border-ecodelivery-green"
+              />
+            </div>
+          </>
+        )}
 
         <TimeSelect
           label="Hora Inicio (opcional)"
@@ -193,22 +196,25 @@ export const NuevoDelivery = () => {
           focusRingClass="focus:ring-ecodelivery-green focus:border-ecodelivery-green"
         />
 
-        {/* Lugar de Destino */}
-        <div>
-          <label htmlFor="lugarDestino" className={`block text-sm font-medium mb-1 ${porHora ? 'text-gray-500' : 'text-black'}`}>
-            Lugar de Destino {!porHora && '*'}
-          </label>
-          <input
-            type="text"
-            id="lugarDestino"
-            required={!porHora}
-            disabled={porHora}
-            value={formData.lugarDestino}
-            onChange={(e) => setFormData((prev) => ({ ...prev, lugarDestino: e.target.value }))}
-            placeholder="Ej: Plaza Murillo"
-            className={`w-full border-2 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ecodelivery-green focus:border-ecodelivery-green ${porHora ? 'border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed' : 'border-gray-300'}`}
-          />
-        </div>
+        {!porHora && (
+          <>
+            {/* Lugar de Destino */}
+            <div>
+              <label htmlFor="lugarDestino" className="block text-sm font-medium text-black mb-1">
+                Lugar de Destino *
+              </label>
+              <input
+                type="text"
+                id="lugarDestino"
+                required
+                value={formData.lugarDestino}
+                onChange={(e) => setFormData((prev) => ({ ...prev, lugarDestino: e.target.value }))}
+                placeholder="Ej: Plaza Murillo"
+                className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ecodelivery-green focus:border-ecodelivery-green"
+              />
+            </div>
+          </>
+        )}
 
         <TimeSelect
           label="Hora Fin (opcional)"
@@ -217,23 +223,23 @@ export const NuevoDelivery = () => {
           focusRingClass="focus:ring-ecodelivery-green focus:border-ecodelivery-green"
         />
 
-        {/* Distancia */}
-        <div>
-          <label htmlFor="distancia" className={`block text-sm font-medium mb-1 ${porHora ? 'text-gray-500' : 'text-black'}`}>
-            Distancia (km) {!porHora && '*'}
-          </label>
-          <input
-            type="number"
-            id="distancia"
-            required={!porHora}
-            disabled={porHora}
-            min="0"
-            step="0.1"
-            value={formData.distancia}
-            onChange={(e) => setFormData((prev) => ({ ...prev, distancia: parseFloat(e.target.value) || 0 }))}
-            className={`w-full border-2 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ecodelivery-green focus:border-ecodelivery-green ${porHora ? 'border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed' : 'border-gray-300'}`}
-          />
-        </div>
+        {!porHora && (
+          <div>
+            <label htmlFor="distancia" className="block text-sm font-medium text-black mb-1">
+              Distancia (km) *
+            </label>
+            <input
+              type="number"
+              id="distancia"
+              required
+              min="0"
+              step="0.1"
+              value={formData.distancia}
+              onChange={(e) => setFormData((prev) => ({ ...prev, distancia: parseFloat(e.target.value) || 0 }))}
+              className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ecodelivery-green focus:border-ecodelivery-green"
+            />
+          </div>
+        )}
 
         {/* Notas */}
         <div>
