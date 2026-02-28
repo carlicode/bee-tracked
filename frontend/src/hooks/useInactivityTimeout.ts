@@ -1,13 +1,16 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../services/auth';
 
-// 10 minutos de inactividad (en milisegundos)
-const INACTIVITY_TIMEOUT = 10 * 60 * 1000;
+// 30 minutos de inactividad (en milisegundos) - más tiempo para usuarios que tardan en llenar formularios
+const INACTIVITY_TIMEOUT = 30 * 60 * 1000;
 
-// Eventos que indican actividad del usuario
+// Eventos que indican actividad del usuario (incluye input/change para contar al llenar formularios)
 const ACTIVITY_EVENTS = [
   'mousedown',
   'keydown',
+  'keyup',
+  'input',
+  'change',
   'scroll',
   'touchstart',
   'click',
@@ -34,7 +37,7 @@ export function useInactivityTimeout() {
       if (isAuthenticated()) {
         console.log('⏱️ Sesión expirada por inactividad');
         logout();
-        alert('Tu sesión ha expirado por inactividad. Por favor inicia sesión nuevamente.');
+        alert('Tu sesión ha expirado por inactividad (30 min). Por favor inicia sesión nuevamente.');
       }
     }, INACTIVITY_TIMEOUT);
   }, [logout, isAuthenticated]);

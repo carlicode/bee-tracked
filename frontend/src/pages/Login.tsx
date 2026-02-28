@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../services/auth';
+import { useAccessibility } from '../contexts/AccessibilityContext';
 import { isCognitoConfigured, signIn as cognitoSignIn, getUserTypeFromToken } from '../services/cognito';
 import { storage } from '../services/storage';
 
@@ -10,6 +11,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 export const Login = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { largeTextEnabled, toggleLargeText } = useAccessibility();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -132,7 +134,17 @@ export const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 flex items-center justify-center px-4 relative">
+      <button
+        type="button"
+        onClick={toggleLargeText}
+        className="absolute top-4 right-4 p-2 rounded-lg bg-gray-200 hover:bg-gray-300 transition text-gray-700"
+        title={largeTextEnabled ? 'Letras normales' : 'Letras más grandes'}
+        aria-label={largeTextEnabled ? 'Desactivar letras grandes' : 'Activar letras grandes'}
+      >
+        <span className="text-xl font-bold">A</span>
+        {largeTextEnabled && <span className="text-xs ml-0.5">✓</span>}
+      </button>
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-4">

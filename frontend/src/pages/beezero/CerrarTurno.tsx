@@ -13,9 +13,11 @@ export const CerrarTurno = () => {
   const [turnoInicio, setTurnoInicio] = useState<Partial<Turno> | null>(null);
 
   const [deseaRegistrarDano, setDeseaRegistrarDano] = useState<boolean | null>(null);
-  const [formData, setFormData] = useState<Partial<Turno>>({
-    cierreCaja: 0,
-    qr: 0,
+  const [formData, setFormData] = useState<Partial<Turno> & { cierreCajaStr?: string; qrStr?: string }>({
+    cierreCaja: undefined,
+    qr: undefined,
+    cierreCajaStr: '',
+    qrStr: '',
     kilometraje: undefined,
     danosAuto: 'ninguno',
     fotoPantalla: '',
@@ -89,15 +91,16 @@ export const CerrarTurno = () => {
 
   const calcularDiferencia = () => {
     const apertura = formData.aperturaCaja || 0;
-    const cierre = formData.cierreCaja || 0;
-    const qr = formData.qr || 0;
+    const cierre = formData.cierreCaja ?? (parseFloat((formData as { cierreCajaStr?: string }).cierreCajaStr ?? '') || 0);
+    const qr = formData.qr ?? (parseFloat((formData as { qrStr?: string }).qrStr ?? '') || 0);
     return apertura + qr + cierre;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.cierreCaja || formData.cierreCaja <= 0) {
+    const cierreNum = formData.cierreCaja ?? parseFloat((formData as { cierreCajaStr?: string }).cierreCajaStr ?? '');
+    if (cierreNum == null || isNaN(cierreNum) || cierreNum <= 0) {
       alert('Por favor ingresa el cierre de caja');
       return;
     }
@@ -137,8 +140,8 @@ export const CerrarTurno = () => {
 
       if (turnosApi.isEnabled() && turnoInicio?.id) {
         await turnosApi.cerrar(turnoInicio.id, {
-          cierreCaja: formData.cierreCaja!,
-          qr: formData.qr,
+          cierreCaja: formData.cierreCaja ?? (parseFloat((formData as { cierreCajaStr?: string }).cierreCajaStr ?? '') || 0),
+          qr: formData.qr ?? (parseFloat((formData as { qrStr?: string }).qrStr ?? '') || 0),
           kilometraje: formData.kilometraje,
           danosAuto: danos,
           fotoPantalla: formData.fotoPantalla,
@@ -229,55 +232,71 @@ export const CerrarTurno = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-6 space-y-6">
-        {/* Cierre de Caja */}
+        {/* Cierre de Caja - texto para evitar cero adelante */}
         <div>
           <label htmlFor="cierreCaja" className="block text-sm font-medium text-black mb-1">
             Cierre de Caja (Bs) *
           </label>
           <input
-            type="number"
+            type="text"
+            inputMode="decimal"
             id="cierreCaja"
             required
-            min="0"
-            step="0.01"
-            value={formData.cierreCaja}
-            onChange={(e) => setFormData((prev) => ({ ...prev, cierreCaja: parseFloat(e.target.value) || 0 }))}
+            value={(formData as { cierreCajaStr?: string }).cierreCajaStr ?? (formData.cierreCaja != null && formData.cierreCaja > 0 ? String(formData.cierreCaja) : '')}
+            onChange={(e) => {
+              const raw = e.target.value.replace(',', '.');
+              const soloNumeros = raw.replace(/[^0-9.]/g, '');
+              const partes = soloNumeros.split('.');
+              const valida = partes.length <= 2 && (partes[1]?.length ?? 0) <= 2;
+              const str = valida ? soloNumeros : ((formData as { cierreCajaStr?: string }).cierreCajaStr ?? '');
+              const num = parseFloat(str);
+              setFormData((prev) => ({ ...prev, cierreCajaStr: str, cierreCaja: str === '' ? undefined : (isNaN(num) ? undefined : Math.max(0, num)) }));
+            }}
+            placeholder="Ej: 164"
             className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
           />
         </div>
 
-        {/* QR */}
+        {/* QR - texto para evitar cero adelante */}
         <div>
           <label htmlFor="qr" className="block text-sm font-medium text-black mb-1">
             QR (Bs)
           </label>
           <input
-            type="number"
+            type="text"
+            inputMode="decimal"
             id="qr"
-            min="0"
-            step="0.01"
-            value={formData.qr === 0 ? '' : formData.qr}
-            onChange={(e) => setFormData((prev) => ({ ...prev, qr: parseFloat(e.target.value) || 0 }))}
+            value={(formData as { qrStr?: string }).qrStr ?? (formData.qr != null && formData.qr > 0 ? String(formData.qr) : '')}
+            onChange={(e) => {
+              const raw = e.target.value.replace(',', '.');
+              const soloNumeros = raw.replace(/[^0-9.]/g, '');
+              const partes = soloNumeros.split('.');
+              const valida = partes.length <= 2 && (partes[1]?.length ?? 0) <= 2;
+              const str = valida ? soloNumeros : ((formData as { qrStr?: string }).qrStr ?? '');
+              const num = parseFloat(str);
+              setFormData((prev) => ({ ...prev, qrStr: str, qr: str === '' ? undefined : (isNaN(num) ? undefined : Math.max(0, num)) }));
+            }}
+            placeholder="Ej: 0"
             className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
           />
         </div>
 
         {/* Resumen de Caja */}
-        {formData.cierreCaja && formData.cierreCaja > 0 && (
+        {(formData.cierreCaja ?? parseFloat((formData as { cierreCajaStr?: string }).cierreCajaStr ?? '')) > 0 && (
           <div className="bg-gray-50 rounded-lg p-4">
             <div className="flex justify-between mb-2">
               <span className="text-gray-700">Apertura:</span>
               <span className="font-semibold">Bs {formData.aperturaCaja}</span>
             </div>
-            {formData.qr && formData.qr > 0 && (
+            {(formData.qr ?? parseFloat((formData as { qrStr?: string }).qrStr ?? '')) > 0 && (
               <div className="flex justify-between mb-2">
                 <span className="text-gray-700">QR:</span>
-                <span className="font-semibold">Bs {formData.qr}</span>
-              </div>
+              <span className="font-semibold">Bs {formData.qr ?? parseFloat((formData as { qrStr?: string }).qrStr ?? '')}</span>
+            </div>
             )}
             <div className="flex justify-between mb-2">
               <span className="text-gray-700">Cierre:</span>
-              <span className="font-semibold">Bs {formData.cierreCaja}</span>
+              <span className="font-semibold">Bs {formData.cierreCaja ?? parseFloat((formData as { cierreCajaStr?: string }).cierreCajaStr ?? '')}</span>
             </div>
             <div className="border-t pt-2 mt-2 flex justify-between">
               <span className="font-bold text-black">Diferencia:</span>
@@ -327,19 +346,22 @@ export const CerrarTurno = () => {
           </button>
         </div>
 
-        {/* Kilometraje */}
+        {/* Kilometraje - texto libre */}
         <div>
           <label htmlFor="kilometraje" className="block text-sm font-medium text-black mb-1">
             Kilometraje
           </label>
           <input
-            type="number"
+            type="text"
             id="kilometraje"
-            min={0}
-            value={formData.kilometraje ?? ''}
+            value={formData.kilometraje != null ? String(formData.kilometraje) : ''}
             onChange={(e) => {
-              const valor = e.target.value === '' ? undefined : Number(e.target.value);
-              setFormData((prev) => ({ ...prev, kilometraje: valor !== undefined && valor >= 0 ? valor : undefined }));
+              const str = e.target.value;
+              const num = parseFloat(str);
+              setFormData((prev) => ({
+                ...prev,
+                kilometraje: str === '' ? undefined : (isNaN(num) ? undefined : num),
+              }));
             }}
             placeholder="Km"
             className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"

@@ -16,11 +16,13 @@ export const IniciarTurno = () => {
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   const [deseaRegistrarDano, setDeseaRegistrarDano] = useState<boolean | null>(null);
-  const [formData, setFormData] = useState<Partial<Turno>>({
+  const [formData, setFormData] = useState<Partial<Turno> & { aperturaCajaStr?: string; kilometrajeStr?: string }>({
     abejita: user?.driverName || '',
-    aperturaCaja: 0,
+    aperturaCaja: undefined,
     auto: '',
     kilometraje: undefined,
+    aperturaCajaStr: '',
+    kilometrajeStr: '',
     danosAuto: 'ninguno',
     fotoPantalla: '',
     fotoExterior: '',
@@ -76,7 +78,7 @@ export const IniciarTurno = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const aperturaValida = formData.aperturaCaja != null && formData.aperturaCaja >= 0;
+    const aperturaValida = formData.aperturaCaja != null && formData.aperturaCaja >= 0 && !isNaN(formData.aperturaCaja);
     if (!formData.abejita || !formData.auto || !aperturaValida) {
       alert('Por favor completa todos los campos requeridos');
       return;
@@ -177,23 +179,28 @@ export const IniciarTurno = () => {
           />
         </div>
 
-        {/* Apertura de Caja */}
+        {/* Apertura de Caja - texto para evitar cero adelante */}
         <div>
           <label htmlFor="aperturaCaja" className="block text-sm font-medium text-black mb-1">
             Apertura de Caja (Bs) *
           </label>
           <input
-            type="number"
+            type="text"
+            inputMode="decimal"
             id="aperturaCaja"
             required
-            min="0"
-            step="0.01"
-            value={formData.aperturaCaja}
+            value={formData.aperturaCajaStr ?? (formData.aperturaCaja != null && formData.aperturaCaja > 0 ? String(formData.aperturaCaja) : '')}
             onChange={(e) => {
-              const valor = parseFloat(e.target.value);
-              const aperturaCaja = isNaN(valor) ? 0 : Math.max(0, valor);
-              setFormData((prev) => ({ ...prev, aperturaCaja }));
+              const raw = e.target.value.replace(',', '.');
+              const soloNumeros = raw.replace(/[^0-9.]/g, '');
+              const partes = soloNumeros.split('.');
+              const valida = partes.length <= 2 && (partes[1]?.length ?? 0) <= 2;
+              const str = valida ? soloNumeros : (formData.aperturaCajaStr ?? '');
+              const num = parseFloat(str);
+              const aperturaCaja = str === '' ? undefined : (isNaN(num) ? undefined : Math.max(0, num));
+              setFormData((prev) => ({ ...prev, aperturaCajaStr: str, aperturaCaja }));
             }}
+            placeholder="Ej: 4455"
             className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
           />
         </div>
@@ -243,19 +250,23 @@ export const IniciarTurno = () => {
           </button>
         </div>
 
-        {/* Kilometraje */}
+        {/* Kilometraje - texto libre */}
         <div>
           <label htmlFor="kilometraje" className="block text-sm font-medium text-black mb-1">
             Kilometraje
           </label>
           <input
-            type="number"
+            type="text"
             id="kilometraje"
-            min={0}
-            value={formData.kilometraje ?? ''}
+            value={formData.kilometrajeStr ?? (formData.kilometraje != null ? String(formData.kilometraje) : '')}
             onChange={(e) => {
-              const valor = e.target.value === '' ? undefined : Number(e.target.value);
-              setFormData((prev) => ({ ...prev, kilometraje: valor !== undefined && valor >= 0 ? valor : undefined }));
+              const str = e.target.value;
+              const num = parseFloat(str);
+              setFormData((prev) => ({
+                ...prev,
+                kilometrajeStr: str,
+                kilometraje: str === '' ? undefined : (isNaN(num) ? undefined : num),
+              }));
             }}
             placeholder="Km"
             className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"

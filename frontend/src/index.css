@@ -11,3 +11,21 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Accesibilidad: letras más grandes para usuarios con dificultad visual */
+html.bee-tracked-large-text {
+  font-size: 18px;
+}
+html.bee-tracked-large-text body,
+html.bee-tracked-large-text input,
+html.bee-tracked-large-text select,
+html.bee-tracked-large-text textarea,
+html.bee-tracked-large-text button,
+html.bee-tracked-large-text label,
+html.bee-tracked-large-text p,
+html.bee-tracked-large-text span {
+  font-size: 1.1em !important;
+}
+html.bee-tracked-large-text h1 { font-size: 1.8em !important; }
+html.bee-tracked-large-text h2 { font-size: 1.5em !important; }
+html.bee-tracked-large-text h3 { font-size: 1.3em !important; }
+

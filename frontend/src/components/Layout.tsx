@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../services/auth';
+import { useAccessibility } from '../contexts/AccessibilityContext';
 
 interface LayoutProps {
   children: ReactNode;
@@ -9,6 +10,7 @@ interface LayoutProps {
 export const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate();
   const { logout, getCurrentUser, getUserType } = useAuth();
+  const { largeTextEnabled, toggleLargeText } = useAccessibility();
   const user = getCurrentUser();
   const userType = getUserType() || 'beezero';
 
@@ -43,8 +45,18 @@ export const Layout = ({ children }: LayoutProps) => {
               </div>
             </div>
             {user && (
-              <div className="flex items-center gap-4">
-                <span className={`text-sm font-medium ${textClass}`}>
+              <div className="flex items-center gap-2 sm:gap-4">
+                <button
+                  type="button"
+                  onClick={toggleLargeText}
+                  className={`p-1.5 rounded-lg ${textClass} hover:opacity-80 transition`}
+                  title={largeTextEnabled ? 'Letras normales' : 'Letras más grandes'}
+                  aria-label={largeTextEnabled ? 'Desactivar letras grandes' : 'Activar letras grandes'}
+                >
+                  <span className="text-lg font-bold" style={{ lineHeight: 1 }}>A</span>
+                  {largeTextEnabled && <span className="text-xs ml-0.5">✓</span>}
+                </button>
+                <span className={`text-sm font-medium ${textClass} hidden sm:inline`}>
                   {user.driverName}
                 </span>
                 <button

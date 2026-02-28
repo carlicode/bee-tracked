@@ -31,7 +31,7 @@ export const turnosApi = {
     abejita: string;
     auto: string;
     aperturaCaja: number;
-    kilometraje?: number;
+    kilometraje?: number | string;
     danosAuto?: string;
     fotoPantalla?: string;
     fotoExterior?: string;
@@ -63,7 +63,7 @@ export const turnosApi = {
     payload: {
       cierreCaja: number;
       qr?: number;
-      kilometraje?: number;
+      kilometraje?: number | string;
       danosAuto?: string;
       fotoPantalla?: string;
       fotoExterior?: string;
