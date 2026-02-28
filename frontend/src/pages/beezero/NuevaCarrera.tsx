@@ -1,18 +1,23 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth';
+import { useToast } from '../../contexts/ToastContext';
 import { apiService } from '../../services/api';
 import { beezeroApi, isBeezeroApiEnabled } from '../../services/beezeroApi';
 import { storage } from '../../services/storage';
 import { formatters } from '../../utils/formatters';
+import { DEFAULT_CLIENTES } from '../../config/constants';
 import { TimeSelect } from '../../components/TimeSelect';
+import { PorHoraCheckbox } from '../../components/PorHoraCheckbox';
 import type { Carrera } from '../../types';
 
 export const NuevaCarrera = () => {
   const navigate = useNavigate();
+  const toast = useToast();
   const { getCurrentUser } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [clientes, setClientes] = useState<string[]>([]);
+  const [clientesApi, setClientesApi] = useState<string[]>([]);
+  const clientesOpciones = [...new Set([...DEFAULT_CLIENTES, ...clientesApi])];
   
   const [formData, setFormData] = useState<Partial<Carrera>>({
     fecha: new Date().toISOString().split('T')[0],
@@ -24,8 +29,11 @@ export const NuevaCarrera = () => {
     tiempo: '',
     distancia: 0,
     precio: 0,
+    porHora: false,
     observaciones: '',
   });
+
+  const porHora = formData.porHora ?? false;
 
   const handleClienteChange = async (value: string) => {
     setFormData((prev) => ({ ...prev, cliente: value }));
@@ -34,21 +42,25 @@ export const NuevaCarrera = () => {
       try {
         const response = await apiService.autocompleteClientes(value);
         if (response.success && response.data) {
-          setClientes(response.data);
+          setClientesApi(response.data);
         }
       } catch (error) {
         console.error('Error autocompletando clientes:', error);
       }
     } else {
-      setClientes([]);
+      setClientesApi([]);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.cliente || !formData.lugarRecojo || !formData.lugarDestino || formData.precio == null) {
-      alert('Por favor completa todos los campos requeridos');
+
+    if (!formData.cliente || formData.precio == null) {
+      toast.show('Por favor completa todos los campos requeridos', 'info');
+      return;
+    }
+    if (!porHora && (!formData.lugarRecojo || !formData.lugarDestino)) {
+      toast.show('Por favor completa Lugar de Recojo y Lugar de Destino', 'info');
       return;
     }
 
@@ -56,7 +68,7 @@ export const NuevaCarrera = () => {
       setLoading(true);
       const token = storage.getToken();
       if (!token) {
-        alert('Sesión expirada. Por favor inicia sesión nuevamente.');
+        toast.show('Sesión expirada. Por favor inicia sesión nuevamente.', 'error');
         navigate('/');
         return;
       }
@@ -65,24 +77,35 @@ export const NuevaCarrera = () => {
         const user = getCurrentUser();
         const abejita = user?.name || user?.driverName || '';
         if (!abejita) {
-          alert('No se pudo obtener el nombre del conductor. Inicia sesión nuevamente.');
+          toast.show('No se pudo obtener el nombre del conductor. Inicia sesión nuevamente.', 'error');
           return;
         }
-        await beezeroApi.registrarCarrera(abejita, formData as Carrera);
-        alert('Carrera registrada exitosamente');
+        await beezeroApi.registrarCarrera(abejita, {
+          ...formData,
+          lugarRecojo: porHora ? '' : formData.lugarRecojo,
+          lugarDestino: porHora ? '' : formData.lugarDestino,
+          distancia: porHora ? 0 : (formData.distancia ?? 0),
+        } as Carrera);
+        toast.show('Carrera registrada exitosamente', 'success');
         navigate('/beezero/dashboard');
       } else {
-        const response = await apiService.createCarrera(formData as Carrera, token);
+        const payload: Carrera = {
+          ...(formData as Carrera),
+          lugarRecojo: porHora ? '' : (formData.lugarRecojo ?? ''),
+          lugarDestino: porHora ? '' : (formData.lugarDestino ?? ''),
+          distancia: porHora ? 0 : (formData.distancia ?? 0),
+        };
+        const response = await apiService.createCarrera(payload, token);
         if (response.success) {
-          alert('Carrera registrada exitosamente');
+          toast.show('Carrera registrada exitosamente', 'success');
           navigate('/beezero/dashboard');
         } else {
-          alert(response.error || 'Error al registrar la carrera');
+          toast.show(response.error || 'Error al registrar la carrera', 'error');
         }
       }
     } catch (error) {
       console.error('Error guardando carrera:', error);
-      alert(error instanceof Error ? error.message : 'Error al registrar la carrera. Intenta nuevamente.');
+      toast.show(error instanceof Error ? error.message : 'Error al registrar la carrera. Intenta nuevamente.', 'error');
     } finally {
       setLoading(false);
     }
@@ -131,15 +154,16 @@ export const NuevaCarrera = () => {
             onChange={(e) => handleClienteChange(e.target.value)}
             className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
             list="clientes-list"
+            placeholder="Selecciona o escribe el nombre del cliente"
           />
           <datalist id="clientes-list">
-            {clientes.map((cliente, index) => (
+            {clientesOpciones.map((cliente, index) => (
               <option key={index} value={cliente} />
             ))}
           </datalist>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <TimeSelect
             label="Hora Inicio"
             required
@@ -155,37 +179,45 @@ export const NuevaCarrera = () => {
           />
         </div>
 
+        <PorHoraCheckbox
+          checked={porHora}
+          onChange={(v) => setFormData((prev) => ({ ...prev, porHora: v }))}
+          checkboxClass="text-beezero-yellow focus:ring-beezero-yellow"
+        />
+
         <div>
-          <label htmlFor="lugarRecojo" className="block text-sm font-medium text-gray-700 mb-1">
-            Lugar de Recojo *
+          <label htmlFor="lugarRecojo" className={`block text-sm font-medium mb-1 ${porHora ? 'text-gray-500' : 'text-gray-700'}`}>
+            Lugar de Recojo {!porHora && '*'}
           </label>
           <input
             type="text"
             id="lugarRecojo"
-            required
+            required={!porHora}
+            disabled={porHora}
             value={formData.lugarRecojo}
             onChange={(e) => setFormData((prev) => ({ ...prev, lugarRecojo: e.target.value }))}
-            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
+            className={`w-full border-2 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow ${porHora ? 'border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed' : 'border-gray-300'}`}
             placeholder="Ej: Tarija, Bolivia"
           />
         </div>
 
         <div>
-          <label htmlFor="lugarDestino" className="block text-sm font-medium text-gray-700 mb-1">
-            Lugar de Destino *
+          <label htmlFor="lugarDestino" className={`block text-sm font-medium mb-1 ${porHora ? 'text-gray-500' : 'text-gray-700'}`}>
+            Lugar de Destino {!porHora && '*'}
           </label>
           <input
             type="text"
             id="lugarDestino"
-            required
+            required={!porHora}
+            disabled={porHora}
             value={formData.lugarDestino}
             onChange={(e) => setFormData((prev) => ({ ...prev, lugarDestino: e.target.value }))}
-            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
+            className={`w-full border-2 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow ${porHora ? 'border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed' : 'border-gray-300'}`}
             placeholder="Ej: Capitán ñuflo, Bolivia"
           />
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label htmlFor="tiempo" className="block text-sm font-medium text-gray-700 mb-1">
               Tiempo
@@ -200,7 +232,7 @@ export const NuevaCarrera = () => {
             />
           </div>
           <div>
-            <label htmlFor="distancia" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="distancia" className={`block text-sm font-medium mb-1 ${porHora ? 'text-gray-500' : 'text-gray-700'}`}>
               Distancia (km)
             </label>
             <input
@@ -208,9 +240,10 @@ export const NuevaCarrera = () => {
               id="distancia"
               min="0"
               step="0.1"
+              disabled={porHora}
               value={formData.distancia}
               onChange={(e) => setFormData((prev) => ({ ...prev, distancia: parseFloat(e.target.value) || 0 }))}
-              className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
+              className={`w-full border-2 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow ${porHora ? 'border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed' : 'border-gray-300'}`}
             />
           </div>
           <div>

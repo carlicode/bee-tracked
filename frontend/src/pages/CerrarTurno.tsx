@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LoadingSpinner } from '../components/LoadingSpinner';
+import { useToast } from '../contexts/ToastContext';
 import { formatters } from '../utils/formatters';
 import type { Turno } from '../types/turno';
 
 export const CerrarTurno = () => {
   const navigate = useNavigate();
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -37,7 +39,7 @@ export const CerrarTurno = () => {
 
   const handleGetLocation = () => {
     if (!navigator.geolocation) {
-      alert('La geolocalización no está disponible en tu dispositivo');
+      toast.show('La geolocalización no está disponible en tu dispositivo', 'error');
       return;
     }
 
@@ -52,7 +54,7 @@ export const CerrarTurno = () => {
       },
       (error) => {
         console.error('Error obteniendo ubicación:', error);
-        alert('Error al obtener la ubicación. Asegúrate de permitir el acceso a la ubicación.');
+        toast.show('Error al obtener la ubicación. Asegúrate de permitir el acceso a la ubicación.', 'error');
         setLocationLoading(false);
       },
       {
@@ -68,7 +70,7 @@ export const CerrarTurno = () => {
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('La imagen es muy grande. Máximo 5MB');
+      toast.show('La imagen es muy grande. Máximo 5MB', 'error');
       return;
     }
 
@@ -93,12 +95,12 @@ export const CerrarTurno = () => {
     e.preventDefault();
 
     if (!formData.cierreCaja || formData.cierreCaja <= 0) {
-      alert('Por favor ingresa el cierre de caja');
+      toast.show('Por favor ingresa el cierre de caja', 'info');
       return;
     }
 
     if (!location) {
-      alert('Por favor obtén tu ubicación antes de cerrar el turno');
+      toast.show('Por favor obtén tu ubicación antes de cerrar el turno', 'info');
       return;
     }
 
@@ -127,11 +129,11 @@ export const CerrarTurno = () => {
       localStorage.setItem('turnos_historial', JSON.stringify(turnosHistorial));
       localStorage.removeItem('turno_actual');
       
-      alert('Turno cerrado exitosamente');
+      toast.show('Turno cerrado exitosamente', 'success');
       navigate('/dashboard');
     } catch (error) {
       console.error('Error cerrando turno:', error);
-      alert('Error al cerrar el turno. Intenta nuevamente.');
+      toast.show('Error al cerrar el turno. Intenta nuevamente.', 'error');
     } finally {
       setLoading(false);
     }

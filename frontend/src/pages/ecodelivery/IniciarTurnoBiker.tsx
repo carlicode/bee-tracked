@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth';
+import { useToast } from '../../contexts/ToastContext';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { storage } from '../../services/storage';
 import { useImageUpload } from '../../hooks/useImageUpload';
@@ -10,6 +11,7 @@ import type { TurnoSimple } from '../../types/turno';
 
 export const IniciarTurnoBiker = () => {
   const navigate = useNavigate();
+  const toast = useToast();
   const { getCurrentUser } = useAuth();
   const user = getCurrentUser();
   const [loading, setLoading] = useState(false);
@@ -19,7 +21,7 @@ export const IniciarTurnoBiker = () => {
 
   const handleGetLocationAndStart = () => {
     if (!navigator.geolocation) {
-      alert('La geolocalización no está disponible en tu dispositivo');
+      toast.show('La geolocalización no está disponible en tu dispositivo', 'error');
       return;
     }
 
@@ -37,7 +39,7 @@ export const IniciarTurnoBiker = () => {
       },
       (error) => {
         console.error('Error obteniendo ubicación:', error);
-        alert('Error al obtener la ubicación. Asegúrate de permitir el acceso a la ubicación.');
+        toast.show('Error al obtener la ubicación. Asegúrate de permitir el acceso a la ubicación.', 'error');
         setLocationLoading(false);
       },
       {
@@ -63,7 +65,7 @@ export const IniciarTurnoBiker = () => {
           photoUrl = url;
         } catch (err) {
           console.error('Error subiendo foto:', err);
-          alert('No se pudo subir la foto. ¿Backend y S3 configurados? Puedes iniciar turno sin foto.');
+          toast.show('No se pudo subir la foto. ¿Backend y S3 configurados? Puedes iniciar turno sin foto.', 'error');
         }
       }
 
@@ -87,7 +89,7 @@ export const IniciarTurnoBiker = () => {
           turnoId = res.turnoId;
         } catch (err) {
           console.error('Error registrando turno en sheet:', err);
-          alert('Turno guardado localmente. No se pudo registrar en el Sheet (¿backend y GOOGLE_SHEET_ID configurados?).');
+          toast.show('Turno guardado localmente. No se pudo registrar en el Sheet (¿backend y GOOGLE_SHEET_ID configurados?).', 'info');
         }
       }
 
@@ -106,11 +108,11 @@ export const IniciarTurnoBiker = () => {
       };
 
       storage.setItem('turno_actual_biker', turnoData);
-      alert('¡Turno iniciado exitosamente!');
+      toast.show('¡Turno iniciado exitosamente!', 'success');
       navigate('/ecodelivery/dashboard');
     } catch (error) {
       console.error('Error iniciando turno:', error);
-      alert('Error al iniciar el turno. Intenta nuevamente.');
+      toast.show('Error al iniciar el turno. Intenta nuevamente.', 'error');
     } finally {
       setLoading(false);
     }

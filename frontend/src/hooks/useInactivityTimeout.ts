@@ -1,5 +1,6 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../services/auth';
+import { useToast } from '../contexts/ToastContext';
 
 // 30 minutos de inactividad (en milisegundos) - más tiempo para usuarios que tardan en llenar formularios
 const INACTIVITY_TIMEOUT = 30 * 60 * 1000;
@@ -21,6 +22,7 @@ const ACTIVITY_EVENTS = [
  */
 export function useInactivityTimeout() {
   const { logout, isAuthenticated } = useAuth();
+  const toast = useToast();
   const timeoutRef = useRef<number | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
 
@@ -36,11 +38,14 @@ export function useInactivityTimeout() {
     timeoutRef.current = window.setTimeout(() => {
       if (isAuthenticated()) {
         console.log('⏱️ Sesión expirada por inactividad');
-        logout();
-        alert('Tu sesión ha expirado por inactividad (30 min). Por favor inicia sesión nuevamente.');
+        toast.show('Tu sesión ha expirado por inactividad (30 min). Por favor inicia sesión nuevamente.', 'info', {
+          onClose: () => {
+            logout();
+          },
+        });
       }
     }, INACTIVITY_TIMEOUT);
-  }, [logout, isAuthenticated]);
+  }, [logout, isAuthenticated, toast]);
 
   useEffect(() => {
     // Solo activar si el usuario está autenticado

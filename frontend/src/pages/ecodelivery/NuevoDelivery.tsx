@@ -1,15 +1,19 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth';
+import { useToast } from '../../contexts/ToastContext';
 import { storage } from '../../services/storage';
 import { useImageUpload } from '../../hooks/useImageUpload';
+import { DEFAULT_CLIENTES } from '../../config/constants';
 import { ecodeliveryApi, isEcodeliveryApiEnabled } from '../../services/ecodeliveryApi';
 import { formatters } from '../../utils/formatters';
 import { TimeSelect } from '../../components/TimeSelect';
+import { PorHoraCheckbox } from '../../components/PorHoraCheckbox';
 import type { Delivery } from '../../types';
 
 export const NuevoDelivery = () => {
   const navigate = useNavigate();
+  const toast = useToast();
   const { getCurrentUser } = useAuth();
   const user = getCurrentUser();
   const [loading, setLoading] = useState(false);
@@ -29,11 +33,17 @@ export const NuevoDelivery = () => {
     notas: '',
   });
 
+  const porHora = formData.porHora ?? false;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.cliente || !formData.lugarOrigen || !formData.lugarDestino || !formData.distancia) {
-      alert('Por favor completa todos los campos requeridos');
+    if (!formData.cliente) {
+      toast.show('Por favor completa todos los campos requeridos', 'info');
+      return;
+    }
+    if (!porHora && (!formData.lugarOrigen || !formData.lugarDestino || formData.distancia == null)) {
+      toast.show('Por favor completa Lugar de Origen, Lugar de Destino y Distancia', 'info');
       return;
     }
 
@@ -54,7 +64,7 @@ export const NuevoDelivery = () => {
           photoUrl = url;
         } catch (err) {
           console.error('Error subiendo foto:', err);
-          alert('No se pudo subir la foto. El delivery se registrará sin foto.');
+          toast.show('No se pudo subir la foto. El delivery se registrará sin foto.', 'error');
         }
       }
 
@@ -63,10 +73,10 @@ export const NuevoDelivery = () => {
           await ecodeliveryApi.registrarDelivery({
             bikerName,
             cliente: formData.cliente,
-            lugarOrigen: formData.lugarOrigen,
-            lugarDestino: formData.lugarDestino,
-            distancia: formData.distancia,
-            porHora: formData.porHora ?? false,
+            lugarOrigen: porHora ? '' : (formData.lugarOrigen ?? ''),
+            lugarDestino: porHora ? '' : (formData.lugarDestino ?? ''),
+            distancia: porHora ? 0 : (formData.distancia ?? 0),
+            porHora,
             notas: formData.notas?.trim() || undefined,
             fechaRegistro: fecha,
             horaRegistro,
@@ -76,7 +86,7 @@ export const NuevoDelivery = () => {
           });
         } catch (err) {
           console.error('Error registrando delivery en sheet:', err);
-          alert('Delivery guardado localmente. No se pudo registrar en Carreras_bikers (¿backend y CARRERAS_BIKERS_SHEET_ID configurados?).');
+          toast.show('Delivery guardado localmente. No se pudo registrar en Carreras_bikers (¿backend y CARRERAS_BIKERS_SHEET_ID configurados?).', 'info');
         }
       }
 
@@ -84,9 +94,9 @@ export const NuevoDelivery = () => {
         bikerName,
         fecha,
         cliente: formData.cliente,
-        lugarOrigen: formData.lugarOrigen,
-        lugarDestino: formData.lugarDestino,
-        distancia: formData.distancia,
+        lugarOrigen: porHora ? '' : (formData.lugarOrigen ?? ''),
+        lugarDestino: porHora ? '' : (formData.lugarDestino ?? ''),
+        distancia: porHora ? 0 : (formData.distancia ?? 0),
         horaInicio: formData.horaInicio?.trim() || undefined,
         horaFin: formData.horaFin?.trim() || undefined,
         porHora: formData.porHora ?? false,
@@ -100,11 +110,11 @@ export const NuevoDelivery = () => {
       historial.unshift(deliveryData);
       storage.setItem('historial_deliveries', historial);
       
-      alert('Delivery registrado exitosamente');
+      toast.show('Delivery registrado exitosamente', 'success');
       navigate('/ecodelivery/dashboard');
     } catch (error) {
       console.error('Error registrando delivery:', error);
-      alert('Error al registrar el delivery. Intenta nuevamente.');
+      toast.show('Error al registrar el delivery. Intenta nuevamente.', 'error');
     } finally {
       setLoading(false);
     }
@@ -142,24 +152,37 @@ export const NuevoDelivery = () => {
             required
             value={formData.cliente}
             onChange={(e) => setFormData((prev) => ({ ...prev, cliente: e.target.value }))}
-            placeholder="Nombre del cliente"
+            placeholder="Selecciona o escribe el nombre del cliente"
+            list="clientes-delivery-list"
             className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ecodelivery-green focus:border-ecodelivery-green"
           />
+          <datalist id="clientes-delivery-list">
+            {DEFAULT_CLIENTES.map((cliente, index) => (
+              <option key={index} value={cliente} />
+            ))}
+          </datalist>
         </div>
+
+        <PorHoraCheckbox
+          checked={porHora}
+          onChange={(v) => setFormData((prev) => ({ ...prev, porHora: v }))}
+          checkboxClass="text-ecodelivery-green focus:ring-ecodelivery-green"
+        />
 
         {/* Lugar de Origen */}
         <div>
-          <label htmlFor="lugarOrigen" className="block text-sm font-medium text-black mb-1">
-            Lugar de Origen *
+          <label htmlFor="lugarOrigen" className={`block text-sm font-medium mb-1 ${porHora ? 'text-gray-500' : 'text-black'}`}>
+            Lugar de Origen {!porHora && '*'}
           </label>
           <input
             type="text"
             id="lugarOrigen"
-            required
+            required={!porHora}
+            disabled={porHora}
             value={formData.lugarOrigen}
             onChange={(e) => setFormData((prev) => ({ ...prev, lugarOrigen: e.target.value }))}
             placeholder="Ej: Av. 6 de Agosto"
-            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ecodelivery-green focus:border-ecodelivery-green"
+            className={`w-full border-2 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ecodelivery-green focus:border-ecodelivery-green ${porHora ? 'border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed' : 'border-gray-300'}`}
           />
         </div>
 
@@ -172,17 +195,18 @@ export const NuevoDelivery = () => {
 
         {/* Lugar de Destino */}
         <div>
-          <label htmlFor="lugarDestino" className="block text-sm font-medium text-black mb-1">
-            Lugar de Destino *
+          <label htmlFor="lugarDestino" className={`block text-sm font-medium mb-1 ${porHora ? 'text-gray-500' : 'text-black'}`}>
+            Lugar de Destino {!porHora && '*'}
           </label>
           <input
             type="text"
             id="lugarDestino"
-            required
+            required={!porHora}
+            disabled={porHora}
             value={formData.lugarDestino}
             onChange={(e) => setFormData((prev) => ({ ...prev, lugarDestino: e.target.value }))}
             placeholder="Ej: Plaza Murillo"
-            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ecodelivery-green focus:border-ecodelivery-green"
+            className={`w-full border-2 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ecodelivery-green focus:border-ecodelivery-green ${porHora ? 'border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed' : 'border-gray-300'}`}
           />
         </div>
 
@@ -195,33 +219,20 @@ export const NuevoDelivery = () => {
 
         {/* Distancia */}
         <div>
-          <label htmlFor="distancia" className="block text-sm font-medium text-black mb-1">
-            Distancia (km) *
+          <label htmlFor="distancia" className={`block text-sm font-medium mb-1 ${porHora ? 'text-gray-500' : 'text-black'}`}>
+            Distancia (km) {!porHora && '*'}
           </label>
           <input
             type="number"
             id="distancia"
-            required
+            required={!porHora}
+            disabled={porHora}
             min="0"
             step="0.1"
             value={formData.distancia}
             onChange={(e) => setFormData((prev) => ({ ...prev, distancia: parseFloat(e.target.value) || 0 }))}
-            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ecodelivery-green focus:border-ecodelivery-green"
+            className={`w-full border-2 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ecodelivery-green focus:border-ecodelivery-green ${porHora ? 'border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed' : 'border-gray-300'}`}
           />
-        </div>
-
-        {/* Carrera por hora */}
-        <div className="flex items-center gap-3">
-          <input
-            type="checkbox"
-            id="porHora"
-            checked={formData.porHora ?? false}
-            onChange={(e) => setFormData((prev) => ({ ...prev, porHora: e.target.checked }))}
-            className="w-5 h-5 rounded border-2 border-gray-300 text-ecodelivery-green focus:ring-ecodelivery-green"
-          />
-          <label htmlFor="porHora" className="text-sm font-medium text-black">
-            Carrera por hora
-          </label>
         </div>
 
         {/* Notas */}

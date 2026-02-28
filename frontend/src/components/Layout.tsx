@@ -46,16 +46,23 @@ export const Layout = ({ children }: LayoutProps) => {
             </div>
             {user && (
               <div className="flex items-center gap-2 sm:gap-4">
-                <button
-                  type="button"
-                  onClick={toggleLargeText}
-                  className={`p-1.5 rounded-lg ${textClass} hover:opacity-80 transition`}
-                  title={largeTextEnabled ? 'Letras normales' : 'Letras más grandes'}
-                  aria-label={largeTextEnabled ? 'Desactivar letras grandes' : 'Activar letras grandes'}
-                >
-                  <span className="text-lg font-bold" style={{ lineHeight: 1 }}>A</span>
-                  {largeTextEnabled && <span className="text-xs ml-0.5">✓</span>}
-                </button>
+                <label className="flex items-center gap-2 cursor-pointer" title={largeTextEnabled ? 'Desactivar letras grandes' : 'Activar letras grandes'}>
+                  <span className={`text-sm font-medium ${textClass}`}>
+                    {largeTextEnabled ? 'Agrandar letras' : 'No'}
+                  </span>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={largeTextEnabled}
+                    aria-label={largeTextEnabled ? 'Desactivar letras grandes' : 'Activar letras grandes'}
+                    onClick={toggleLargeText}
+                    className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors ${largeTextEnabled ? (userType === 'beezero' ? 'bg-black' : 'bg-white') : 'bg-gray-300'}`}
+                  >
+                    <span
+                      className={`inline-block h-5 w-5 transform rounded-full transition-transform shadow ${largeTextEnabled ? (userType === 'beezero' ? 'bg-beezero-yellow translate-x-6' : 'bg-ecodelivery-green translate-x-6') : 'bg-white translate-x-0.5'}`}
+                    />
+                  </button>
+                </label>
                 <span className={`text-sm font-medium ${textClass} hidden sm:inline`}>
                   {user.driverName}
                 </span>

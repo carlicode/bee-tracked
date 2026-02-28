@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../services/auth';
 import { LoadingSpinner } from '../components/LoadingSpinner';
+import { useToast } from '../contexts/ToastContext';
 import { formatters } from '../utils/formatters';
 import type { Turno } from '../types/turno';
 
 export const IniciarTurno = () => {
   const navigate = useNavigate();
+  const toast = useToast();
   const { getCurrentUser } = useAuth();
   const user = getCurrentUser();
   const [loading, setLoading] = useState(false);
@@ -24,7 +26,7 @@ export const IniciarTurno = () => {
 
   const handleGetLocation = () => {
     if (!navigator.geolocation) {
-      alert('La geolocalización no está disponible en tu dispositivo');
+      toast.show('La geolocalización no está disponible en tu dispositivo', 'error');
       return;
     }
 
@@ -39,7 +41,7 @@ export const IniciarTurno = () => {
       },
       (error) => {
         console.error('Error obteniendo ubicación:', error);
-        alert('Error al obtener la ubicación. Asegúrate de permitir el acceso a la ubicación.');
+        toast.show('Error al obtener la ubicación. Asegúrate de permitir el acceso a la ubicación.', 'error');
         setLocationLoading(false);
       },
       {
@@ -55,7 +57,7 @@ export const IniciarTurno = () => {
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('La imagen es muy grande. Máximo 5MB');
+      toast.show('La imagen es muy grande. Máximo 5MB', 'error');
       return;
     }
 
@@ -73,12 +75,12 @@ export const IniciarTurno = () => {
     e.preventDefault();
 
     if (!formData.abejita || !formData.auto || !formData.aperturaCaja || formData.aperturaCaja <= 0) {
-      alert('Por favor completa todos los campos requeridos');
+      toast.show('Por favor completa todos los campos requeridos', 'info');
       return;
     }
 
     if (!location) {
-      alert('Por favor obtén tu ubicación antes de iniciar el turno');
+      toast.show('Por favor obtén tu ubicación antes de iniciar el turno', 'info');
       return;
     }
 
@@ -106,11 +108,11 @@ export const IniciarTurno = () => {
       // Guardar en localStorage para demo
       localStorage.setItem('turno_actual', JSON.stringify(turnoData));
       
-      alert('Turno iniciado exitosamente');
+      toast.show('Turno iniciado exitosamente', 'success');
       navigate('/dashboard');
     } catch (error) {
       console.error('Error iniciando turno:', error);
-      alert('Error al iniciar el turno. Intenta nuevamente.');
+      toast.show('Error al iniciar el turno. Intenta nuevamente.', 'error');
     } finally {
       setLoading(false);
     }

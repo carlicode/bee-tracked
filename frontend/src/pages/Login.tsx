@@ -135,16 +135,23 @@ export const Login = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 flex items-center justify-center px-4 relative">
-      <button
-        type="button"
-        onClick={toggleLargeText}
-        className="absolute top-4 right-4 p-2 rounded-lg bg-gray-200 hover:bg-gray-300 transition text-gray-700"
-        title={largeTextEnabled ? 'Letras normales' : 'Letras más grandes'}
-        aria-label={largeTextEnabled ? 'Desactivar letras grandes' : 'Activar letras grandes'}
-      >
-        <span className="text-xl font-bold">A</span>
-        {largeTextEnabled && <span className="text-xs ml-0.5">✓</span>}
-      </button>
+      <label className="absolute top-4 right-4 flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-gray-200 hover:bg-gray-300 transition text-gray-700" title={largeTextEnabled ? 'Desactivar letras grandes' : 'Activar letras grandes'}>
+        <span className="text-sm font-medium">
+          {largeTextEnabled ? 'Agrandar letras' : 'No'}
+        </span>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={largeTextEnabled}
+          aria-label={largeTextEnabled ? 'Desactivar letras grandes' : 'Activar letras grandes'}
+          onClick={toggleLargeText}
+          className="relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors bg-gray-400"
+        >
+          <span
+            className={`inline-block h-5 w-5 transform rounded-full transition-transform ${largeTextEnabled ? 'bg-beezero-yellow translate-x-6' : 'bg-white translate-x-0.5'} shadow`}
+          />
+        </button>
+      </label>
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-4">

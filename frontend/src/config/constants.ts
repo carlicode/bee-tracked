@@ -35,6 +35,39 @@ export const SUCCESS_MESSAGES = {
   TURNO_CERRADO: 'Turno cerrado exitosamente',
 } as const;
 
+/** Clientes por defecto para selección en NuevaCarrera y NuevoDelivery. Se puede escribir manualmente si no está en la lista. */
+export const DEFAULT_CLIENTES = [
+  'Yango',
+  'Indrive',
+  'Eco Delivery',
+  'Podarte',
+  'Calle',
+  'Tania Vazquez',
+  'Aldea SOS',
+  'Mica',
+  'Fabiola',
+  'Miguel F.',
+  'qhathu',
+  'Bee Zero',
+  'David Hinojosa',
+  'Anna',
+  'KDBOL',
+  'Tada',
+  'Kimbap',
+  'SIE S.A',
+  'Vida Sana',
+  'Electrored',
+  'Hogar de las vitaminas',
+  'Gaia Pacha',
+  'Sacred Sex',
+  '61361772',
+  'Fabiana Pastor',
+  'Totto',
+  'Alejandra',
+  'Hillu',
+  'Bourboneria',
+] as const;
+
 /** Placas de autos disponibles para conductores BeeZero (Abejita). Formato: número + espacio + letras. Orden alfabético. */
 export const PLACAS_AUTO_ABEJITA = [
   '6265 LYR',

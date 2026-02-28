@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth';
+import { useToast } from '../../contexts/ToastContext';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { storage } from '../../services/storage';
 import { useImageUpload } from '../../hooks/useImageUpload';
@@ -10,6 +11,7 @@ import type { TurnoSimple } from '../../types/turno';
 
 export const CerrarTurnoBiker = () => {
   const navigate = useNavigate();
+  const toast = useToast();
   const { getCurrentUser } = useAuth();
   const user = getCurrentUser();
   const [loading, setLoading] = useState(false);
@@ -21,16 +23,17 @@ export const CerrarTurnoBiker = () => {
   useEffect(() => {
     const turno = storage.getItem<TurnoSimple>('turno_actual_biker');
     if (!turno || !turno.turnoIniciado || turno.turnoCerrado) {
-      alert('No hay un turno activo para cerrar');
-      navigate('/ecodelivery/dashboard');
+      toast.show('No hay un turno activo para cerrar', 'info', {
+        onClose: () => navigate('/ecodelivery/dashboard'),
+      });
       return;
     }
     setTurnoActual(turno);
-  }, [navigate]);
+  }, [navigate, toast]);
 
   const handleGetLocationAndClose = () => {
     if (!navigator.geolocation) {
-      alert('La geolocalización no está disponible en tu dispositivo');
+      toast.show('La geolocalización no está disponible en tu dispositivo', 'error');
       return;
     }
 
@@ -48,7 +51,7 @@ export const CerrarTurnoBiker = () => {
       },
       (error) => {
         console.error('Error obteniendo ubicación:', error);
-        alert('Error al obtener la ubicación. Asegúrate de permitir el acceso a la ubicación.');
+        toast.show('Error al obtener la ubicación. Asegúrate de permitir el acceso a la ubicación.', 'error');
         setLocationLoading(false);
       },
       {
@@ -76,7 +79,7 @@ export const CerrarTurnoBiker = () => {
           photoUrl = url;
         } catch (err) {
           console.error('Error subiendo foto:', err);
-          alert('No se pudo subir la foto. ¿Backend y S3 configurados? Puedes cerrar turno sin foto.');
+          toast.show('No se pudo subir la foto. ¿Backend y S3 configurados? Puedes cerrar turno sin foto.', 'error');
         }
       }
 
@@ -97,7 +100,7 @@ export const CerrarTurnoBiker = () => {
           });
         } catch (err) {
           console.error('Error registrando cierre en sheet:', err);
-          alert('Turno cerrado localmente. No se pudo actualizar el Sheet.');
+          toast.show('Turno cerrado localmente. No se pudo actualizar el Sheet.', 'info');
         }
       }
 
@@ -118,11 +121,11 @@ export const CerrarTurnoBiker = () => {
       storage.setItem('historial_turnos_biker', historial);
       storage.removeItem('turno_actual_biker');
 
-      alert('¡Turno cerrado exitosamente!');
+      toast.show('¡Turno cerrado exitosamente!', 'success');
       navigate('/ecodelivery/dashboard');
     } catch (error) {
       console.error('Error cerrando turno:', error);
-      alert('Error al cerrar el turno. Intenta nuevamente.');
+      toast.show('Error al cerrar el turno. Intenta nuevamente.', 'error');
     } finally {
       setLoading(false);
     }

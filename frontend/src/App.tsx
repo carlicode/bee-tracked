@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { GoogleOAuthProvider, GOOGLE_CLIENT_ID, useAuth } from './services/auth';
 import { AuthProvider } from './contexts/AuthContext';
+import { ToastProvider } from './contexts/ToastContext';
 import { AccessibilityProvider } from './contexts/AccessibilityContext';
 import { ThemeProvider } from './components/ThemeProvider';
 import { Layout } from './components/Layout';
@@ -271,9 +272,11 @@ function App() {
   // AuthProvider debe envolver AppContent para que useAuth() esté disponible en las rutas.
   const content = (
     <AuthProvider>
-      <AccessibilityProvider>
-        <AppContent />
-      </AccessibilityProvider>
+      <ToastProvider>
+        <AccessibilityProvider>
+          <AppContent />
+        </AccessibilityProvider>
+      </ToastProvider>
     </AuthProvider>
   );
 

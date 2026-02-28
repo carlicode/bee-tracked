@@ -34,13 +34,13 @@ export function TimeSelect({
   const [h, m] = parseHora(value);
 
   return (
-    <div className="w-full">
+    <div className="w-full min-w-0">
       {label && (
         <label className="block text-sm font-medium text-black mb-1">
           {label} {required && '*'}
         </label>
       )}
-      <div className="flex gap-2 items-center">
+      <div className="flex gap-1 sm:gap-2 items-center">
         <select
           value={h}
           onChange={(e) => {
@@ -57,7 +57,7 @@ export function TimeSelect({
           }}
           required={required}
           disabled={disabled}
-          className={`flex-1 min-h-[48px] text-base border-2 border-gray-300 rounded-lg px-3 py-3 focus:outline-none focus:ring-2 ${focusRingClass} bg-white`}
+          className={`flex-1 min-w-0 min-h-[44px] sm:min-h-[48px] text-base border-2 border-gray-300 rounded-lg px-2 sm:px-3 py-2 sm:py-3 focus:outline-none focus:ring-2 ${focusRingClass} bg-white`}
           style={{ fontSize: '16px' }}
         >
           <option value="">Hora</option>
@@ -67,7 +67,7 @@ export function TimeSelect({
             </option>
           ))}
         </select>
-        <span className="text-xl font-bold text-gray-600">:</span>
+        <span className="text-lg sm:text-xl font-bold text-gray-600 shrink-0">:</span>
         <select
           value={m}
           onChange={(e) => {
@@ -84,7 +84,7 @@ export function TimeSelect({
           }}
           required={required}
           disabled={disabled}
-          className={`flex-1 min-h-[48px] text-base border-2 border-gray-300 rounded-lg px-3 py-3 focus:outline-none focus:ring-2 ${focusRingClass} bg-white`}
+          className={`flex-1 min-w-0 min-h-[44px] sm:min-h-[48px] text-base border-2 border-gray-300 rounded-lg px-2 sm:px-3 py-2 sm:py-3 focus:outline-none focus:ring-2 ${focusRingClass} bg-white`}
           style={{ fontSize: '16px' }}
         >
           <option value="">Min</option>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
+import { useToast } from '../../contexts/ToastContext';
 import { PLACAS_AUTO_ABEJITA } from '../../config/constants';
 import { turnosApi } from '../../services/turnosApi';
 import { formatters } from '../../utils/formatters';
@@ -9,6 +10,7 @@ import type { Turno } from '../../types/turno';
 
 export const IniciarTurno = () => {
   const navigate = useNavigate();
+  const toast = useToast();
   const { getCurrentUser } = useAuth();
   const user = getCurrentUser();
   const [loading, setLoading] = useState(false);
@@ -30,7 +32,7 @@ export const IniciarTurno = () => {
 
   const handleGetLocation = () => {
     if (!navigator.geolocation) {
-      alert('La geolocalización no está disponible en tu dispositivo');
+      toast.show('La geolocalización no está disponible en tu dispositivo', 'error');
       return;
     }
 
@@ -45,7 +47,7 @@ export const IniciarTurno = () => {
       },
       (error) => {
         console.error('Error obteniendo ubicación:', error);
-        alert('Error al obtener la ubicación. Asegúrate de permitir el acceso a la ubicación.');
+        toast.show('Error al obtener la ubicación. Asegúrate de permitir el acceso a la ubicación.', 'error');
         setLocationLoading(false);
       },
       {
@@ -61,7 +63,7 @@ export const IniciarTurno = () => {
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('La imagen es muy grande. Máximo 5MB');
+      toast.show('La imagen es muy grande. Máximo 5MB', 'error');
       return;
     }
 
@@ -80,17 +82,17 @@ export const IniciarTurno = () => {
 
     const aperturaValida = formData.aperturaCaja != null && formData.aperturaCaja >= 0 && !isNaN(formData.aperturaCaja);
     if (!formData.abejita || !formData.auto || !aperturaValida) {
-      alert('Por favor completa todos los campos requeridos');
+      toast.show('Por favor completa todos los campos requeridos', 'info');
       return;
     }
 
     if (deseaRegistrarDano === null) {
-      alert('Por favor indica si desea registrar algún daño al auto (Sí o No)');
+      toast.show('Por favor indica si desea registrar algún daño al auto (Sí o No)', 'info');
       return;
     }
 
     if (!location) {
-      alert('Por favor obtén tu ubicación antes de iniciar el turno');
+      toast.show('Por favor obtén tu ubicación antes de iniciar el turno', 'info');
       return;
     }
 
@@ -136,12 +138,12 @@ export const IniciarTurno = () => {
       const toSave = { ...turnoData, id };
       localStorage.setItem('turno_actual', JSON.stringify(toSave));
 
-      alert('Turno iniciado exitosamente');
+      toast.show('Turno iniciado exitosamente', 'success');
       navigate('/beezero/dashboard');
     } catch (error) {
       console.error('Error iniciando turno:', error);
       const msg = error instanceof Error ? error.message : 'Error al iniciar el turno. Intenta nuevamente.';
-      alert(msg);
+      toast.show(msg, 'error');
     } finally {
       setLoading(false);
     }
