@@ -55,7 +55,7 @@ export const NuevaCarrera = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.cliente || formData.precio == null) {
+    if (!formData.cliente) {
       toast.show('Por favor completa todos los campos requeridos', 'info');
       return;
     }
@@ -251,12 +251,11 @@ export const NuevaCarrera = () => {
           )}
           <div>
             <label htmlFor="precio" className="block text-sm font-medium text-gray-700 mb-1">
-              Precio (Bs) *
+              Precio (Bs)
             </label>
             <input
               type="number"
               id="precio"
-              required
               min="0"
               step="0.01"
               value={formData.precio}

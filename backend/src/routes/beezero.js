@@ -48,12 +48,20 @@ router.post('/carreras/registrar', async (req, res) => {
       precio,
       observaciones,
       foto,
+      porHora,
     } = req.body || {};
 
-    if (!abejita || !fecha || !cliente || !lugarRecojo || !lugarDestino || precio == null) {
+    if (!abejita || !fecha || !cliente) {
       return res.status(400).json({
         success: false,
-        error: 'Faltan abejita, fecha, cliente, lugarRecojo, lugarDestino o precio',
+        error: 'Faltan abejita, fecha o cliente',
+      });
+    }
+    const esPorHora = Boolean(porHora);
+    if (!esPorHora && (!lugarRecojo || !lugarDestino)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Faltan lugarRecojo y lugarDestino (o marca Carrera por hora)',
       });
     }
 
@@ -78,7 +86,7 @@ router.post('/carreras/registrar', async (req, res) => {
       esPorHora ? '' : String(lugarDestino || '').trim(),
       tiempo ? String(tiempo).trim() : '',
       esPorHora ? 0 : (distancia != null ? Number(distancia) : 0),
-      Number(precio),
+      precio != null && precio !== '' ? Number(precio) : 0,
       observaciones ? String(observaciones).trim() : '',
       foto || '',
       timestampCreacion,

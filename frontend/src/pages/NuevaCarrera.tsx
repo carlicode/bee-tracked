@@ -221,12 +221,11 @@ export const NuevaCarrera = () => {
           )}
           <div>
             <label htmlFor="precio" className="block text-sm font-medium text-gray-700 mb-1">
-              Precio (Bs) *
+              Precio (Bs)
             </label>
             <input
               type="number"
               id="precio"
-              required
               min="0"
               step="0.01"
               value={formData.precio}
