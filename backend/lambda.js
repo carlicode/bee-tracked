@@ -19,10 +19,12 @@ app.use(express.json({ limit: '10mb' }));
 const authRouter = require('./src/routes/auth');
 const turnosRouter = require('./src/routes/turnos');
 const ecodeliveryRouter = require('./src/routes/ecodelivery');
+const beezeroRouter = require('./src/routes/beezero');
 
 app.use('/api/auth', authRouter);
 app.use('/api/turnos', turnosRouter);
 app.use('/api/ecodelivery', ecodeliveryRouter);
+app.use('/api/beezero', beezeroRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
