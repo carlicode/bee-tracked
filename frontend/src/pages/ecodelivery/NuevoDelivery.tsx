@@ -9,6 +9,7 @@ import { ecodeliveryApi, isEcodeliveryApiEnabled } from '../../services/ecodeliv
 import { formatters } from '../../utils/formatters';
 import { TimeSelect } from '../../components/TimeSelect';
 import { PorHoraCheckbox } from '../../components/PorHoraCheckbox';
+import { ClienteSelect } from '../../components/ClienteSelect';
 import type { Delivery } from '../../types';
 
 export const NuevoDelivery = () => {
@@ -146,21 +147,15 @@ export const NuevoDelivery = () => {
           <label htmlFor="cliente" className="block text-sm font-medium text-black mb-1">
             Cliente *
           </label>
-          <input
-            type="text"
+          <ClienteSelect
             id="cliente"
+            value={formData.cliente || ''}
+            onChange={(v) => setFormData((prev) => ({ ...prev, cliente: v }))}
+            options={DEFAULT_CLIENTES}
             required
-            value={formData.cliente}
-            onChange={(e) => setFormData((prev) => ({ ...prev, cliente: e.target.value }))}
-            placeholder="Selecciona o escribe el nombre del cliente"
-            list="clientes-delivery-list"
-            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ecodelivery-green focus:border-ecodelivery-green"
+            focusRingClass="focus:ring-ecodelivery-green focus:border-ecodelivery-green"
+            selectedClass="bg-ecodelivery-green/20"
           />
-          <datalist id="clientes-delivery-list">
-            {DEFAULT_CLIENTES.map((cliente, index) => (
-              <option key={index} value={cliente} />
-            ))}
-          </datalist>
         </div>
 
         <PorHoraCheckbox

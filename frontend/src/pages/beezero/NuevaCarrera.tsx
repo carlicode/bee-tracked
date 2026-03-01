@@ -9,6 +9,7 @@ import { formatters } from '../../utils/formatters';
 import { DEFAULT_CLIENTES } from '../../config/constants';
 import { TimeSelect } from '../../components/TimeSelect';
 import { PorHoraCheckbox } from '../../components/PorHoraCheckbox';
+import { ClienteSelect } from '../../components/ClienteSelect';
 import type { Carrera } from '../../types';
 
 export const NuevaCarrera = () => {
@@ -146,21 +147,15 @@ export const NuevaCarrera = () => {
           <label htmlFor="cliente" className="block text-sm font-medium text-gray-700 mb-1">
             Cliente *
           </label>
-          <input
-            type="text"
+          <ClienteSelect
             id="cliente"
+            value={formData.cliente || ''}
+            onChange={(v) => handleClienteChange(v)}
+            options={clientesOpciones}
             required
-            value={formData.cliente}
-            onChange={(e) => handleClienteChange(e.target.value)}
-            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
-            list="clientes-list"
-            placeholder="Selecciona o escribe el nombre del cliente"
+            focusRingClass="focus:ring-beezero-yellow focus:border-beezero-yellow"
+            selectedClass="bg-beezero-yellow/20"
           />
-          <datalist id="clientes-list">
-            {clientesOpciones.map((cliente, index) => (
-              <option key={index} value={cliente} />
-            ))}
-          </datalist>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
