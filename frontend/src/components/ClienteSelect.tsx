@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 
+const MANUAL_ENTRY_OPTION = 'Ingresar manualmente';
+
 export interface ClienteSelectProps {
   value: string;
   onChange: (value: string) => void;
@@ -29,11 +31,13 @@ export function ClienteSelect({
 }: ClienteSelectProps) {
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const opts = [...options].sort((a, b) => a.localeCompare(b, 'es'));
   const filtered = filter.trim()
-    ? options.filter((o) => o.toLowerCase().includes(filter.toLowerCase().trim()))
-    : [...options];
+    ? opts.filter((o) => o.toLowerCase().includes(filter.toLowerCase().trim()))
+    : opts;
 
   useEffect(() => {
     setFilter(value);
@@ -50,6 +54,13 @@ export function ClienteSelect({
   }, []);
 
   const handleSelect = (opt: string) => {
+    if (opt === MANUAL_ENTRY_OPTION) {
+      onChange('');
+      setFilter('');
+      setOpen(false);
+      setTimeout(() => inputRef.current?.focus(), 0);
+      return;
+    }
     onChange(opt);
     setFilter(opt);
     setOpen(false);
@@ -64,6 +75,7 @@ export function ClienteSelect({
   return (
     <div ref={containerRef} className="relative">
       <input
+        ref={inputRef}
         type="text"
         id={id}
         required={required}
@@ -90,12 +102,19 @@ export function ClienteSelect({
           className="absolute z-50 w-full mt-1 max-h-48 overflow-auto rounded-lg border-2 border-gray-200 bg-white shadow-lg py-1"
           role="listbox"
         >
+          <li
+            role="option"
+            onClick={() => handleSelect(MANUAL_ENTRY_OPTION)}
+            className="px-3 py-2 cursor-pointer text-gray-600 hover:bg-gray-100 active:bg-gray-100 border-b border-gray-100 font-medium"
+          >
+            {MANUAL_ENTRY_OPTION}
+          </li>
           {filtered.length === 0 ? (
             <li className="px-3 py-2 text-gray-500 text-sm">Sin coincidencias</li>
           ) : (
-            filtered.map((opt, i) => (
+            filtered.map((opt) => (
               <li
-                key={i}
+                key={opt}
                 role="option"
                 aria-selected={value === opt}
                 onClick={() => handleSelect(opt)}
