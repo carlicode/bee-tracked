@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { storage } from './storage';
 import type { Carrera } from '../types';
 
@@ -17,6 +17,13 @@ function authHeaders(): Record<string, string> {
   return headers;
 }
 
+function getErrorMessage(err: unknown): string {
+  if (err instanceof AxiosError && err.response?.data && typeof err.response.data === 'object' && 'error' in err.response.data) {
+    return String(err.response.data.error);
+  }
+  return err instanceof Error ? err.message : 'Error de conexión';
+}
+
 export const beezeroApi = {
   /**
    * Registra una carrera en la pestaña del driver en Google Sheet Carreras_drivers.
@@ -26,33 +33,37 @@ export const beezeroApi = {
     carrera: Partial<Carrera>
   ): Promise<{ carreraId: string; sheetTitle: string }> {
     if (!API_BASE) throw new Error('Backend no configurado (VITE_API_URL)');
-    const { data } = await axios.post<{
-      success: boolean;
-      carreraId?: string;
-      sheetTitle?: string;
-      error?: string;
-    }>(
-      `${API_BASE}/api/beezero/carreras/registrar`,
-      {
-        abejita,
-        fecha: carrera.fecha,
-        cliente: carrera.cliente,
-        horaInicio: carrera.horaInicio || '',
-        horaFin: carrera.horaFin || '',
-        lugarRecojo: carrera.porHora ? '' : (carrera.lugarRecojo ?? ''),
-        lugarDestino: carrera.porHora ? '' : (carrera.lugarDestino ?? ''),
-        tiempo: carrera.tiempo || '',
-        distancia: carrera.porHora ? 0 : (carrera.distancia ?? 0),
-        precio: carrera.precio ?? 0,
-        porHora: carrera.porHora ?? false,
-        observaciones: carrera.observaciones || '',
-        foto: carrera.foto || '',
-      },
-      { headers: { ...authHeaders(), 'Content-Type': 'application/json' }, timeout: 15000 }
-    );
-    if (!data.success || data.carreraId == null)
-      throw new Error(data.error || 'Error al registrar la carrera');
-    return { carreraId: data.carreraId, sheetTitle: data.sheetTitle || '' };
+    try {
+      const { data } = await axios.post<{
+        success: boolean;
+        carreraId?: string;
+        sheetTitle?: string;
+        error?: string;
+      }>(
+        `${API_BASE}/api/beezero/carreras/registrar`,
+        {
+          abejita,
+          fecha: carrera.fecha,
+          cliente: carrera.cliente,
+          horaInicio: carrera.horaInicio || '',
+          horaFin: carrera.horaFin || '',
+          lugarRecojo: carrera.porHora ? '' : (carrera.lugarRecojo ?? ''),
+          lugarDestino: carrera.porHora ? '' : (carrera.lugarDestino ?? ''),
+          tiempo: carrera.tiempo || '',
+          distancia: carrera.porHora ? 0 : (carrera.distancia ?? 0),
+          precio: carrera.precio ?? 0,
+          porHora: carrera.porHora ?? false,
+          observaciones: carrera.observaciones || '',
+          foto: carrera.foto || '',
+        },
+        { headers: { ...authHeaders(), 'Content-Type': 'application/json' }, timeout: 15000 }
+      );
+      if (!data.success || data.carreraId == null)
+        throw new Error(data.error || 'Error al registrar la carrera');
+      return { carreraId: data.carreraId, sheetTitle: data.sheetTitle || '' };
+    } catch (err) {
+      throw new Error(getErrorMessage(err));
+    }
   },
 
   /**
