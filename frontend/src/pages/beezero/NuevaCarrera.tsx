@@ -74,7 +74,14 @@ export const NuevaCarrera = () => {
         return;
       }
 
-      if (isBeezeroApiEnabled()) {
+      const useBeezeroApi = isBeezeroApiEnabled();
+      const apiUrl = import.meta.env.VITE_API_URL || '(no configurado)';
+      console.debug('[NuevaCarrera] API:', useBeezeroApi ? `beezeroApi (${apiUrl})` : 'apiService (Apps Script)', {
+        porHora,
+        formData: { ...formData, lugarRecojo: porHora ? '(por hora)' : formData.lugarRecojo, lugarDestino: porHora ? '(por hora)' : formData.lugarDestino },
+      });
+
+      if (useBeezeroApi) {
         const user = getCurrentUser();
         const abejita = user?.name || user?.driverName || '';
         if (!abejita) {

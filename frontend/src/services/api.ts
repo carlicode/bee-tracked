@@ -80,8 +80,10 @@ const appsScriptRequest = async <T>(
       return response.data as T;
     }
   } catch (error) {
+    const msg = getErrorMessage(error);
+    console.warn('[apiService]', method, path, { error: msg, baseURL: api?.defaults?.baseURL });
     logError(error, `API ${method} ${path}`);
-    throw new Error(getErrorMessage(error));
+    throw new Error(msg);
   }
 };
 

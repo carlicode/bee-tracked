@@ -26,6 +26,17 @@ const CARRERAS_DRIVERS_HEADERS = [
  * Body: abejita (driverName), fecha, cliente, horaInicio, horaFin, lugarRecojo, lugarDestino, tiempo, distancia, precio, observaciones, foto?
  */
 router.post('/carreras/registrar', async (req, res) => {
+  const body = req.body || {};
+  console.log('[beezero] POST /carreras/registrar body:', JSON.stringify({
+    abejita: body.abejita,
+    fecha: body.fecha,
+    cliente: body.cliente,
+    porHora: body.porHora,
+    lugarRecojo: body.lugarRecojo ? '(presente)' : '(vacío)',
+    lugarDestino: body.lugarDestino ? '(presente)' : '(vacío)',
+    precio: body.precio,
+  }));
+
   try {
     const spreadsheetId = getCarrerasSpreadsheetId();
     if (!spreadsheetId) {
@@ -49,21 +60,24 @@ router.post('/carreras/registrar', async (req, res) => {
       observaciones,
       foto,
       porHora,
-    } = req.body || {};
+    } = body;
 
     if (!abejita || !fecha || !cliente) {
+      console.warn('[beezero] Validación fallida: faltan abejita, fecha o cliente', { abejita: !!abejita, fecha: !!fecha, cliente: !!cliente });
       return res.status(400).json({
         success: false,
         error: 'Faltan abejita, fecha o cliente',
       });
     }
-    const esPorHora = porHora === true || porHora === 'true' || String(porHora).toLowerCase() === 'si';
+    const esPorHora = porHora === true || porHora === 'true' || String(porHora || '').toLowerCase() === 'si';
     if (!esPorHora && (!lugarRecojo || !lugarDestino)) {
+      console.warn('[beezero] Validación fallida: faltan lugarRecojo/lugarDestino (esPorHora=false)', { esPorHora, lugarRecojo: !!lugarRecojo, lugarDestino: !!lugarDestino });
       return res.status(400).json({
         success: false,
         error: 'Faltan lugarRecojo y lugarDestino (o marca Carrera por hora)',
       });
     }
+    console.log('[beezero] Validación OK, esPorHora:', esPorHora);
 
     const timestampCreacion = new Date().toISOString();
     const sheetTitle = await getOrCreateSheetInSpreadsheet(
