@@ -31,6 +31,7 @@ export const NuevaCarrera = () => {
     distancia: 0,
     precio: 0,
     porHora: false,
+    aCuenta: false,
     observaciones: '',
   });
 
@@ -186,6 +187,20 @@ export const NuevaCarrera = () => {
           onChange={(v) => setFormData((prev) => ({ ...prev, porHora: v }))}
           checkboxClass="text-beezero-yellow focus:ring-beezero-yellow"
         />
+
+        <div className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            id="aCuenta"
+            checked={formData.aCuenta ?? false}
+            onChange={(e) => setFormData((prev) => ({ ...prev, aCuenta: e.target.checked }))}
+            className="w-5 h-5 rounded border-2 border-gray-300 focus:ring-2 focus:ring-offset-0 text-beezero-yellow focus:ring-beezero-yellow"
+            aria-describedby="aCuenta-desc"
+          />
+          <label htmlFor="aCuenta" id="aCuenta-desc" className="text-sm font-medium text-black">
+            A cuenta
+          </label>
+        </div>
 
         {!porHora && (
           <>

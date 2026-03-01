@@ -16,7 +16,7 @@ const getCarrerasSpreadsheetId = () =>
 const CARRERAS_DRIVERS_HEADERS = [
   'CarreraId', 'Abejita', 'Fecha', 'Cliente', 'Hora Inicio', 'Hora Fin',
   'Lugar Recojo', 'Lugar Destino', 'Tiempo', 'Distancia (km)', 'Precio (Bs)',
-  'Observaciones', 'Foto', 'Timestamp Creación', 'Por hora',
+  'Observaciones', 'Foto', 'Timestamp Creación', 'Por hora', 'A cuenta',
 ];
 
 /**
@@ -60,6 +60,7 @@ router.post('/carreras/registrar', async (req, res) => {
       observaciones,
       foto,
       porHora,
+      aCuenta,
     } = body;
 
     if (!abejita || !fecha || !cliente) {
@@ -105,6 +106,7 @@ router.post('/carreras/registrar', async (req, res) => {
       foto || '',
       timestampCreacion,
       esPorHora ? 'si' : 'no',
+      (aCuenta === true || aCuenta === 'true' || String(aCuenta || '').toLowerCase() === 'si') ? 'si' : 'no',
     ];
 
     await appendRowToSpreadsheet(spreadsheetId, sheetTitle, row);
@@ -178,6 +180,7 @@ router.get('/carreras/:driverName', async (req, res) => {
       foto: row[12] || '',
       timestampCreacion: row[13] || '',
       porHora: (row[14] || '').toLowerCase() === 'si',
+      aCuenta: (row[15] || '').toLowerCase() === 'si',
     }));
 
     let filtered = carreras;

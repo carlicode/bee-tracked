@@ -49,6 +49,7 @@ export const beezeroApi = {
       distancia: carrera.porHora ? 0 : (carrera.distancia ?? 0),
       precio: carrera.precio ?? 0,
       porHora: carrera.porHora ?? false,
+      aCuenta: carrera.aCuenta ?? false,
       observaciones: carrera.observaciones || '',
       foto: carrera.foto || '',
     };
@@ -111,6 +112,7 @@ export const beezeroApi = {
         precio: number;
         observaciones: string;
         foto: string;
+        aCuenta?: boolean;
       }>;
       error?: string;
     }>(
@@ -129,6 +131,7 @@ export const beezeroApi = {
       distancia: c.distancia,
       precio: c.precio,
       observaciones: c.observaciones,
+      aCuenta: c.aCuenta,
     }));
     return { carreras };
   },

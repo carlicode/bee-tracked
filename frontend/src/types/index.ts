@@ -10,6 +10,8 @@ export interface Carrera {
   precio: number;
   /** Si la carrera es cobrada por hora (no requiere lugar recojo, destino ni distancia) */
   porHora?: boolean;
+  /** Si la carrera es a cuenta (por pagar) */
+  aCuenta?: boolean;
   observaciones?: string;
   foto?: string;
   email?: string;

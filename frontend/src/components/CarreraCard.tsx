@@ -15,6 +15,11 @@ export const CarreraCard = ({ carrera }: CarreraCardProps) => {
         <div className="text-right">
           <p className="font-bold text-black text-lg">Bs {carrera.precio}</p>
           <p className="text-xs text-gray-500">{carrera.tiempo}</p>
+          {carrera.aCuenta && (
+            <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-800 rounded">
+              A cuenta
+            </span>
+          )}
         </div>
       </div>
       <div className="space-y-1 text-sm text-gray-700">
