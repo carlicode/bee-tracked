@@ -118,25 +118,31 @@ export const IniciarTurno = () => {
         createdAt: ahora.toISOString(),
       };
 
-      let id: string | undefined;
+      // Guardar en localStorage ANTES de la llamada al backend
+      // Así el turno queda activo localmente aunque el backend tarde o falle
+      const toSave = { ...turnoData };
+      localStorage.setItem('turno_actual', JSON.stringify(toSave));
 
       if (turnosApi.isEnabled()) {
-        const res = await turnosApi.iniciar({
-          abejita: turnoData.abejita!,
-          auto: turnoData.auto!,
-          aperturaCaja: turnoData.aperturaCaja!,
-          kilometraje: turnoData.kilometraje,
-          danosAuto: danos,
-          fotoPantalla: turnoData.fotoPantalla,
-          fotoExterior: fotoExt,
-          horaInicio,
-          ubicacionInicio: { lat: location.lat, lng: location.lng },
-        });
-        id = res.id;
+        try {
+          const res = await turnosApi.iniciar({
+            abejita: turnoData.abejita!,
+            auto: turnoData.auto!,
+            aperturaCaja: turnoData.aperturaCaja!,
+            kilometraje: turnoData.kilometraje,
+            danosAuto: danos,
+            fotoPantalla: turnoData.fotoPantalla,
+            fotoExterior: fotoExt,
+            horaInicio,
+            ubicacionInicio: { lat: location.lat, lng: location.lng },
+          });
+          // Actualizar el id del turno en localStorage si el backend respondió
+          localStorage.setItem('turno_actual', JSON.stringify({ ...toSave, id: res.id }));
+        } catch (backendError) {
+          console.error('Backend tardó o falló, turno guardado localmente:', backendError);
+          // El turno ya está guardado localmente, no bloqueamos al usuario
+        }
       }
-
-      const toSave = { ...turnoData, id };
-      localStorage.setItem('turno_actual', JSON.stringify(toSave));
 
       toast.show('Turno iniciado exitosamente', 'success');
       navigate('/beezero/dashboard');

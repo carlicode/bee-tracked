@@ -140,24 +140,30 @@ export const CerrarTurno = () => {
         updatedAt: ahora.toISOString(),
       };
 
-      if (turnosApi.isEnabled() && turnoInicio?.id) {
-        await turnosApi.cerrar(turnoInicio.id, {
-          cierreCaja: formData.cierreCaja ?? (parseFloat((formData as { cierreCajaStr?: string }).cierreCajaStr ?? '') || 0),
-          qr: formData.qr ?? (parseFloat((formData as { qrStr?: string }).qrStr ?? '') || 0),
-          kilometraje: formData.kilometraje,
-          danosAuto: danos,
-          fotoPantalla: formData.fotoPantalla,
-          fotoExterior: fotoExt,
-          horaCierre,
-          ubicacionFin: { lat: location.lat, lng: location.lng },
-          observaciones: formData.observaciones || '',
-        });
-      }
-
+      // Guardar localmente primero para no bloquear al usuario si el backend tarda
       const turnosHistorial = JSON.parse(localStorage.getItem('turnos_historial') || '[]');
       turnosHistorial.push(turnoCompleto);
       localStorage.setItem('turnos_historial', JSON.stringify(turnosHistorial));
       localStorage.removeItem('turno_actual');
+
+      if (turnosApi.isEnabled() && turnoInicio?.id) {
+        try {
+          await turnosApi.cerrar(turnoInicio.id, {
+            cierreCaja: formData.cierreCaja ?? (parseFloat((formData as { cierreCajaStr?: string }).cierreCajaStr ?? '') || 0),
+            qr: formData.qr ?? (parseFloat((formData as { qrStr?: string }).qrStr ?? '') || 0),
+            kilometraje: formData.kilometraje,
+            danosAuto: danos,
+            fotoPantalla: formData.fotoPantalla,
+            fotoExterior: fotoExt,
+            horaCierre,
+            ubicacionFin: { lat: location.lat, lng: location.lng },
+            observaciones: formData.observaciones || '',
+          });
+        } catch (backendError) {
+          console.error('Backend tardó o falló al cerrar turno, turno guardado localmente:', backendError);
+          // El turno ya fue cerrado localmente, no bloqueamos al usuario
+        }
+      }
 
       toast.show('Turno cerrado exitosamente', 'success');
       navigate('/beezero/dashboard');

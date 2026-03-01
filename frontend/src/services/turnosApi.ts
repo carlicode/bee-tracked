@@ -42,7 +42,7 @@ export const turnosApi = {
       const { data } = await axios.post<{ success: boolean; data: { id: string } }>(
         `${API_BASE}/api/turnos/iniciar`,
         payload,
-        { timeout: 15000, headers: authHeaders() }
+        { timeout: 40000, headers: authHeaders() }
       );
       if (!data.success || !data.data?.id) throw new Error('Respuesta inválida al iniciar turno');
       return { id: data.data.id };
@@ -76,7 +76,7 @@ export const turnosApi = {
       const { data } = await axios.post<{ success: boolean }>(
         `${API_BASE}/api/turnos/${encodeURIComponent(id)}/cerrar`,
         payload,
-        { timeout: 15000, headers: authHeaders() }
+        { timeout: 40000, headers: authHeaders() }
       );
       if (!data.success) throw new Error('Error al cerrar turno');
     } catch (err: unknown) {
