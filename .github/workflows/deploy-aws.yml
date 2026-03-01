@@ -32,10 +32,8 @@ jobs:
       - name: Create .env.production
         working-directory: frontend
         run: |
-          # Backend Lambda (vars.VITE_API_URL o fallback al desplegado)
-          API_URL="${{ vars.VITE_API_URL }}"
-          [ -z "$API_URL" ] && API_URL="https://bxa273i618.execute-api.us-east-1.amazonaws.com/prod"
-          echo "VITE_API_URL=$API_URL" > .env.production
+          # Siempre usar el Lambda desplegado (nuevo endpoint con soporte carrera por hora)
+          echo "VITE_API_URL=https://bxa273i618.execute-api.us-east-1.amazonaws.com/prod" > .env.production
           echo "VITE_COGNITO_USER_POOL_ID=${{ vars.VITE_COGNITO_USER_POOL_ID }}" >> .env.production
           echo "VITE_COGNITO_CLIENT_ID=${{ vars.VITE_COGNITO_CLIENT_ID }}" >> .env.production
 
