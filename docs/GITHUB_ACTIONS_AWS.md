@@ -17,7 +17,7 @@ En tu repo: **Settings → Secrets and variables → Actions**.
 
 | Nombre | Descripción | Ejemplo |
 |--------|-------------|---------|
-| `VITE_API_URL` | URL del backend en producción | `https://1d9blio38d.execute-api.us-east-1.amazonaws.com` |
+| `VITE_API_URL` | URL del backend Lambda en producción | `https://bxa273i618.execute-api.us-east-1.amazonaws.com/prod` |
 | `VITE_COGNITO_USER_POOL_ID` | User Pool ID de Cognito | `us-east-1_REsVOVqcY` |
 | `VITE_COGNITO_CLIENT_ID` | App client ID de Cognito | `29rgiplrp6t3aq2b58ee91i54v` |
 

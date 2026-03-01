@@ -57,7 +57,7 @@ router.post('/carreras/registrar', async (req, res) => {
         error: 'Faltan abejita, fecha o cliente',
       });
     }
-    const esPorHora = Boolean(porHora);
+    const esPorHora = porHora === true || porHora === 'true' || String(porHora).toLowerCase() === 'si';
     if (!esPorHora && (!lugarRecojo || !lugarDestino)) {
       return res.status(400).json({
         success: false,

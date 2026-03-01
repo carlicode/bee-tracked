@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - 'frontend/**'
+      - 'backend/**'
       - '.github/workflows/deploy-aws.yml'
   workflow_dispatch:  # Permite ejecutar manualmente desde la pestaña Actions
 
@@ -31,7 +32,10 @@ jobs:
       - name: Create .env.production
         working-directory: frontend
         run: |
-          echo "VITE_API_URL=${{ vars.VITE_API_URL }}" > .env.production
+          # Backend Lambda (vars.VITE_API_URL o fallback al desplegado)
+          API_URL="${{ vars.VITE_API_URL }}"
+          [ -z "$API_URL" ] && API_URL="https://bxa273i618.execute-api.us-east-1.amazonaws.com/prod"
+          echo "VITE_API_URL=$API_URL" > .env.production
           echo "VITE_COGNITO_USER_POOL_ID=${{ vars.VITE_COGNITO_USER_POOL_ID }}" >> .env.production
           echo "VITE_COGNITO_CLIENT_ID=${{ vars.VITE_COGNITO_CLIENT_ID }}" >> .env.production
 
