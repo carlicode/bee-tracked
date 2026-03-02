@@ -32,6 +32,8 @@ router.post('/carreras/registrar', async (req, res) => {
     fecha: body.fecha,
     cliente: body.cliente,
     porHora: body.porHora,
+    aCuenta: body.aCuenta,
+    pagoPorQR: body.pagoPorQR,
     lugarRecojo: body.lugarRecojo ? '(presente)' : '(vacío)',
     lugarDestino: body.lugarDestino ? '(presente)' : '(vacío)',
     precio: body.precio,

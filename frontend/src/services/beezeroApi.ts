@@ -56,7 +56,7 @@ export const beezeroApi = {
     };
     const url = `${API_BASE}/api/beezero/carreras/registrar`;
     if (DEBUG) {
-      console.debug('[beezeroApi] registrarCarrera', { url, payload, porHora: payload.porHora });
+      console.debug('[beezeroApi] registrarCarrera', { url, payload, porHora: payload.porHora, aCuenta: payload.aCuenta, pagoPorQR: payload.pagoPorQR });
     }
 
     try {
