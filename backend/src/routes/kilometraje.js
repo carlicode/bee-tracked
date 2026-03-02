@@ -64,7 +64,7 @@ router.post('/kilometraje', async (req, res) => {
     await registrarKilometraje(
       String(carreraId),
       String(bikerName).trim(),
-      Number(kilometraje)
+      String(kilometraje ?? '').trim()
     );
 
     res.status(201).json({

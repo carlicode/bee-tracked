@@ -173,7 +173,7 @@ export const ecodeliveryApi = {
   async registrarKilometraje(params: {
     carreraId: string;
     bikerName: string;
-    kilometraje: number;
+    kilometraje: string;
   }): Promise<void> {
     if (!API_BASE) throw new Error('Backend no configurado');
     const { data } = await axios.post<{ success: boolean; error?: string }>(

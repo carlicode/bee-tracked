@@ -164,7 +164,7 @@ async function getCarreraById(carreraId) {
  * Registra un kilometraje: copia datos de la carrera a la hoja Kilometraje y agrega el km.
  * @param {string} carreraId - ID de la carrera en Registros
  * @param {string} bikerName - Nombre del biker (para validación)
- * @param {number} kilometraje - Km registrados por el biker
+ * @param {string} kilometraje - Km registrados por el biker (string, puede incluir comas: "5.2, 3.1")
  */
 async function registrarKilometraje(carreraId, bikerName, kilometraje) {
   const spreadsheetId = getRegistrosSpreadsheetId();
@@ -179,16 +179,16 @@ async function registrarKilometraje(carreraId, bikerName, kilometraje) {
     throw new Error('La carrera no pertenece a este biker');
   }
 
-  const kmNum = Number(kilometraje);
-  if (Number.isNaN(kmNum) || kmNum < 0) {
-    throw new Error('Kilometraje debe ser un número mayor o igual a 0');
+  const kmStr = String(kilometraje ?? '').trim();
+  if (!kmStr) {
+    throw new Error('Kilometraje es obligatorio');
   }
 
   // Crear hoja Kilometraje si no existe (con headers)
   await getOrCreateSheetInSpreadsheet(spreadsheetId, SHEET_KILOMETRAJE, KILOMETRAJE_HEADERS);
 
   const row = KILOMETRAJE_HEADERS.map((col) => {
-    if (col === 'Kilometraje') return kmNum;
+    if (col === 'Kilometraje') return kmStr;
     return carrera[col] ?? '';
   });
 
@@ -231,7 +231,7 @@ async function getKilometrajesByBiker(bikerName) {
     if (rowBiker.toLowerCase() !== bikerLower) continue;
 
     const id = obj['ID'] ?? obj['id'] ?? row[0] ?? '';
-    const km = parseFloat(obj['Kilometraje'] || obj['kilometraje'] || 0) || 0;
+    const km = (obj['Kilometraje'] ?? obj['kilometraje'] ?? '').toString();
     registros.push({
       id: String(id),
       kilometraje: km,

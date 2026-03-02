@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ecodeliveryApi, isEcodeliveryApiEnabled } from '../../services/ecodeliveryApi';
 import { useAuth } from '../../services/auth';
 import { useToast } from '../../contexts/ToastContext';
+import { LinkableText } from '../../components/LinkableText';
 import type { CarreraRegistro } from '../../types';
 
 export const Kilometraje = () => {
@@ -43,9 +44,9 @@ export const Kilometraje = () => {
 
   const handleRegistrarKm = async () => {
     if (!modalCarrera || !bikerName) return;
-    const km = parseFloat(kmInput);
-    if (Number.isNaN(km) || km < 0) {
-      toast.show('Ingresa un kilometraje válido (número >= 0)', 'info');
+    const kmStr = kmInput.trim();
+    if (!kmStr) {
+      toast.show('Ingresa el kilometraje', 'info');
       return;
     }
     try {
@@ -53,7 +54,7 @@ export const Kilometraje = () => {
       await ecodeliveryApi.registrarKilometraje({
         carreraId: modalCarrera.id,
         bikerName,
-        kilometraje: km,
+        kilometraje: kmStr,
       });
       toast.show('Kilometraje registrado exitosamente', 'success');
       setModalCarrera(null);
@@ -133,9 +134,15 @@ export const Kilometraje = () => {
                 <div className="min-w-0 flex-1">
                   <h3 className="text-lg font-bold text-black truncate">{getCarreraLabel(carrera)}</h3>
                   <p className="text-sm text-gray-600 mt-1">
-                    {String(carrera['Direccion Recojo'] ?? carrera['Recojo'] ?? '')}
-                    {(carrera['Direccion Recojo'] || carrera['Recojo']) ? ' → ' : ''}
-                    {String(carrera['Direccion Entrega'] ?? carrera['Entrega'] ?? '')}
+                    <LinkableText
+                      text={
+                        [
+                          String(carrera['Direccion Recojo'] ?? carrera['Recojo'] ?? ''),
+                          (carrera['Direccion Recojo'] || carrera['Recojo']) ? ' → ' : '',
+                          String(carrera['Direccion Entrega'] ?? carrera['Entrega'] ?? ''),
+                        ].join('')
+                      }
+                    />
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
                     Hora: {(carrera['Hora Ini'] ?? carrera['Hora Registro'] ?? '').toString()}
@@ -167,12 +174,11 @@ export const Kilometraje = () => {
             </label>
             <input
               id="km-input"
-              type="number"
-              min="0"
-              step="0.1"
+              type="text"
+              inputMode="decimal"
               value={kmInput}
               onChange={(e) => setKmInput(e.target.value)}
-              placeholder="Ej: 5.2"
+              placeholder="Ej: 5.2 o 5,2 o 5.2, 3.1"
               className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ecodelivery-green focus:border-ecodelivery-green mb-4"
               autoFocus
             />

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ecodeliveryApi, isEcodeliveryApiEnabled } from '../../services/ecodeliveryApi';
 import { useAuth } from '../../services/auth';
+import { LinkableText } from '../../components/LinkableText';
 import type { KilometrajeRegistro } from '../../types';
 
 export const MisKilometrajes = () => {
@@ -138,10 +139,14 @@ export const MisKilometrajes = () => {
               </div>
               <div className="text-sm text-gray-600">
                 {(reg['Direccion Recojo'] || reg['Recojo']) ? (
-                  <p>Recojo: {String(reg['Direccion Recojo'] ?? reg['Recojo'] ?? '')}</p>
+                  <p>
+                    Recojo: <LinkableText text={String(reg['Direccion Recojo'] ?? reg['Recojo'] ?? '')} />
+                  </p>
                 ) : null}
                 {(reg['Direccion Entrega'] || reg['Entrega']) ? (
-                  <p>Entrega: {String(reg['Direccion Entrega'] ?? reg['Entrega'] ?? '')}</p>
+                  <p>
+                    Entrega: <LinkableText text={String(reg['Direccion Entrega'] ?? reg['Entrega'] ?? '')} />
+                  </p>
                 ) : null}
               </div>
             </div>
