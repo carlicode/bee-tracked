@@ -81,8 +81,8 @@ router.post('/carreras/registrar', async (req, res) => {
     console.log('[beezero] Validación OK, esPorHora:', esPorHora);
 
     const ahora = new Date();
-    const fechaCreacion = ahora.toISOString().slice(0, 10);
-    const horaCreacion = ahora.toTimeString().slice(0, 5);
+    const fechaCreacion = ahora.toLocaleDateString('en-CA', { timeZone: 'America/La_Paz' });
+    const horaCreacion = ahora.toLocaleTimeString('en-GB', { timeZone: 'America/La_Paz', hour: '2-digit', minute: '2-digit', hour12: false });
     const sheetTitle = await getOrCreateSheetInSpreadsheet(
       spreadsheetId,
       abejita,
