@@ -115,10 +115,10 @@ async function getCarrerasDelDia(bikerName) {
     const rowBiker = (obj['Biker'] || obj['biker'] || '').trim();
     if (rowBiker.toLowerCase() !== bikerLower) continue;
 
-    // Filtrar por fecha: Fecha Registro o Fechas
-    const fechaRegistro = normalizarFecha(obj['Fecha Registro'] || obj['Fecha registro'] || '');
+    // Filtrar por fecha: priorizar Fechas (fecha de la carrera) sobre Fecha Registro
     const fechas = normalizarFecha(obj['Fechas'] || obj['fechas'] || '');
-    const fechaCarrera = fechaRegistro || fechas;
+    const fechaRegistro = normalizarFecha(obj['Fecha Registro'] || obj['Fecha registro'] || '');
+    const fechaCarrera = fechas || fechaRegistro;
     if (fechaCarrera !== hoy) continue;
 
     const id = obj['ID'] ?? obj['id'] ?? row[0] ?? '';
