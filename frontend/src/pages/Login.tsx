@@ -61,8 +61,8 @@ export const Login = () => {
           userType,
         };
         login(user, idToken, sessionId);
-        // Operadores y BeeZero entran al dashboard BeeZero; Ecodelivery al suyo
-        if (userType === 'ecodelivery') {
+        // Operadores y Ecodelivery usan la misma vista eco; BeeZero al suyo
+        if (userType === 'ecodelivery' || userType === 'operador') {
           navigate('/ecodelivery/dashboard', { replace: true });
         } else {
           navigate('/beezero/dashboard', { replace: true });

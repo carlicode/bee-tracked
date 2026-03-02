@@ -41,10 +41,10 @@ const DashboardRouter = () => {
   const { getUserType } = useAuth();
   const userType = getUserType();
 
-  if (userType === 'ecodelivery') {
+  // Ecodelivery y Operador usan la misma vista eco (acceso completo)
+  if (userType === 'ecodelivery' || userType === 'operador') {
     return <Navigate to="/ecodelivery/dashboard" replace />;
   }
-  // BeeZero y Operador entran al dashboard BeeZero
   return <Navigate to="/beezero/dashboard" replace />;
 };
 
