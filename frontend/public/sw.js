@@ -1,45 +1,32 @@
-// Service Worker para PWA
-const CACHE_NAME = 'eco-drivers-v1';
-const urlsToCache = [
-  '/',
-  '/index.html',
-  '/src/main.tsx',
-  '/src/App.tsx'
-];
+// Service Worker para PWA - Network first para siempre tener la última versión
+const CACHE_NAME = 'eco-drivers-v2';
 
-// Install event - cache assets
+// Install - solo activar, no cachear assets
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        return cache.addAll(urlsToCache);
-      })
-  );
+  self.skipWaiting();
 });
 
-// Fetch event - serve from cache, fallback to network
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Return cached version or fetch from network
-        return response || fetch(event.request);
-      })
-  );
-});
-
-// Activate event - clean up old caches
+// Activate - limpiar caches antiguos
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
+        cacheNames.map((cacheName) => caches.delete(cacheName))
       );
-    })
+    }).then(() => self.clients.claim())
   );
+});
+
+// Fetch - Network first: siempre intentar red, cache solo si offline
+self.addEventListener('fetch', (event) => {
+  if (event.request.mode === 'navigate' || event.request.destination === 'document' || event.request.url.endsWith('.js') || event.request.url.endsWith('.css')) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => response)
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+  event.respondWith(fetch(event.request));
 });
 
