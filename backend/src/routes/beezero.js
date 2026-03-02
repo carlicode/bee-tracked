@@ -16,7 +16,7 @@ const getCarrerasSpreadsheetId = () =>
 const CARRERAS_DRIVERS_HEADERS = [
   'CarreraId', 'Abejita', 'Fecha', 'Cliente', 'Hora Inicio', 'Hora Fin',
   'Lugar Recojo', 'Lugar Destino', 'Tiempo', 'Distancia (km)', 'Precio (Bs)',
-  'Observaciones', 'Foto', 'Timestamp Creación', 'Por hora', 'A cuenta',
+  'Observaciones', 'Foto', 'Fecha creación', 'Hora creación', 'Por hora', 'A cuenta',
 ];
 
 /**
@@ -80,7 +80,9 @@ router.post('/carreras/registrar', async (req, res) => {
     }
     console.log('[beezero] Validación OK, esPorHora:', esPorHora);
 
-    const timestampCreacion = new Date().toISOString();
+    const ahora = new Date();
+    const fechaCreacion = ahora.toISOString().slice(0, 10);
+    const horaCreacion = ahora.toTimeString().slice(0, 5);
     const sheetTitle = await getOrCreateSheetInSpreadsheet(
       spreadsheetId,
       abejita,
@@ -104,7 +106,8 @@ router.post('/carreras/registrar', async (req, res) => {
       precio != null && precio !== '' ? Number(precio) : 0,
       observaciones ? String(observaciones).trim() : '',
       foto || '',
-      timestampCreacion,
+      fechaCreacion,
+      horaCreacion,
       esPorHora ? 'si' : 'no',
       (aCuenta === true || aCuenta === 'true' || String(aCuenta || '').toLowerCase() === 'si') ? 'si' : 'no',
     ];
@@ -178,9 +181,10 @@ router.get('/carreras/:driverName', async (req, res) => {
       precio: parseFloat(row[10]) || 0,
       observaciones: row[11] || '',
       foto: row[12] || '',
-      timestampCreacion: row[13] || '',
-      porHora: (row[14] || '').toLowerCase() === 'si',
-      aCuenta: (row[15] || '').toLowerCase() === 'si',
+      fechaCreacion: row[13] || '',
+      horaCreacion: row[14] || '',
+      porHora: (row[15] || '').toLowerCase() === 'si',
+      aCuenta: (row[16] || '').toLowerCase() === 'si',
     }));
 
     let filtered = carreras;

@@ -10,7 +10,7 @@ const path = require('path');
 const CARRERAS_DRIVERS_HEADERS = [
   'CarreraId', 'Abejita', 'Fecha', 'Cliente', 'Hora Inicio', 'Hora Fin',
   'Lugar Recojo', 'Lugar Destino', 'Tiempo', 'Distancia (km)', 'Precio (Bs)',
-  'Observaciones', 'Foto', 'Timestamp Creación', 'Por hora', 'A cuenta',
+  'Observaciones', 'Foto', 'Fecha creación', 'Hora creación', 'Por hora', 'A cuenta',
 ];
 
 async function main() {
@@ -50,7 +50,7 @@ async function main() {
 
       const response = await sheets.spreadsheets.values.get({
         spreadsheetId: SHEET_ID,
-        range: `${title}!A1:P1`,
+        range: `${title}!A1:Q1`,
       });
 
       const currentHeaders = response.data.values?.[0] || [];
@@ -64,7 +64,7 @@ async function main() {
       const newHeaders = [...CARRERAS_DRIVERS_HEADERS];
       await sheets.spreadsheets.values.update({
         spreadsheetId: SHEET_ID,
-        range: `${title}!A1:P1`,
+        range: `${title}!A1:Q1`,
         valueInputOption: 'RAW',
         resource: {
           values: [newHeaders],

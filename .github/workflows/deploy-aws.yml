@@ -54,12 +54,20 @@ jobs:
 
       - name: Sync to S3
         run: |
-          # Subir archivos estáticos (JS, CSS, imágenes) con caché largo
+          # Subir JS con Content-Type correcto (evita error MIME type en CloudFront)
           aws s3 sync frontend/dist/ s3://${{ env.S3_BUCKET }}/ \
             --delete \
             --exclude "index.html" \
             --exclude "manifest.json" \
-            --cache-control "public, max-age=31536000, immutable"
+            --exclude "*.css" \
+            --cache-control "public, max-age=31536000, immutable" \
+            --content-type "application/javascript"
+          # Subir CSS con Content-Type correcto
+          aws s3 sync frontend/dist/ s3://${{ env.S3_BUCKET }}/ \
+            --exclude "*" \
+            --include "*.css" \
+            --cache-control "public, max-age=31536000, immutable" \
+            --content-type "text/css"
           
           # Subir index.html sin caché (siempre la versión más nueva)
           aws s3 cp frontend/dist/index.html s3://${{ env.S3_BUCKET }}/index.html \

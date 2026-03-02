@@ -31,9 +31,10 @@ Este documento describe la hoja de Google Sheets para el registro de carreras de
 | K       | Precio (Bs)        | Precio en bolivianos           | 18 |
 | L       | Observaciones      | Notas adicionales              | Cliente amable |
 | M       | Foto               | URL de foto en S3 (opcional)   | https://... |
-| N       | Timestamp Creación | Fecha/hora de registro (ISO)   | 2026-02-28T03:17:00.000Z |
-| O       | Por hora           | "si" si es carrera por hora, "no" si no | si, no |
-| P       | A cuenta           | "si" si es a cuenta (por pagar), "no" si no | si, no |
+| N       | Fecha creación     | Fecha de registro (YYYY-MM-DD)  | 2026-02-28 |
+| O       | Hora creación      | Hora de registro (HH:mm)        | 03:17 |
+| P       | Por hora           | "si" si es carrera por hora, "no" si no | si, no |
+| Q       | A cuenta           | "si" si es a cuenta (por pagar), "no" si no | si, no |
 
 ## Compartir con la cuenta de servicio
 

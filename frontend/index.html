@@ -18,20 +18,26 @@
       <p style="margin-top:1.5rem;"><a href="" style="color:#2563eb; font-weight:600;">Recargar ahora</a></p>
     </div>
     <script>
-      // Si falla la carga del script por caché antigua (MIME type text/html), mostrar mensaje
-      window.addEventListener('error', function(e) {
-        if (e.message && typeof e.message === 'string' && e.message.includes('MIME type') && e.message.includes('text/html')) {
-          var root = document.getElementById('root');
-          var box = document.getElementById('cache-error');
-          if (root && box) {
-            root.style.display = 'none';
-            box.style.display = 'block';
-            var link = box.querySelector('a');
+      // Si falla la carga del script (MIME type, caché antigua) o la app no carga, mostrar mensaje
+      function showCacheError() {
+        var root = document.getElementById('root');
+        var box = document.getElementById('cache-error');
+        if (root && box && !root.querySelector('*')) {
+          root.style.display = 'none';
+          box.style.display = 'block';
+          var link = box.querySelector('a');
+          if (link) {
             link.href = location.href;
             link.onclick = function() { location.reload(true); return false; };
           }
         }
+      }
+      window.addEventListener('error', function(e) {
+        if ((e.message && String(e.message).includes('MIME type')) || (e.target && e.target.tagName === 'SCRIPT')) {
+          showCacheError();
+        }
       }, true);
+      setTimeout(showCacheError, 5000);
     </script>
     <script type="module" src="/src/main.tsx"></script>
     <script>

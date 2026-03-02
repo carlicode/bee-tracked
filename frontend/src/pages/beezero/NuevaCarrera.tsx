@@ -256,13 +256,17 @@ export const NuevaCarrera = () => {
                 Distancia (km)
               </label>
               <input
-                type="number"
+                type="text"
+                inputMode="decimal"
                 id="distancia"
-                min="0"
-                step="0.1"
-                value={formData.distancia}
-                onChange={(e) => setFormData((prev) => ({ ...prev, distancia: parseFloat(e.target.value) || 0 }))}
+                value={String(formData.distancia ?? '')}
+                onChange={(e) => {
+                  const v = e.target.value.replace(',', '.').replace(/[^0-9.]/g, '');
+                  const n = parseFloat(v);
+                  setFormData((prev) => ({ ...prev, distancia: v === '' ? 0 : isNaN(n) ? prev.distancia ?? 0 : n }));
+                }}
                 className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
+                placeholder="0"
               />
             </div>
           )}
@@ -271,13 +275,17 @@ export const NuevaCarrera = () => {
               Precio (Bs)
             </label>
             <input
-              type="number"
+              type="text"
+              inputMode="decimal"
               id="precio"
-              min="0"
-              step="0.01"
-              value={formData.precio}
-              onChange={(e) => setFormData((prev) => ({ ...prev, precio: parseFloat(e.target.value) || 0 }))}
+              value={String(formData.precio ?? '')}
+              onChange={(e) => {
+                const v = e.target.value.replace(',', '.').replace(/[^0-9.]/g, '');
+                const n = parseFloat(v);
+                setFormData((prev) => ({ ...prev, precio: v === '' ? 0 : isNaN(n) ? prev.precio ?? 0 : n }));
+              }}
               className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
+              placeholder="0"
             />
           </div>
         </div>
