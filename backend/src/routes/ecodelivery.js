@@ -418,4 +418,8 @@ router.post('/deliveries/registrar', async (req, res) => {
   }
 });
 
+// Rutas Kilometraje (carreras del día + registrar km)
+const kilometrajeRouter = require('./kilometraje');
+router.use('/', kilometrajeRouter);
+
 module.exports = router;

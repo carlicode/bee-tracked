@@ -75,20 +75,20 @@ export const DashboardBiker = () => {
         </DashboardCard>
 
         <DashboardCard
-          to="/ecodelivery/nuevo-delivery"
+          to="/ecodelivery/kilometraje"
           icon={<IconPlus />}
-          title="Registrar Delivery"
-          subtitle="Registra un delivery realizado"
-          description="Registra los detalles del delivery: cliente, origen, destino"
+          title="Kilometraje"
+          subtitle="Carreras del día"
+          description="Ve tus carreras del día y registra el kilometraje de cada una"
           theme="ecodelivery"
         />
 
         <DashboardCard
-          to="/ecodelivery/mis-deliveries"
+          to="/ecodelivery/mis-kilometrajes"
           icon={<IconBriefcase />}
-          title="Mis Deliveries"
-          subtitle="Historial de deliveries"
-          description="Revisa todos tus deliveries registrados"
+          title="Mis Kilometrajes"
+          subtitle="Historial de kilometraje"
+          description="Revisa todos tus registros de kilometraje"
           theme="ecodelivery"
         />
 

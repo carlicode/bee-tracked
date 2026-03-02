@@ -155,6 +155,56 @@ export const ecodeliveryApi = {
   },
 
   /**
+   * Obtiene las carreras del día actual (Bolivia) del biker desde hoja Registros.
+   */
+  async getCarrerasDelDia(bikerName: string): Promise<{ carreras: import('../types').CarreraRegistro[] }> {
+    if (!API_BASE) throw new Error('Backend no configurado');
+    const { data } = await axios.get<{ success: boolean; carreras?: import('../types').CarreraRegistro[]; error?: string }>(
+      `${API_BASE}/api/ecodelivery/carreras`,
+      { params: { bikerName }, headers: authHeaders(), timeout: 10000 }
+    );
+    if (!data.success) throw new Error(data.error || 'Error al obtener carreras');
+    return { carreras: data.carreras || [] };
+  },
+
+  /**
+   * Registra kilometraje a una carrera (escribe en hoja Kilometraje).
+   */
+  async registrarKilometraje(params: {
+    carreraId: string;
+    bikerName: string;
+    kilometraje: number;
+  }): Promise<void> {
+    if (!API_BASE) throw new Error('Backend no configurado');
+    const { data } = await axios.post<{ success: boolean; error?: string }>(
+      `${API_BASE}/api/ecodelivery/kilometraje`,
+      params,
+      { headers: { ...authHeaders(), 'Content-Type': 'application/json' }, timeout: 15000 }
+    );
+    if (!data.success) throw new Error(data.error || 'Error al registrar kilometraje');
+  },
+
+  /**
+   * Obtiene el historial de kilometraje del biker desde hoja Kilometraje.
+   */
+  async getMisKilometrajes(bikerName: string): Promise<{
+    registros: import('../types').KilometrajeRegistro[];
+  }> {
+    if (!API_BASE) throw new Error('Backend no configurado');
+    const { data } = await axios.get<{
+      success: boolean;
+      registros?: import('../types').KilometrajeRegistro[];
+      error?: string;
+    }>(`${API_BASE}/api/ecodelivery/kilometraje`, {
+      params: { bikerName },
+      headers: authHeaders(),
+      timeout: 10000,
+    });
+    if (!data.success) throw new Error(data.error || 'Error al obtener kilometrajes');
+    return { registros: data.registros || [] };
+  },
+
+  /**
    * Sube una foto de delivery a S3
    * Ruta: Registros_BeeTracked/Ecodelivery/Deliveries/
    */

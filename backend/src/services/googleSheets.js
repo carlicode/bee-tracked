@@ -323,6 +323,33 @@ async function getAllRowsFromSpreadsheet(spreadsheetId, sheetName) {
   }
 }
 
+/**
+ * Obtiene todas las filas de una hoja incluyendo el header (para mapear por nombre de columna).
+ * @param {string} spreadsheetId - ID del spreadsheet
+ * @param {string} sheetName - Nombre de la hoja
+ * @param {string} rangeSuffix - Sufijo de rango (ej: 'A:AF' para más columnas). Default: 'A:Z'
+ * @returns {Promise<{ headers: string[], rows: any[][] }>}
+ */
+async function getAllRowsWithHeadersFromSpreadsheet(spreadsheetId, sheetName, rangeSuffix = 'A:AF') {
+  const sheets = await getSheetsClient();
+  try {
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: `${sheetName}!${rangeSuffix}`,
+    });
+    const allRows = res.data.values || [];
+    if (allRows.length === 0) {
+      return { headers: [], rows: [] };
+    }
+    const headers = allRows[0];
+    const rows = allRows.slice(1);
+    return { headers, rows };
+  } catch (error) {
+    console.error('Error getting rows with headers from spreadsheet:', error.message);
+    throw new Error(`Failed to get rows: ${error.message}`);
+  }
+}
+
 module.exports = {
   initializeSheetsClient,
   appendRow,
@@ -336,4 +363,5 @@ module.exports = {
   getRowCountInSpreadsheet,
   getSheetsInSpreadsheet,
   getAllRowsFromSpreadsheet,
+  getAllRowsWithHeadersFromSpreadsheet,
 };

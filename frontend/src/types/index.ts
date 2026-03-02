@@ -59,3 +59,16 @@ export interface ApiResponse<T> {
   error?: string;
 }
 
+/** Carrera del día desde hoja Registros (Ecodelivery Kilometraje) */
+export interface CarreraRegistro {
+  id: string;
+  [key: string]: unknown;
+}
+
+/** Registro de kilometraje en hoja Kilometraje */
+export interface KilometrajeRegistro {
+  id: string;
+  kilometraje: number;
+  [key: string]: unknown;
+}
+

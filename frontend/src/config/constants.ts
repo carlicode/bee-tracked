@@ -35,7 +35,7 @@ export const SUCCESS_MESSAGES = {
   TURNO_CERRADO: 'Turno cerrado exitosamente',
 } as const;
 
-/** Clientes por defecto para selección en NuevaCarrera y NuevoDelivery (orden alfabético). */
+/** Clientes por defecto para selección en NuevaCarrera (orden alfabético). */
 export const DEFAULT_CLIENTES = [
   '61361772',
   'Aldea SOS',

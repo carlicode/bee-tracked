@@ -23,8 +23,8 @@ import { DetalleTurno as DetalleTurnoBeezero } from './pages/beezero/DetalleTurn
 import { DashboardBiker } from './pages/ecodelivery/DashboardBiker';
 import { IniciarTurnoBiker } from './pages/ecodelivery/IniciarTurnoBiker';
 import { CerrarTurnoBiker } from './pages/ecodelivery/CerrarTurnoBiker';
-import { NuevoDelivery } from './pages/ecodelivery/NuevoDelivery';
-import { MisDeliveries } from './pages/ecodelivery/MisDeliveries';
+import { Kilometraje } from './pages/ecodelivery/Kilometraje';
+import { MisKilometrajes } from './pages/ecodelivery/MisKilometrajes';
 import { MisTurnos as MisTurnosBiker } from './pages/ecodelivery/MisTurnos';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
@@ -214,13 +214,13 @@ function AppContent() {
           }
         />
         <Route
-          path="/ecodelivery/nuevo-delivery"
+          path="/ecodelivery/kilometraje"
           element={
             <PrivateRoute>
               {isAuthenticated() && (
                 <ThemeProvider userType={userType}>
                   <Layout>
-                    <NuevoDelivery />
+                    <Kilometraje />
                   </Layout>
                 </ThemeProvider>
               )}
@@ -228,13 +228,13 @@ function AppContent() {
           }
         />
         <Route
-          path="/ecodelivery/mis-deliveries"
+          path="/ecodelivery/mis-kilometrajes"
           element={
             <PrivateRoute>
               {isAuthenticated() && (
                 <ThemeProvider userType={userType}>
                   <Layout>
-                    <MisDeliveries />
+                    <MisKilometrajes />
                   </Layout>
                 </ThemeProvider>
               )}
