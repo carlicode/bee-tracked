@@ -1,11 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth';
 import { useToast } from '../../contexts/ToastContext';
 import { apiService } from '../../services/api';
 import { beezeroApi, isBeezeroApiEnabled } from '../../services/beezeroApi';
 import { storage } from '../../services/storage';
-import { formatters } from '../../utils/formatters';
 import { DEFAULT_CLIENTES } from '../../config/constants';
 import { TimeSelect } from '../../components/TimeSelect';
 import { PorHoraCheckbox } from '../../components/PorHoraCheckbox';
@@ -20,10 +19,10 @@ export const NuevaCarrera = () => {
   const [clientesApi, setClientesApi] = useState<string[]>([]);
   const clientesOpciones = [...new Set([...DEFAULT_CLIENTES, ...clientesApi])];
   
-  const [formData, setFormData] = useState<Partial<Carrera>>({
+  const initialFormData = (): Partial<Carrera> => ({
     fecha: new Date().toISOString().split('T')[0],
     cliente: '',
-    horaInicio: formatters.timeToHHmm(new Date()),
+    horaInicio: '',
     lugarRecojo: '',
     lugarDestino: '',
     horaFin: '',
@@ -35,7 +34,24 @@ export const NuevaCarrera = () => {
     observaciones: '',
   });
 
+  const [formData, setFormData] = useState<Partial<Carrera>>(initialFormData);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [distanciaStr, setDistanciaStr] = useState('');
+  const [precioStr, setPrecioStr] = useState('');
+
+  useEffect(() => {
+    setDistanciaStr(formData.distancia === 0 || formData.distancia === undefined ? '' : String(formData.distancia));
+    setPrecioStr(formData.precio === 0 || formData.precio === undefined ? '' : String(formData.precio));
+  }, [formData.distancia, formData.precio]);
+
   const porHora = formData.porHora ?? false;
+
+  const sanitizeDecimalInput = (raw: string): string => {
+    const v = raw.replace(',', '.');
+    const parts = v.split('.');
+    const sanitized = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : v;
+    return sanitized.replace(/[^0-9.]/g, '');
+  };
 
   const handleClienteChange = async (value: string) => {
     setFormData((prev) => ({ ...prev, cliente: value }));
@@ -95,8 +111,7 @@ export const NuevaCarrera = () => {
           lugarDestino: porHora ? '' : formData.lugarDestino,
           distancia: porHora ? 0 : (formData.distancia ?? 0),
         } as Carrera);
-        toast.show('Carrera registrada exitosamente', 'success');
-        navigate('/beezero/dashboard');
+        setShowSuccessModal(true);
       } else {
         const payload: Carrera = {
           ...(formData as Carrera),
@@ -106,8 +121,7 @@ export const NuevaCarrera = () => {
         };
         const response = await apiService.createCarrera(payload, token);
         if (response.success) {
-          toast.show('Carrera registrada exitosamente', 'success');
-          navigate('/beezero/dashboard');
+          setShowSuccessModal(true);
         } else {
           toast.show(response.error || 'Error al registrar la carrera', 'error');
         }
@@ -169,7 +183,6 @@ export const NuevaCarrera = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <TimeSelect
             label="Hora Inicio"
-            required
             value={formData.horaInicio || ''}
             onChange={(v) => setFormData((prev) => ({ ...prev, horaInicio: v }))}
             focusRingClass="focus:ring-beezero-yellow focus:border-beezero-yellow"
@@ -259,11 +272,14 @@ export const NuevaCarrera = () => {
                 type="text"
                 inputMode="decimal"
                 id="distancia"
-                value={String(formData.distancia ?? '')}
-                onChange={(e) => {
-                  const v = e.target.value.replace(',', '.').replace(/[^0-9.]/g, '');
-                  const n = parseFloat(v);
-                  setFormData((prev) => ({ ...prev, distancia: v === '' ? 0 : isNaN(n) ? prev.distancia ?? 0 : n }));
+                value={distanciaStr}
+                onChange={(e) => setDistanciaStr(sanitizeDecimalInput(e.target.value))}
+                onBlur={() => {
+                  const n = parseFloat(distanciaStr);
+                  setFormData((prev) => ({
+                    ...prev,
+                    distancia: distanciaStr === '' ? 0 : isNaN(n) ? prev.distancia ?? 0 : n,
+                  }));
                 }}
                 className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
                 placeholder="0"
@@ -278,11 +294,14 @@ export const NuevaCarrera = () => {
               type="text"
               inputMode="decimal"
               id="precio"
-              value={String(formData.precio ?? '')}
-              onChange={(e) => {
-                const v = e.target.value.replace(',', '.').replace(/[^0-9.]/g, '');
-                const n = parseFloat(v);
-                setFormData((prev) => ({ ...prev, precio: v === '' ? 0 : isNaN(n) ? prev.precio ?? 0 : n }));
+              value={precioStr}
+              onChange={(e) => setPrecioStr(sanitizeDecimalInput(e.target.value))}
+              onBlur={() => {
+                const n = parseFloat(precioStr);
+                setFormData((prev) => ({
+                  ...prev,
+                  precio: precioStr === '' ? 0 : isNaN(n) ? prev.precio ?? 0 : n,
+                }));
               }}
               className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
               placeholder="0"
@@ -321,6 +340,41 @@ export const NuevaCarrera = () => {
           </button>
         </div>
       </form>
+
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-beezero-yellow rounded-xl shadow-xl p-6 max-w-sm w-full text-center">
+            <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-black flex items-center justify-center">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold text-black mb-2">Listo</h3>
+            <p className="text-black mb-6">Carrera registrada exitosamente</p>
+            <div className="flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setFormData(initialFormData());
+                  setDistanciaStr('');
+                  setPrecioStr('');
+                  setShowSuccessModal(false);
+                }}
+                className="w-full bg-black text-white px-4 py-3 rounded-lg font-semibold hover:bg-gray-800 transition"
+              >
+                Registrar otra carrera
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/beezero/dashboard')}
+                className="w-full border-2 border-black text-black px-4 py-3 rounded-lg font-semibold hover:bg-black/5 transition"
+              >
+                Ir al dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
