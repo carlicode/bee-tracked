@@ -202,18 +202,33 @@ export const NuevaCarrera = () => {
           checkboxClass="text-beezero-yellow focus:ring-beezero-yellow"
         />
 
-        <div className="flex items-center gap-3">
-          <input
-            type="checkbox"
-            id="aCuenta"
-            checked={formData.aCuenta ?? false}
-            onChange={(e) => setFormData((prev) => ({ ...prev, aCuenta: e.target.checked }))}
-            className="w-5 h-5 rounded border-2 border-gray-300 focus:ring-2 focus:ring-offset-0 text-beezero-yellow focus:ring-beezero-yellow"
-            aria-describedby="aCuenta-desc"
-          />
-          <label htmlFor="aCuenta" id="aCuenta-desc" className="text-sm font-medium text-black">
-            A cuenta
-          </label>
+        <div className="flex flex-wrap items-center gap-6">
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="aCuenta"
+              checked={formData.aCuenta ?? false}
+              onChange={(e) => setFormData((prev) => ({ ...prev, aCuenta: e.target.checked }))}
+              className="w-5 h-5 rounded border-2 border-gray-300 focus:ring-2 focus:ring-offset-0 text-beezero-yellow focus:ring-beezero-yellow"
+              aria-describedby="aCuenta-desc"
+            />
+            <label htmlFor="aCuenta" id="aCuenta-desc" className="text-sm font-medium text-black">
+              A cuenta
+            </label>
+          </div>
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="pagoPorQR"
+              checked={formData.pagoPorQR ?? false}
+              onChange={(e) => setFormData((prev) => ({ ...prev, pagoPorQR: e.target.checked }))}
+              className="w-5 h-5 rounded border-2 border-gray-300 focus:ring-2 focus:ring-offset-0 text-beezero-yellow focus:ring-beezero-yellow"
+              aria-describedby="pagoPorQR-desc"
+            />
+            <label htmlFor="pagoPorQR" id="pagoPorQR-desc" className="text-sm font-medium text-black">
+              Pago por QR
+            </label>
+          </div>
         </div>
 
         {!porHora && (
@@ -288,19 +303,6 @@ export const NuevaCarrera = () => {
             </div>
           )}
           <div>
-            <div className="flex items-center gap-3 mb-1">
-              <input
-                type="checkbox"
-                id="pagoPorQR"
-                checked={formData.pagoPorQR ?? false}
-                onChange={(e) => setFormData((prev) => ({ ...prev, pagoPorQR: e.target.checked }))}
-                className="w-5 h-5 rounded border-2 border-gray-300 focus:ring-2 focus:ring-offset-0 text-beezero-yellow focus:ring-beezero-yellow"
-                aria-describedby="pagoPorQR-desc"
-              />
-              <label htmlFor="pagoPorQR" id="pagoPorQR-desc" className="text-sm font-medium text-black">
-                Pago por QR
-              </label>
-            </div>
             <label htmlFor="precio" className="block text-sm font-medium text-gray-700 mb-1">
               Precio (Bs)
             </label>
