@@ -67,10 +67,31 @@ Ejemplo de política (reemplaza `447924811196` por tu Account ID si es distinto)
 - **Actions** en la pestaña del repo: ahí ves cada ejecución y los logs.
 - Si todo va bien, en unos minutos la app en CloudFront tendrá los últimos cambios.
 
-## 5. Resumen de pasos
+## 5. Deploy del Backend (Lambda)
 
-1. Crear usuario IAM con la política anterior y crear Access Key.
+El workflow también despliega el backend Lambda. Si el job `deploy-backend` falla, el Lambda no se actualiza (p. ej. rutas `/api/ecodelivery/carreras` no existirán).
+
+**Permisos IAM adicionales** para el deploy del backend (añadir a la política del usuario):
+
+- CloudFormation: `cloudformation:*` (o al menos CreateStack, UpdateStack, DescribeStacks, DeleteStack)
+- Lambda: `lambda:*` (o UpdateFunctionCode, GetFunction, PublishVersion)
+- API Gateway: `apigateway:*`
+- IAM: `iam:PassRole` (para el rol del Lambda)
+- S3: bucket de deploy de Serverless (Serverless crea uno automáticamente)
+
+**Deploy manual** si el job falla:
+
+```bash
+cd backend
+npm ci
+npx serverless deploy --stage prod --config serverless.deploy.yml
+```
+
+## 6. Resumen de pasos
+
+1. Crear usuario IAM con la política anterior (frontend + backend) y crear Access Key.
 2. En el repo: **Settings → Secrets and variables → Actions**.
 3. Añadir **Secrets:** `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`.
-4. Añadir **Variables:** `VITE_API_URL`, `VITE_COGNITO_USER_POOL_ID`, `VITE_COGNITO_CLIENT_ID`.
+4. Añadir **Variables:** `VITE_COGNITO_USER_POOL_ID`, `VITE_COGNITO_CLIENT_ID`.
 5. Hacer push a `main` (o ejecutar el workflow a mano) y revisar en **Actions**.
+6. Si hay 404 en `/api/ecodelivery/carreras`, ver [TROUBLESHOOTING_404_CARRERAS.md](TROUBLESHOOTING_404_CARRERAS.md).

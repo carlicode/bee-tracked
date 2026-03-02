@@ -16,9 +16,7 @@ env:
   CLOUDFRONT_DISTRIBUTION_ID: E7WOJ080IV37F
 
 jobs:
-  # Backend: desplegar manualmente con `cd backend && npx serverless deploy --stage prod`
-  # (Serverless v4 requiere login; el deploy local con credenciales AWS funciona)
-  deploy:
+  deploy-frontend:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -91,7 +89,25 @@ jobs:
             --distribution-id ${{ env.CLOUDFRONT_DISTRIBUTION_ID }} \
             --paths "/*"
 
-      # Requiere IAM con permisos: CloudFormation, Lambda, API Gateway, IAM, S3 (deploy)
+  # Backend: requiere IAM con CloudFormation, Lambda, API Gateway, IAM, S3
+  deploy-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
       - name: Deploy Backend (Lambda)
         working-directory: backend
         run: |

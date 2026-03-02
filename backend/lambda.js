@@ -41,5 +41,18 @@ app.use((req, res) => {
   res.status(404).json({ success: false, error: 'Route not found' });
 });
 
-// Export for Lambda
-module.exports.handler = serverless(app);
+// Wrapper: API Gateway puede incluir el stage en el path (ej. /prod/api/...)
+// Strip stage para que Express reciba /api/...
+const slsHandler = serverless(app);
+module.exports.handler = async (event, context) => {
+  const stage = event?.requestContext?.stage;
+  if (stage) {
+    if (event.path?.startsWith(`/${stage}/`)) {
+      event.path = event.path.slice(stage.length + 1) || '/';
+    }
+    if (event.version === '2.0' && event.rawPath?.startsWith(`/${stage}/`)) {
+      event.rawPath = event.rawPath.slice(stage.length + 1) || '/';
+    }
+  }
+  return slsHandler(event, context);
+};
