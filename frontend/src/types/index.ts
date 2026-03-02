@@ -12,6 +12,8 @@ export interface Carrera {
   porHora?: boolean;
   /** Si la carrera es a cuenta (por pagar) */
   aCuenta?: boolean;
+  /** Si el pago fue por QR */
+  pagoPorQR?: boolean;
   observaciones?: string;
   foto?: string;
   email?: string;

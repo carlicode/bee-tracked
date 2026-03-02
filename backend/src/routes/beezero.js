@@ -16,7 +16,7 @@ const getCarrerasSpreadsheetId = () =>
 const CARRERAS_DRIVERS_HEADERS = [
   'CarreraId', 'Abejita', 'Fecha', 'Cliente', 'Hora Inicio', 'Hora Fin',
   'Lugar Recojo', 'Lugar Destino', 'Tiempo', 'Distancia (km)', 'Precio (Bs)',
-  'Observaciones', 'Foto', 'Fecha creación', 'Hora creación', 'Por hora', 'A cuenta',
+  'Observaciones', 'Foto', 'Fecha creación', 'Hora creación', 'Por hora', 'A cuenta', 'Pago por QR',
 ];
 
 /**
@@ -61,6 +61,7 @@ router.post('/carreras/registrar', async (req, res) => {
       foto,
       porHora,
       aCuenta,
+      pagoPorQR,
     } = body;
 
     if (!abejita || !fecha || !cliente) {
@@ -110,6 +111,7 @@ router.post('/carreras/registrar', async (req, res) => {
       horaCreacion,
       esPorHora ? 'si' : 'no',
       (aCuenta === true || aCuenta === 'true' || String(aCuenta || '').toLowerCase() === 'si') ? 'si' : 'no',
+      (pagoPorQR === true || pagoPorQR === 'true' || String(pagoPorQR || '').toLowerCase() === 'si') ? 'si' : 'no',
     ];
 
     await appendRowToSpreadsheet(spreadsheetId, sheetTitle, row);
@@ -185,6 +187,7 @@ router.get('/carreras/:driverName', async (req, res) => {
       horaCreacion: row[14] || '',
       porHora: (row[15] || '').toLowerCase() === 'si',
       aCuenta: (row[16] || '').toLowerCase() === 'si',
+      pagoPorQR: (row[17] || '').toLowerCase() === 'si',
     }));
 
     let filtered = carreras;

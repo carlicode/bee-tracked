@@ -35,6 +35,7 @@ Este documento describe la hoja de Google Sheets para el registro de carreras de
 | O       | Hora creación      | Hora de registro (HH:mm)        | 03:17 |
 | P       | Por hora           | "si" si es carrera por hora, "no" si no | si, no |
 | Q       | A cuenta           | "si" si es a cuenta (por pagar), "no" si no | si, no |
+| R       | Pago por QR        | "si" si el pago fue por QR, "no" si no      | si, no |
 
 ## Compartir con la cuenta de servicio
 

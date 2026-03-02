@@ -50,6 +50,7 @@ export const beezeroApi = {
       precio: carrera.precio ?? 0,
       porHora: carrera.porHora ?? false,
       aCuenta: carrera.aCuenta ?? false,
+      pagoPorQR: carrera.pagoPorQR ?? false,
       observaciones: carrera.observaciones || '',
       foto: carrera.foto || '',
     };
@@ -113,6 +114,7 @@ export const beezeroApi = {
         observaciones: string;
         foto: string;
         aCuenta?: boolean;
+        pagoPorQR?: boolean;
       }>;
       error?: string;
     }>(
@@ -132,6 +134,7 @@ export const beezeroApi = {
       precio: c.precio,
       observaciones: c.observaciones,
       aCuenta: c.aCuenta,
+      pagoPorQR: c.pagoPorQR,
     }));
     return { carreras };
   },
