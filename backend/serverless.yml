@@ -9,7 +9,7 @@ provider:
   memorySize: 512
   environment:
     NODE_ENV: production
-    FRONTEND_URL: ${file(./.deploy-info):CLOUDFRONT_URL, 'https://d19ls0k7de9u6w.cloudfront.net'}
+    FRONTEND_URL: 'https://d19ls0k7de9u6w.cloudfront.net'
     GOOGLE_SHEET_ID: '1L69tZzVSHlhuKGP9MCdcezOGPsYyjC2Mm-i03Hm5tM8'
     CARRERAS_BIKERS_SHEET_ID: '1OkM4FLSe0CsLo8w4o50xcVdzsUcHVzpaYRqhGBwJRcs'
     AWS_S3_BUCKET: bee-tracked-photos
