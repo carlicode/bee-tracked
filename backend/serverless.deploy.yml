@@ -13,6 +13,7 @@ provider:
     FRONTEND_URL: 'https://d19ls0k7de9u6w.cloudfront.net'
     GOOGLE_SHEET_ID: '1L69tZzVSHlhuKGP9MCdcezOGPsYyjC2Mm-i03Hm5tM8'
     CARRERAS_BIKERS_SHEET_ID: '1OkM4FLSe0CsLo8w4o50xcVdzsUcHVzpaYRqhGBwJRcs'
+    REGISTROS_SHEET_ID: '1a8M19WHhfM2SWKSiWbTIpVU76gdAFCJ9uv7y0fnPA4g'
     AWS_S3_BUCKET: bee-tracked-photos
     AWS_REGION_CUSTOM: us-east-1
     COGNITO_USER_POOL_ID: us-east-1_REsVOVqcY

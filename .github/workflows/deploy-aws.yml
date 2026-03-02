@@ -90,3 +90,10 @@ jobs:
           aws cloudfront create-invalidation \
             --distribution-id ${{ env.CLOUDFRONT_DISTRIBUTION_ID }} \
             --paths "/*"
+
+      # Requiere IAM con permisos: CloudFormation, Lambda, API Gateway, IAM, S3 (deploy)
+      - name: Deploy Backend (Lambda)
+        working-directory: backend
+        run: |
+          npm ci
+          npx serverless deploy --stage prod --config serverless.deploy.yml
