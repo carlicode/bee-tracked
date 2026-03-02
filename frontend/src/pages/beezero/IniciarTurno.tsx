@@ -118,9 +118,10 @@ export const IniciarTurno = () => {
         createdAt: ahora.toISOString(),
       };
 
-      // Guardar en localStorage ANTES de la llamada al backend
-      // Así el turno queda activo localmente aunque el backend tarde o falle
+      // Guardar en localStorage ANTES de la llamada al backend (sin fotos base64 para evitar exceder la cuota)
       const toSave = { ...turnoData };
+      delete (toSave as Record<string, unknown>).fotoPantalla;
+      delete (toSave as Record<string, unknown>).fotoExterior;
       localStorage.setItem('turno_actual', JSON.stringify(toSave));
 
       if (turnosApi.isEnabled()) {
@@ -136,7 +137,7 @@ export const IniciarTurno = () => {
             horaInicio,
             ubicacionInicio: { lat: location.lat, lng: location.lng },
           });
-          // Actualizar el id del turno en localStorage si el backend respondió
+          // Actualizar el id del turno en localStorage si el backend respondió (toSave ya no tiene fotos)
           localStorage.setItem('turno_actual', JSON.stringify({ ...toSave, id: res.id }));
         } catch (backendError) {
           console.error('Backend tardó o falló, turno guardado localmente:', backendError);

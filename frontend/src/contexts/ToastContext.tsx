@@ -34,7 +34,7 @@ function ToastModal({
   onCloseCallback?: () => void;
   userType: 'beezero' | 'ecodelivery' | 'operador' | null;
 }) {
-  const theme = userType === 'ecodelivery' ? 'ecodelivery' : 'beezero'; // operador uses beezero theme
+  const theme = (userType === 'ecodelivery' || userType === 'operador') ? 'ecodelivery' : 'beezero';
 
   const config = {
     success: {

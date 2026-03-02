@@ -35,17 +35,18 @@ export const themes: Record<UserType, Theme> = {
   },
   operador: {
     name: 'operador',
-    displayName: 'Operador',
+    displayName: 'EcoDelivery',
     colors: {
-      primary: '#FFD700',
-      primaryDark: '#FFC700',
+      primary: '#10B981',
+      primaryDark: '#059669',
+      primaryLight: '#34D399',
       black: '#000000',
       grayDark: '#1F2937',
       grayLight: '#F9FAFB',
     },
     logo: {
-      firstPart: 'bee',
-      secondPart: 'zero',
+      firstPart: 'eco',
+      secondPart: 'delivery',
     },
   },
   ecodelivery: {

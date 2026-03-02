@@ -105,8 +105,11 @@ export const IniciarTurno = () => {
         createdAt: ahora.toISOString(),
       };
 
-      // Guardar en localStorage para demo
-      localStorage.setItem('turno_actual', JSON.stringify(turnoData));
+      // Guardar en localStorage sin fotos base64 (evita exceder la cuota de ~5-10MB)
+      const toSave = { ...turnoData };
+      delete (toSave as Record<string, unknown>).fotoPantalla;
+      delete (toSave as Record<string, unknown>).fotoExterior;
+      localStorage.setItem('turno_actual', JSON.stringify(toSave));
       
       toast.show('Turno iniciado exitosamente', 'success');
       navigate('/dashboard');

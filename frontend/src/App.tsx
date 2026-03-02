@@ -48,6 +48,15 @@ const DashboardRouter = () => {
   return <Navigate to="/beezero/dashboard" replace />;
 };
 
+/** Operadores no deben ver BeeZero: redirige a eco */
+const OperadorGuard = ({ children }: { children: React.ReactNode }) => {
+  const { getUserType } = useAuth();
+  if (getUserType() === 'operador') {
+    return <Navigate to="/ecodelivery/dashboard" replace />;
+  }
+  return <>{children}</>;
+};
+
 function AppContent() {
   const { isAuthenticated, getUserType } = useAuth();
   const userType = getUserType() || 'beezero';
@@ -70,18 +79,20 @@ function AppContent() {
           }
         />
         
-        {/* BeeZero Routes */}
+        {/* BeeZero Routes — operadores no pueden acceder */}
         <Route
           path="/beezero/dashboard"
           element={
             <PrivateRoute>
-              {isAuthenticated() && (
-                <ThemeProvider userType={userType}>
-                  <Layout>
-                    <DashboardBeezero />
-                  </Layout>
-                </ThemeProvider>
-              )}
+              <OperadorGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType={userType}>
+                    <Layout>
+                      <DashboardBeezero />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </OperadorGuard>
             </PrivateRoute>
           }
         />
@@ -89,13 +100,15 @@ function AppContent() {
           path="/beezero/iniciar-turno"
           element={
             <PrivateRoute>
-              {isAuthenticated() && (
-                <ThemeProvider userType={userType}>
-                  <Layout>
-                    <IniciarTurno />
-                  </Layout>
-                </ThemeProvider>
-              )}
+              <OperadorGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType={userType}>
+                    <Layout>
+                      <IniciarTurno />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </OperadorGuard>
             </PrivateRoute>
           }
         />
@@ -103,13 +116,15 @@ function AppContent() {
           path="/beezero/cerrar-turno"
           element={
             <PrivateRoute>
-              {isAuthenticated() && (
-                <ThemeProvider userType={userType}>
-                  <Layout>
-                    <CerrarTurno />
-                  </Layout>
-                </ThemeProvider>
-              )}
+              <OperadorGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType={userType}>
+                    <Layout>
+                      <CerrarTurno />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </OperadorGuard>
             </PrivateRoute>
           }
         />
@@ -117,13 +132,15 @@ function AppContent() {
           path="/beezero/nueva-carrera"
           element={
             <PrivateRoute>
-              {isAuthenticated() && (
-                <ThemeProvider userType={userType}>
-                  <Layout>
-                    <NuevaCarrera />
-                  </Layout>
-                </ThemeProvider>
-              )}
+              <OperadorGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType={userType}>
+                    <Layout>
+                      <NuevaCarrera />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </OperadorGuard>
             </PrivateRoute>
           }
         />
@@ -131,13 +148,15 @@ function AppContent() {
           path="/beezero/mis-carreras"
           element={
             <PrivateRoute>
-              {isAuthenticated() && (
-                <ThemeProvider userType={userType}>
-                  <Layout>
-                    <MisCarreras />
-                  </Layout>
-                </ThemeProvider>
-              )}
+              <OperadorGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType={userType}>
+                    <Layout>
+                      <MisCarreras />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </OperadorGuard>
             </PrivateRoute>
           }
         />
@@ -145,13 +164,15 @@ function AppContent() {
           path="/beezero/mis-turnos"
           element={
             <PrivateRoute>
-              {isAuthenticated() && (
-                <ThemeProvider userType={userType}>
-                  <Layout>
-                    <MisTurnosBeezero />
-                  </Layout>
-                </ThemeProvider>
-              )}
+              <OperadorGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType={userType}>
+                    <Layout>
+                      <MisTurnosBeezero />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </OperadorGuard>
             </PrivateRoute>
           }
         />
@@ -159,13 +180,15 @@ function AppContent() {
           path="/beezero/turno/:id"
           element={
             <PrivateRoute>
-              {isAuthenticated() && (
-                <ThemeProvider userType={userType}>
-                  <Layout>
-                    <DetalleTurnoBeezero />
-                  </Layout>
-                </ThemeProvider>
-              )}
+              <OperadorGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType={userType}>
+                    <Layout>
+                      <DetalleTurnoBeezero />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </OperadorGuard>
             </PrivateRoute>
           }
         />

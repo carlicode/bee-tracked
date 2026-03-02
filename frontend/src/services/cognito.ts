@@ -40,13 +40,13 @@ export type CognitoUserType = 'beezero' | 'operador' | 'ecodelivery';
 
 /**
  * Obtiene el tipo de usuario desde el idToken de Cognito (claim cognito:groups).
- * Prioridad: beezero > operador > ecodelivery. Si no hay grupos, devuelve 'ecodelivery'.
+ * Prioridad: operador > beezero > ecodelivery. Operadores usan vista eco.
  */
 export function getUserTypeFromToken(idToken: string): CognitoUserType {
   const payload = decodePayload(idToken);
   const groups = (payload['cognito:groups'] as string[] | undefined) || [];
-  if (groups.includes('beezero')) return 'beezero';
   if (groups.includes('operador')) return 'operador';
+  if (groups.includes('beezero')) return 'beezero';
   if (groups.includes('ecodelivery')) return 'ecodelivery';
   return 'ecodelivery';
 }

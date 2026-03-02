@@ -116,8 +116,11 @@ export const DashboardBeezero = () => {
                 createdAt: turnoIniciado['Timestamp Creación']
               };
               
-              // Guardar en localStorage para próximas cargas
-              localStorage.setItem('turno_actual', JSON.stringify(turno));
+              // Guardar en localStorage sin fotos (evita exceder cuota)
+              const toSave = { ...turno };
+              delete (toSave as Record<string, unknown>).fotoPantalla;
+              delete (toSave as Record<string, unknown>).fotoExterior;
+              localStorage.setItem('turno_actual', JSON.stringify(toSave));
               setTurnoActual(turno);
             } else {
               setTurnoActual(null);
