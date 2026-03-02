@@ -50,6 +50,18 @@ npm start
 
 El servidor estará disponible en `http://localhost:3001`
 
+### Deploy a AWS Lambda
+
+Para desplegar el backend a producción (requiere credenciales AWS configuradas):
+
+```bash
+cd backend
+npm install
+npm run deploy
+```
+
+Esto actualiza el Lambda con los últimos cambios (ej. columna "Pago por QR" en carreras).
+
 ## 📚 API Endpoints
 
 ### Turnos

@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
+    "deploy": "serverless deploy --stage prod --config serverless.deploy.yml",
     "test": "echo \"Error: no test specified\" && exit 1",
     "s3:create-registros": "node scripts/create-s3-registros.js"
   },
@@ -31,6 +32,10 @@
   },
   "devDependencies": {
     "nodemon": "^3.0.1",
+    "serverless": "3.38.0",
     "serverless-offline": "^14.5.0"
+  },
+  "overrides": {
+    "serverless": "3.38.0"
   }
 }
