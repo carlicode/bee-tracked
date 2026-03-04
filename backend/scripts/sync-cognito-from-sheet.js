@@ -138,10 +138,16 @@ async function getSheetUsers() {
   const headers = rows[0];
   const usedUsernames = new Set();
   const users = [];
+  const seenLower = new Set();
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
     const u = parseSheetRow(row, headers, usedUsernames);
-    if (u) users.push(u);
+    if (u) {
+      const key = u.usuario.toLowerCase();
+      if (seenLower.has(key)) continue; // saltar duplicados
+      seenLower.add(key);
+      users.push(u);
+    }
   }
   return users;
 }
@@ -172,12 +178,17 @@ function listCognitoUsers() {
   return users;
 }
 
+/**
+ * El frontend envía el username en minúsculas a Cognito (cognito.ts línea 71).
+ * Crear usuarios en minúsculas para que el login funcione.
+ */
 function createCognitoUser(usuario, nombre, contraseña) {
+  const cognitoUsername = usuario.toLowerCase();
   const nameEsc = nombre.replace(/"/g, '\\"');
   try {
     runAws([
       'admin-create-user',
-      `--username "${usuario}"`,
+      `--username "${cognitoUsername}"`,
       `--temporary-password "Temp${contraseña}!"`,
       `--user-attributes Name=name,Value="${nameEsc}"`,
       '--message-action SUPPRESS',
@@ -189,7 +200,7 @@ function createCognitoUser(usuario, nombre, contraseña) {
   try {
     runAws([
       'admin-set-user-password',
-      `--username "${usuario}"`,
+      `--username "${cognitoUsername}"`,
       `--password "${contraseña}"`,
       '--permanent',
     ]);
@@ -199,8 +210,8 @@ function createCognitoUser(usuario, nombre, contraseña) {
   }
 }
 
-function addUserToGroup(usuario, group) {
-  runAws(['admin-add-user-to-group', `--username "${usuario}"`, `--group-name ${group}`], true);
+function addUserToGroup(cognitoUsername, group) {
+  runAws(['admin-add-user-to-group', `--username "${cognitoUsername}"`, `--group-name ${group}`], true);
 }
 
 function deleteCognitoUser(usuario) {
@@ -220,16 +231,21 @@ async function main() {
 
   const cognitoUsers = listCognitoUsers();
   const cognitoUsersLower = new Set(cognitoUsers.map((u) => u.toLowerCase()));
+  const lowerToActual = new Map();
+  for (const u of cognitoUsers) {
+    lowerToActual.set(u.toLowerCase(), u);
+  }
   console.log(`📋 ${cognitoUsers.length} usuarios en Cognito\n`);
 
-  // Crear usuarios nuevos (comparar case-insensitive por si Cognito guarda en minúsculas)
+  // Crear usuarios nuevos en minúsculas (el frontend envía lowercase al login)
   let created = 0;
   for (const u of sheetUsers) {
-    if (!cognitoUsersLower.has(u.usuario.toLowerCase())) {
-      process.stdout.write(`   Creando ${u.usuario} (${u.nombre})... `);
+    const userLower = u.usuario.toLowerCase();
+    if (!cognitoUsersLower.has(userLower)) {
+      process.stdout.write(`   Creando ${userLower} (${u.nombre})... `);
       try {
         if (createCognitoUser(u.usuario, u.nombre, u.contraseña)) {
-          addUserToGroup(u.usuario, u.group);
+          addUserToGroup(userLower, u.group);
           console.log('✅');
           created++;
         } else {
@@ -242,11 +258,12 @@ async function main() {
   }
   if (created > 0) console.log(`\n✅ ${created} usuarios creados\n`);
 
-  // Asignar grupos a usuarios existentes (por si cambiaron de rol)
+  // Asignar grupos a usuarios existentes (usar username exacto de Cognito)
   for (const u of sheetUsers) {
-    if (cognitoUsersLower.has(u.usuario.toLowerCase())) {
+    const actualUsername = lowerToActual.get(u.usuario.toLowerCase());
+    if (actualUsername) {
       try {
-        addUserToGroup(u.usuario, u.group);
+        addUserToGroup(actualUsername, u.group);
       } catch (_) {}
     }
   }
