@@ -4,15 +4,15 @@ const fs = require('fs');
 const path = require('path');
 const { registerSession, invalidateSession } = require('../services/sessionManager');
 
+const DATA_DIR = path.join(__dirname, '../../..', 'data');
 const CREDENTIALS_PATH =
   process.env.ECODELIVERY_CREDENTIALS_PATH ||
-  path.join(__dirname, '../../..', 'data', 'ecodelivery-credentials.csv');
+  path.join(DATA_DIR, 'ecodelivery-credentials.csv');
+const USUARIOS_BEE_TRACKED_PATH = path.join(DATA_DIR, 'usuarios-bee-tracked.csv');
 
-function loadEcodeliveryCredentials() {
-  if (!fs.existsSync(CREDENTIALS_PATH)) {
-    return [];
-  }
-  const content = fs.readFileSync(CREDENTIALS_PATH, 'utf8');
+function parseCsvFile(filePath, hasRolColumn = false) {
+  if (!fs.existsSync(filePath)) return [];
+  const content = fs.readFileSync(filePath, 'utf8');
   const lines = content.split(/\r?\n/).filter((l) => l.length > 0);
   const rows = [];
   for (let i = 1; i < lines.length; i++) {
@@ -23,11 +23,8 @@ function loadEcodeliveryCredentials() {
     for (let j = 0; j < line.length; j++) {
       const c = line[j];
       if (inQuotes) {
-        if (c === '"') {
-          inQuotes = false;
-        } else {
-          current += c;
-        }
+        if (c === '"') inQuotes = false;
+        else current += c;
       } else {
         if (c === '"') inQuotes = true;
         else if (c === ',') {
@@ -38,10 +35,18 @@ function loadEcodeliveryCredentials() {
     }
     parts.push(current.trim());
     if (parts.length >= 3) {
-      rows.push({ biker: parts[0], user: parts[1], password: parts[2] });
+      const rol = hasRolColumn && parts.length >= 4 ? parts[3].trim() : 'Ecodelivery';
+      const userType = rol === 'Bee Zero' ? 'beezero' : rol === 'Operador' ? 'operador' : 'ecodelivery';
+      rows.push({ biker: parts[0], user: parts[1], password: parts[2], userType });
     }
   }
   return rows;
+}
+
+function loadEcodeliveryCredentials() {
+  const primary = parseCsvFile(CREDENTIALS_PATH, false);
+  if (primary.length > 0) return primary.map((r) => ({ ...r, userType: r.userType || 'ecodelivery' }));
+  return parseCsvFile(USUARIOS_BEE_TRACKED_PATH, true);
 }
 
 /**
@@ -63,14 +68,15 @@ router.post('/login', (req, res) => {
     const userTrim = String(user).trim();
     const passTrim = String(password).trim();
 
-    // Ecodelivery: validar contra CSV
+    // Validar contra CSV (ecodelivery-credentials o usuarios-bee-tracked como fallback)
     const credentials = loadEcodeliveryCredentials();
     const match = credentials.find(
-      (r) => r.user === userTrim && r.password === passTrim
+      (r) => r.user.toLowerCase() === userTrim.toLowerCase() && r.password === passTrim
     );
     if (match) {
       const userId = match.user;
-      const sessionId = registerSession(userId, { userType: 'ecodelivery', name: match.biker });
+      const userType = match.userType || 'ecodelivery';
+      const sessionId = registerSession(userId, { userType, name: match.biker });
       
       return res.json({
         success: true,
@@ -78,7 +84,7 @@ router.post('/login', (req, res) => {
           email: `${match.user}@ecodelivery.com`,
           name: match.biker,
           driverName: match.biker,
-          userType: 'ecodelivery',
+          userType,
         },
         sessionId,
       });

@@ -29,7 +29,12 @@ export const Login = () => {
     // 1) Si Cognito está configurado, intentar login Ecodelivery con Cognito primero
     if (isCognitoConfigured()) {
       try {
-        const { idToken, refreshToken, name, username } = await cognitoSignIn(userTrim, passTrim);
+        const COGNITO_TIMEOUT_MS = 15000;
+        const cognitoPromise = cognitoSignIn(userTrim, passTrim);
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Tiempo de espera agotado. Verifica tu conexión.')), COGNITO_TIMEOUT_MS)
+        );
+        const { idToken, refreshToken, name, username } = await Promise.race([cognitoPromise, timeoutPromise]);
         
         // Guardar refresh token y username para renovación automática
         storage.setRefreshToken(refreshToken);
@@ -68,8 +73,14 @@ export const Login = () => {
           navigate('/beezero/dashboard', { replace: true });
         }
         return;
-      } catch {
-        // Cognito falló (usuario no existe o contraseña incorrecta): intentar backend si está configurado (BeeZero)
+      } catch (cognitoErr) {
+        // Cognito falló: intentar backend como fallback. Si no hay backend, mostrar error.
+        if (!API_BASE) {
+          const msg = cognitoErr instanceof Error ? cognitoErr.message : 'Usuario o contraseña incorrectos';
+          setError(msg);
+          setLoading(false);
+          return;
+        }
       }
     }
 
