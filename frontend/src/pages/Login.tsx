@@ -183,6 +183,7 @@ export const Login = () => {
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder={API_BASE ? 'Usuario' : 'eco o patricia'}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg"
+                autoComplete="username"
                 required
                 autoFocus
               />
@@ -199,6 +200,7 @@ export const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={API_BASE ? 'Contraseña' : '(opcional para demo)'}
+                  autoComplete="current-password"
                   required={!!API_BASE}
                   className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg"
                 />

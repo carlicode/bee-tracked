@@ -44,6 +44,13 @@ export function setupAxiosInterceptors() {
     (response) => response,
     async (error: AxiosError) => {
       const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+      const url = originalRequest?.url ?? '';
+      const isAuthRequest = /\/api\/auth\/(login|cognito-login)/.test(url);
+
+      // No interceptar 401 en login: dejar que el componente muestre el error y conserve los datos
+      if (isAuthRequest) {
+        return Promise.reject(error);
+      }
 
       // Si es 401 y no hemos intentado renovar ya
       if (error.response?.status === 401 && !originalRequest._retry) {
