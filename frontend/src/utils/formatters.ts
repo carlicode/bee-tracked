@@ -1,20 +1,27 @@
 /**
  * Formatting utilities
+ * Zona horaria: Bolivia (America/La_Paz)
  */
+const BOLIVIA_TZ = 'America/La_Paz';
 
 export const formatters = {
   /**
    * Format date to YYYY-MM-DD
    */
   dateToInput: (date: Date): string => {
-    return date.toISOString().split('T')[0];
+    return new Intl.DateTimeFormat('en-CA', { timeZone: BOLIVIA_TZ }).format(date);
   },
 
   /**
    * Format time to HH:mm (sin segundos). Uso consistente en toda la app.
    */
   timeToHHmm: (date: Date): string => {
-    return date.toTimeString().slice(0, 5);
+    return new Intl.DateTimeFormat('en-GB', {
+      timeZone: BOLIVIA_TZ,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(date);
   },
 
   /**
@@ -60,6 +67,7 @@ export const formatters = {
   formatDate: (dateString: string): string => {
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('es-BO', {
+      timeZone: BOLIVIA_TZ,
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -72,9 +80,26 @@ export const formatters = {
   formatDateTime: (dateString: string): string => {
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('es-BO', {
+      timeZone: BOLIVIA_TZ,
       year: 'numeric',
       month: 'short',
       day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(date);
+  },
+
+  /**
+   * Formato DD/MM/YYYY HH:mm para timestamps (horario Bolivia)
+   */
+  formatDateTimeShort: (dateString: string | undefined): string => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('es-BO', {
+      timeZone: BOLIVIA_TZ,
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
     }).format(date);

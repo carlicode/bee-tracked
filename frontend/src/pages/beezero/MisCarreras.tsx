@@ -5,6 +5,7 @@ import { CarreraCard } from '../../components/CarreraCard';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { apiService } from '../../services/api';
 import { beezeroApi, isBeezeroApiEnabled } from '../../services/beezeroApi';
+import { formatters } from '../../utils/formatters';
 import type { Carrera } from '../../types';
 
 export const MisCarreras = () => {
@@ -12,10 +13,7 @@ export const MisCarreras = () => {
   const { getCurrentUser } = useAuth();
   const [carreras, setCarreras] = useState<Carrera[]>([]);
   const [loading, setLoading] = useState(true);
-  const [fecha, setFecha] = useState(() => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
-  });
+  const [fecha, setFecha] = useState(() => formatters.dateToInput(new Date()));
 
   useEffect(() => {
     loadCarreras();

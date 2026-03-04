@@ -6,6 +6,7 @@ import { apiService } from '../../services/api';
 import { beezeroApi, isBeezeroApiEnabled } from '../../services/beezeroApi';
 import { storage } from '../../services/storage';
 import { DEFAULT_CLIENTES } from '../../config/constants';
+import { formatters } from '../../utils/formatters';
 import { TimeSelect } from '../../components/TimeSelect';
 import { PorHoraCheckbox } from '../../components/PorHoraCheckbox';
 import { ClienteSelect } from '../../components/ClienteSelect';
@@ -20,7 +21,7 @@ export const NuevaCarrera = () => {
   const clientesOpciones = [...new Set([...DEFAULT_CLIENTES, ...clientesApi])];
   
   const initialFormData = (): Partial<Carrera> => ({
-    fecha: new Date().toISOString().split('T')[0],
+    fecha: formatters.dateToInput(new Date()),
     cliente: '',
     horaInicio: '',
     lugarRecojo: '',
