@@ -44,15 +44,21 @@ export function setupAxiosInterceptors() {
     (response) => response,
     async (error: AxiosError) => {
       const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
+      // Si es 401 pero no hay token (usuario intentando login): no redirigir, dejar que el componente maneje el error
+      const token = storage.getToken();
+      const hasValidToken = token && token !== 'demo-token';
+      if (error.response?.status === 401 && !hasValidToken) {
+        return Promise.reject(error);
+      }
+
       const url = originalRequest?.url ?? '';
       const isAuthRequest = /\/api\/auth\/(login|cognito-login)/.test(url);
-
-      // No interceptar 401 en login: dejar que el componente muestre el error y conserve los datos
       if (isAuthRequest) {
         return Promise.reject(error);
       }
 
-      // Si es 401 y no hemos intentado renovar ya
+      // Si es 401 y no hemos intentado renovar ya (usuario con sesión expirada)
       if (error.response?.status === 401 && !originalRequest._retry) {
         // Si ya estamos renovando, esperar a que termine
         if (isRefreshing) {
