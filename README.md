@@ -449,6 +449,10 @@ node scripts/list-sheets.js            # Diagnóstico Google Sheets
 # Cognito (primera vez)
 bash scripts/setup-cognito-roles.sh      # Crear grupos
 bash scripts/update-cognito-roles.sh     # Asignar usuarios a grupos
+
+# Sincronizar usuarios desde Google Sheet con Cognito
+# Crea usuarios nuevos, elimina los que ya no están en la hoja, asigna grupos
+cd backend && node scripts/sync-cognito-from-sheet.js
 ```
 
 ---
