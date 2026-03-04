@@ -6,6 +6,7 @@ export interface Turno {
   qr?: number;
   auto: string; // Placa del auto
   kilometraje?: number; // Km del odómetro
+  bateria?: number; // Nivel de batería (ej. mV o %)
   danosAuto: string;
   fotoPantalla?: string; // URL o base64
   fotoExterior?: string; // URL o base64

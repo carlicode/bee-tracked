@@ -24,6 +24,7 @@ export const CerrarTurno = () => {
     cierreCajaStr: '',
     qrStr: '',
     kilometraje: undefined,
+    bateria: undefined,
     danosAuto: 'ninguno',
     fotoPantalla: '',
     fotoExterior: '',
@@ -40,6 +41,7 @@ export const CerrarTurno = () => {
           auto: turno.auto,
           aperturaCaja: turno.aperturaCaja,
           kilometraje: turno.kilometraje,
+          bateria: turno.bateria,
           danosAuto: turno.danosAuto || 'ninguno',
         }));
       };
@@ -180,6 +182,7 @@ export const CerrarTurno = () => {
             cierreCaja: formData.cierreCaja ?? (parseFloat((formData as { cierreCajaStr?: string }).cierreCajaStr ?? '') || 0),
             qr: formData.qr ?? (parseFloat((formData as { qrStr?: string }).qrStr ?? '') || 0),
             kilometraje: formData.kilometraje,
+            bateria: formData.bateria,
             danosAuto: danos,
             fotoPantalla: formData.fotoPantalla,
             fotoExterior: fotoExt,
@@ -400,6 +403,29 @@ export const CerrarTurno = () => {
               }));
             }}
             placeholder="Km"
+            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
+          />
+        </div>
+
+        {/* Batería - después de kilometraje */}
+        <div>
+          <label htmlFor="bateria" className="block text-sm font-medium text-black mb-1">
+            Batería
+          </label>
+          <input
+            type="text"
+            id="bateria"
+            inputMode="numeric"
+            value={formData.bateria != null ? String(formData.bateria) : ''}
+            onChange={(e) => {
+              const str = e.target.value;
+              const num = parseFloat(str);
+              setFormData((prev) => ({
+                ...prev,
+                bateria: str === '' ? undefined : (isNaN(num) ? undefined : num),
+              }));
+            }}
+            placeholder="Ej: 85 (% o mV)"
             className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
           />
         </div>

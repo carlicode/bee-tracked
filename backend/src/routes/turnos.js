@@ -41,6 +41,7 @@ router.post('/iniciar', optionalAuth, validateSession, async (req, res) => {
       auto,
       aperturaCaja,
       kilometraje,
+      bateria,
       danosAuto,
       fotoPantalla,
       fotoExterior,
@@ -117,6 +118,7 @@ router.post('/iniciar', optionalAuth, validateSession, async (req, res) => {
       'INICIADO', // Y: Estado
       now, // Z: Timestamp Creación
       now, // AA: Timestamp Actualización
+      bateria ?? '', // AB: Bateria
     ];
 
     // Agregar fila a Google Sheets
@@ -154,6 +156,7 @@ router.post('/:id/cerrar', optionalAuth, validateSession, async (req, res) => {
       cierreCaja,
       qr,
       kilometraje,
+      bateria,
       danosAuto,
       fotoPantalla,
       fotoExterior,
@@ -250,6 +253,7 @@ router.post('/:id/cerrar', optionalAuth, validateSession, async (req, res) => {
       'CERRADO', // Y: Estado
       turnoExistente['Timestamp Creación'], // Z: Timestamp Creación
       now, // AA: Timestamp Actualización
+      bateria ?? turnoExistente.Bateria ?? '', // AB: Bateria
     ];
 
     // Actualizar en Google Sheets

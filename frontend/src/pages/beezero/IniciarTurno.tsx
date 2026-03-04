@@ -18,13 +18,15 @@ export const IniciarTurno = () => {
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   const [deseaRegistrarDano, setDeseaRegistrarDano] = useState<boolean | null>(null);
-  const [formData, setFormData] = useState<Partial<Turno> & { aperturaCajaStr?: string; kilometrajeStr?: string }>({
+  const [formData, setFormData] = useState<Partial<Turno> & { aperturaCajaStr?: string; kilometrajeStr?: string; bateriaStr?: string }>({
     abejita: user?.driverName || '',
     aperturaCaja: undefined,
     auto: '',
     kilometraje: undefined,
+    bateria: undefined,
     aperturaCajaStr: '',
     kilometrajeStr: '',
+    bateriaStr: '',
     danosAuto: 'ninguno',
     fotoPantalla: '',
     fotoExterior: '',
@@ -131,6 +133,7 @@ export const IniciarTurno = () => {
             auto: turnoData.auto!,
             aperturaCaja: turnoData.aperturaCaja!,
             kilometraje: turnoData.kilometraje,
+            bateria: turnoData.bateria,
             danosAuto: danos,
             fotoPantalla: turnoData.fotoPantalla,
             fotoExterior: fotoExt,
@@ -278,6 +281,30 @@ export const IniciarTurno = () => {
               }));
             }}
             placeholder="Km"
+            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
+          />
+        </div>
+
+        {/* Batería - después de kilometraje */}
+        <div>
+          <label htmlFor="bateria" className="block text-sm font-medium text-black mb-1">
+            Batería
+          </label>
+          <input
+            type="text"
+            id="bateria"
+            inputMode="numeric"
+            value={formData.bateriaStr ?? (formData.bateria != null ? String(formData.bateria) : '')}
+            onChange={(e) => {
+              const str = e.target.value;
+              const num = parseFloat(str);
+              setFormData((prev) => ({
+                ...prev,
+                bateriaStr: str,
+                bateria: str === '' ? undefined : (isNaN(num) ? undefined : num),
+              }));
+            }}
+            placeholder="Ej: 85 (% o mV)"
             className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
           />
         </div>

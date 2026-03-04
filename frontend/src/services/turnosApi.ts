@@ -14,6 +14,7 @@ function sheetRowToTurno(row: Record<string, unknown>): Turno {
     auto: (row['Auto (Placa)'] as string) || '',
     aperturaCaja: parseFloat(String(row['Apertura Caja (Bs)'] || '0')) || 0,
     kilometraje: row['Kilometraje Inicio'] ? parseInt(String(row['Kilometraje Inicio'])) : undefined,
+    bateria: row.Bateria ? parseFloat(String(row.Bateria)) : undefined,
     danosAuto: (row['Daños Auto Inicio'] as string) || 'ninguno',
     fotoPantalla: (row['Foto Tablero Inicio'] as string) || '',
     fotoExterior: (row['Foto Exterior Inicio'] as string) || '',
@@ -81,6 +82,7 @@ export const turnosApi = {
     auto: string;
     aperturaCaja: number;
     kilometraje?: number | string;
+    bateria?: number | string;
     danosAuto?: string;
     fotoPantalla?: string;
     fotoExterior?: string;
@@ -113,6 +115,7 @@ export const turnosApi = {
       cierreCaja: number;
       qr?: number;
       kilometraje?: number | string;
+      bateria?: number | string;
       danosAuto?: string;
       fotoPantalla?: string;
       fotoExterior?: string;

@@ -84,7 +84,7 @@ async function appendRow(sheetName, values) {
   try {
     const response = await sheets.spreadsheets.values.append({
       spreadsheetId,
-      range: `${sheetName}!A:AA`,
+      range: `${sheetName}!A:AB`,
       valueInputOption: 'USER_ENTERED',
       resource: {
         values: [values],
@@ -125,7 +125,7 @@ async function updateRowById(sheetName, id, values) {
     // Actualizar la fila (rowIndex + 1 porque las filas empiezan en 1)
     const updateResponse = await sheets.spreadsheets.values.update({
       spreadsheetId,
-      range: `${sheetName}!A${rowIndex + 1}:AA${rowIndex + 1}`,
+      range: `${sheetName}!A${rowIndex + 1}:AB${rowIndex + 1}`,
       valueInputOption: 'USER_ENTERED',
       resource: {
         values: [values],
@@ -150,7 +150,7 @@ async function getAllRows(sheetName) {
   try {
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: `${sheetName}!A:AA`,
+      range: `${sheetName}!A:AB`,
     });
 
     return response.data.values || [];
