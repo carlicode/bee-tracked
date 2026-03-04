@@ -1,7 +1,33 @@
 import axios from 'axios';
 import { storage } from './storage';
+import type { Turno } from '../types/turno';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
+
+/** Convierte fila del Sheet a formato Turno local */
+function sheetRowToTurno(row: Record<string, unknown>): Turno {
+  const lat = row['Ubicación Inicio (Lat)'];
+  const lng = row['Ubicación Inicio (Lng)'];
+  return {
+    id: row.ID != null ? String(row.ID) : undefined,
+    abejita: (row.Abejita as string) || '',
+    auto: (row['Auto (Placa)'] as string) || '',
+    aperturaCaja: parseFloat(String(row['Apertura Caja (Bs)'] || '0')) || 0,
+    kilometraje: row['Kilometraje Inicio'] ? parseInt(String(row['Kilometraje Inicio'])) : undefined,
+    danosAuto: (row['Daños Auto Inicio'] as string) || 'ninguno',
+    fotoPantalla: (row['Foto Tablero Inicio'] as string) || '',
+    fotoExterior: (row['Foto Exterior Inicio'] as string) || '',
+    horaInicio: row['Hora Inicio'] as string,
+    ubicacionInicio: {
+      lat: parseFloat(String(lat || '0').replace(',', '.')) || 0,
+      lng: parseFloat(String(lng || '0').replace(',', '.')) || 0,
+      timestamp: (row['Timestamp Creación'] as string) || '',
+    },
+    turnoIniciado: true,
+    turnoCerrado: false,
+    createdAt: row['Timestamp Creación'] as string,
+  };
+}
 
 function authHeaders(): Record<string, string> {
   const token = storage.getToken();
@@ -22,6 +48,29 @@ function authHeaders(): Record<string, string> {
 export const turnosApi = {
   /** Devuelve true si el frontend está configurado para usar el backend (Google Sheet). */
   isEnabled: (): boolean => Boolean(API_BASE),
+
+  /**
+   * Obtener turno activo (INICIADO) del usuario desde el backend.
+   * Siempre consultar backend primero cuando está habilitado; localStorage es fallback.
+   */
+  async getTurnoActivo(driverName: string): Promise<Turno | null> {
+    if (!API_BASE || !driverName) return null;
+    try {
+      const { data } = await axios.get<{ success: boolean; data?: Record<string, unknown>[] }>(
+        `${API_BASE}/api/turnos`,
+        { timeout: 10000, headers: authHeaders() }
+      );
+      if (!data.success || !Array.isArray(data.data)) return null;
+      const row = data.data.find(
+        (t: Record<string, unknown>) =>
+          t.Abejita === driverName && t.Estado === 'INICIADO'
+      );
+      return row ? sheetRowToTurno(row) : null;
+    } catch (err) {
+      console.error('[turnosApi.getTurnoActivo]', err);
+      return null;
+    }
+  },
 
   /**
    * Iniciar turno en el backend (escribe en la hoja BeeZero).

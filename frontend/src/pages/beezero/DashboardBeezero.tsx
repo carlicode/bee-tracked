@@ -69,7 +69,21 @@ export const DashboardBeezero = () => {
   useEffect(() => {
     const cargarTurnoActual = async () => {
       try {
-        // Primero intentar desde localStorage
+        // Siempre consultar backend primero cuando está habilitado (fuente de verdad)
+        if (turnosApi.isEnabled() && user?.driverName) {
+          const turno = await turnosApi.getTurnoActivo(user.driverName);
+          if (turno) {
+            const toSave = { ...turno };
+            delete (toSave as Record<string, unknown>).fotoPantalla;
+            delete (toSave as Record<string, unknown>).fotoExterior;
+            localStorage.setItem('turno_actual', JSON.stringify(toSave));
+            setTurnoActual(turno);
+            setLoading(false);
+            return;
+          }
+        }
+
+        // Fallback: localStorage (modo demo o backend no disponible)
         const turnoLocal = localStorage.getItem('turno_actual');
         if (turnoLocal) {
           const turno = JSON.parse(turnoLocal) as Turno;
@@ -80,57 +94,23 @@ export const DashboardBeezero = () => {
           }
         }
 
-        // Si no hay en local o el backend está habilitado, consultar el Sheet
-        if (turnosApi.isEnabled() && user?.driverName) {
-          const response = await fetch(
-            `${import.meta.env.VITE_API_URL}/api/turnos`,
-            { timeout: 10000 } as RequestInit
-          );
-          const data = await response.json();
-          
-          if (data.success && data.data && Array.isArray(data.data)) {
-            // Buscar turno iniciado del usuario actual
-            const turnoIniciado = data.data.find(
-              (t: any) => t.Abejita === user.driverName && t.Estado === 'INICIADO'
-            );
-            
-            if (turnoIniciado) {
-              // Convertir formato Sheet a formato Turno local
-              const turno: Turno = {
-                id: turnoIniciado.ID,
-                abejita: turnoIniciado.Abejita,
-                auto: turnoIniciado['Auto (Placa)'],
-                aperturaCaja: parseFloat(turnoIniciado['Apertura Caja (Bs)']) || 0,
-                kilometraje: turnoIniciado['Kilometraje Inicio'] ? parseInt(turnoIniciado['Kilometraje Inicio']) : undefined,
-                danosAuto: turnoIniciado['Daños Auto Inicio'] || 'ninguno',
-                fotoPantalla: turnoIniciado['Foto Tablero Inicio'] || '',
-                fotoExterior: turnoIniciado['Foto Exterior Inicio'] || '',
-                horaInicio: turnoIniciado['Hora Inicio'],
-                ubicacionInicio: {
-                  lat: parseFloat(turnoIniciado['Ubicación Inicio (Lat)'].replace(',', '.')) || 0,
-                  lng: parseFloat(turnoIniciado['Ubicación Inicio (Lng)'].replace(',', '.')) || 0,
-                  timestamp: turnoIniciado['Timestamp Creación']
-                },
-                turnoIniciado: true,
-                turnoCerrado: false,
-                createdAt: turnoIniciado['Timestamp Creación']
-              };
-              
-              // Guardar en localStorage sin fotos (evita exceder cuota)
-              const toSave = { ...turno };
-              delete (toSave as Record<string, unknown>).fotoPantalla;
-              delete (toSave as Record<string, unknown>).fotoExterior;
-              localStorage.setItem('turno_actual', JSON.stringify(toSave));
-              setTurnoActual(turno);
-            } else {
-              setTurnoActual(null);
-            }
-          }
-        } else {
-          setTurnoActual(null);
-        }
+        setTurnoActual(null);
       } catch (error) {
         console.error('Error cargando turno actual:', error);
+        // Fallback a localStorage si el backend falla
+        const turnoLocal = localStorage.getItem('turno_actual');
+        if (turnoLocal) {
+          try {
+            const turno = JSON.parse(turnoLocal) as Turno;
+            if (turno?.turnoIniciado && !turno?.turnoCerrado) {
+              setTurnoActual(turno);
+              setLoading(false);
+              return;
+            }
+          } catch {
+            // ignore
+          }
+        }
         setTurnoActual(null);
       } finally {
         setLoading(false);

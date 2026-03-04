@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { useToast } from '../../contexts/ToastContext';
+import { useAuth } from '../../services/auth';
 import { turnosApi } from '../../services/turnosApi';
 import { formatters } from '../../utils/formatters';
 import type { Turno } from '../../types/turno';
@@ -9,6 +10,8 @@ import type { Turno } from '../../types/turno';
 export const CerrarTurno = () => {
   const navigate = useNavigate();
   const toast = useToast();
+  const { getCurrentUser } = useAuth();
+  const user = getCurrentUser();
   const [loading, setLoading] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -28,21 +31,43 @@ export const CerrarTurno = () => {
   });
 
   useEffect(() => {
-    // Cargar datos del turno iniciado
-    const turnoGuardado = localStorage.getItem('turno_actual');
-    if (turnoGuardado) {
-      const turno = JSON.parse(turnoGuardado);
-      setTurnoInicio(turno);
-      setFormData((prev) => ({
-        ...prev,
-        abejita: turno.abejita,
-        auto: turno.auto,
-        aperturaCaja: turno.aperturaCaja,
-        kilometraje: turno.kilometraje,
-        danosAuto: turno.danosAuto || 'ninguno',
-      }));
-    }
-  }, []);
+    const cargarTurno = async () => {
+      const aplicarTurno = (turno: Partial<Turno>) => {
+        setTurnoInicio(turno);
+        setFormData((prev) => ({
+          ...prev,
+          abejita: turno.abejita,
+          auto: turno.auto,
+          aperturaCaja: turno.aperturaCaja,
+          kilometraje: turno.kilometraje,
+          danosAuto: turno.danosAuto || 'ninguno',
+        }));
+      };
+
+      // Siempre consultar backend primero cuando está habilitado (fuente de verdad)
+      if (turnosApi.isEnabled() && user?.driverName) {
+        const turno = await turnosApi.getTurnoActivo(user.driverName);
+        if (turno) {
+          aplicarTurno(turno);
+          return;
+        }
+      }
+
+      // Fallback: localStorage (modo demo o backend no disponible)
+      const turnoGuardado = localStorage.getItem('turno_actual');
+      if (turnoGuardado) {
+        try {
+          const turno = JSON.parse(turnoGuardado) as Partial<Turno>;
+          if (turno?.turnoIniciado && !turno?.turnoCerrado) {
+            aplicarTurno(turno);
+          }
+        } catch {
+          // JSON inválido
+        }
+      }
+    };
+    cargarTurno();
+  }, [user?.driverName]);
 
   const handleGetLocation = () => {
     if (!navigator.geolocation) {
@@ -140,9 +165,12 @@ export const CerrarTurno = () => {
         updatedAt: ahora.toISOString(),
       };
 
-      // Guardar localmente primero para no bloquear al usuario si el backend tarda
+      // Guardar localmente sin fotos base64 (evita exceder cuota de localStorage)
+      const toSaveHistorial = { ...turnoCompleto };
+      delete (toSaveHistorial as Record<string, unknown>).fotoPantalla;
+      delete (toSaveHistorial as Record<string, unknown>).fotoExterior;
       const turnosHistorial = JSON.parse(localStorage.getItem('turnos_historial') || '[]');
-      turnosHistorial.push(turnoCompleto);
+      turnosHistorial.push(toSaveHistorial);
       localStorage.setItem('turnos_historial', JSON.stringify(turnosHistorial));
       localStorage.removeItem('turno_actual');
 
