@@ -12,7 +12,7 @@
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { spawnSync } = require('child_process');
 
 const CSV_PATH =
   process.env.USUARIOS_CSV_PATH ||
@@ -66,21 +66,21 @@ function parseCsv(content) {
 }
 
 function runAws(args, ignoreError = false) {
-  const cmd = `aws cognito-idp ${args.join(' ')} --user-pool-id "${USER_POOL_ID}" --region ${REGION}`;
-  try {
-    return execSync(cmd, { encoding: 'utf8' });
-  } catch (e) {
+  const allArgs = ['cognito-idp', ...args, '--user-pool-id', USER_POOL_ID, '--region', REGION];
+  const result = spawnSync('aws', allArgs, { encoding: 'utf8' });
+  if (result.status !== 0) {
     if (ignoreError) return null;
-    throw e;
+    throw new Error(result.stderr || result.error?.message || 'AWS command failed');
   }
+  return result.stdout;
 }
 
 function listCognitoUsers() {
   const users = [];
   let nextToken;
   do {
-    const args = ['list-users', '--limit', '60'];
-    if (nextToken) args.push('--next-token', nextToken);
+    const args = ['list-users', '--page-size', '60'];
+    if (nextToken) args.push('--starting-token', nextToken);
     const out = runAws(args);
     const data = JSON.parse(out);
     for (const u of data.Users || []) {
@@ -98,10 +98,10 @@ function createCognitoUser(usuario, nombre, contraseña) {
   try {
     runAws([
       'admin-create-user',
-      `--username "${cognitoUsername}"`,
-      `--temporary-password "Temp${passEsc}!"`,
-      `--user-attributes Name=name,Value="${nameEsc}"`,
-      '--message-action SUPPRESS',
+      '--username', cognitoUsername,
+      '--temporary-password', `Temp${passEsc}!`,
+      '--user-attributes', `Name=name,Value=${nameEsc}`,
+      '--message-action', 'SUPPRESS',
     ]);
   } catch (e) {
     if (!e.message || !e.message.includes('UsernameExistsException')) throw e;
@@ -109,8 +109,8 @@ function createCognitoUser(usuario, nombre, contraseña) {
   try {
     runAws([
       'admin-set-user-password',
-      `--username "${cognitoUsername}"`,
-      `--password "${passEsc}"`,
+      '--username', cognitoUsername,
+      '--password', passEsc,
       '--permanent',
     ]);
     return true;
@@ -121,13 +121,13 @@ function createCognitoUser(usuario, nombre, contraseña) {
 
 function addUserToGroup(cognitoUsername, group) {
   runAws(
-    ['admin-add-user-to-group', `--username "${cognitoUsername}"`, `--group-name ${group}`],
+    ['admin-add-user-to-group', '--username', cognitoUsername, '--group-name', group],
     true
   );
 }
 
 function deleteCognitoUser(usuario) {
-  runAws(['admin-delete-user', `--username "${usuario}"`]);
+  runAws(['admin-delete-user', '--username', usuario]);
 }
 
 async function main() {
