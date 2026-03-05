@@ -67,7 +67,10 @@ function parseCsv(content) {
 
 function runAws(args, ignoreError = false) {
   const allArgs = ['cognito-idp', ...args, '--user-pool-id', USER_POOL_ID, '--region', REGION];
-  const result = spawnSync('aws', allArgs, { encoding: 'utf8' });
+  const result = spawnSync('aws', allArgs, {
+    encoding: 'utf8',
+    env: { ...process.env, LANG: 'en_US.UTF-8', LC_ALL: 'en_US.UTF-8' },
+  });
   if (result.status !== 0) {
     if (ignoreError) return null;
     throw new Error(result.stderr || result.error?.message || 'AWS command failed');
@@ -126,6 +129,20 @@ function addUserToGroup(cognitoUsername, group) {
   );
 }
 
+function removeUserFromGroup(cognitoUsername, group) {
+  runAws(
+    ['admin-remove-user-from-group', '--username', cognitoUsername, '--group-name', group],
+    true
+  );
+}
+
+function updateUserName(cognitoUsername, nombre) {
+  runAws(
+    ['admin-update-user-attributes', '--username', cognitoUsername, '--user-attributes', `Name=name,Value=${nombre}`],
+    true
+  );
+}
+
 function deleteCognitoUser(usuario) {
   runAws(['admin-delete-user', '--username', usuario]);
 }
@@ -173,12 +190,17 @@ async function main() {
   }
   if (created > 0) console.log(`\n✅ ${created} usuarios creados\n`);
 
+  const ALL_GROUPS = ['ecodelivery', 'beezero', 'operador'];
   for (const u of csvUsers) {
     const actualUsername = lowerToActual.get(u.usuario.toLowerCase());
     if (actualUsername) {
       try {
         createCognitoUser(u.usuario, u.nombre, u.contraseña);
+        for (const g of ALL_GROUPS) {
+          if (g !== u.group) removeUserFromGroup(actualUsername, g);
+        }
         addUserToGroup(actualUsername, u.group);
+        updateUserName(actualUsername, u.nombre);
       } catch (_) {}
     }
   }

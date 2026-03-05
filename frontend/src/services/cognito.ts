@@ -30,7 +30,12 @@ function decodePayload(token: string): Record<string, unknown> {
   try {
     const payload = token.split('.')[1];
     if (!payload) return {};
-    return JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as Record<string, unknown>;
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const json = new TextDecoder().decode(bytes);
+    return JSON.parse(json) as Record<string, unknown>;
   } catch {
     return {};
   }
