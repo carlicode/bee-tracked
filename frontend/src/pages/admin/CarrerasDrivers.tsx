@@ -28,8 +28,8 @@ function exportXLSX(
   headerMap: Partial<Record<CarreraAdminColumn, string>>,
   driverName: string,
 ) {
-  const data = [
-    CARRERA_ADMIN_COLUMNS,
+  const data: string[][] = [
+    [...CARRERA_ADMIN_COLUMNS],
     ...rows.map((row) =>
       CARRERA_ADMIN_COLUMNS.map((col) => displayCell(col, pickMapped(row, headerMap, col)))
     ),
