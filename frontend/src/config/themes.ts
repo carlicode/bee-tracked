@@ -18,6 +18,22 @@ export interface Theme {
 }
 
 export const themes: Record<UserType, Theme> = {
+  admin: {
+    name: 'admin',
+    displayName: 'Admin',
+    colors: {
+      primary: '#7C3AED',
+      primaryDark: '#6D28D9',
+      primaryLight: '#A78BFA',
+      black: '#000000',
+      grayDark: '#1F2937',
+      grayLight: '#F9FAFB',
+    },
+    logo: {
+      firstPart: 'bee',
+      secondPart: 'admin',
+    },
+  },
   beezero: {
     name: 'beezero',
     displayName: 'BeeZero',
@@ -63,6 +79,22 @@ export const themes: Record<UserType, Theme> = {
     logo: {
       firstPart: 'eco',
       secondPart: 'delivery',
+    },
+  },
+  rrhh: {
+    name: 'rrhh',
+    displayName: 'RRHH',
+    colors: {
+      primary: '#F97316',
+      primaryDark: '#EA580C',
+      primaryLight: '#FB923C',
+      black: '#000000',
+      grayDark: '#1F2937',
+      grayLight: '#F9FAFB',
+    },
+    logo: {
+      firstPart: 'bee',
+      secondPart: 'rrhh',
     },
   },
 };

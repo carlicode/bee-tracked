@@ -7,6 +7,44 @@ import { turnosApi } from '../../services/turnosApi';
 import { formatters } from '../../utils/formatters';
 import type { Turno } from '../../types/turno';
 
+type GastoCierreInput = {
+  id: string;
+  tipo: string;
+  monto: number | undefined;
+  montoStr: string;
+  descripcion: string;
+  foto: string;
+};
+
+const TIPOS_GASTO = [
+  'QR',
+  'Sueldo',
+  'Peaje/Estacionamiento',
+  'Carga de auto',
+  'Apps',
+  'Reparaciones/Mantenimiento',
+  'BZ/MF',
+  'Lavado',
+  'Alquiler del auto',
+  'CXC driver/cliente/compras',
+  'Falta',
+  'Demas',
+  'Debe cliente',
+  'Electrolinera',
+  'Parchado',
+  'Inflado/Air',
+  'Otro',
+] as const;
+
+const createEmptyGasto = (): GastoCierreInput => ({
+  id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  tipo: '',
+  monto: undefined,
+  montoStr: '',
+  descripcion: '',
+  foto: '',
+});
+
 export const CerrarTurno = () => {
   const navigate = useNavigate();
   const toast = useToast();
@@ -18,11 +56,10 @@ export const CerrarTurno = () => {
   const [turnoInicio, setTurnoInicio] = useState<Partial<Turno> | null>(null);
 
   const [deseaRegistrarDano, setDeseaRegistrarDano] = useState<boolean | null>(null);
-  const [formData, setFormData] = useState<Partial<Turno> & { cierreCajaStr?: string; qrStr?: string }>({
+  const [formData, setFormData] = useState<Partial<Turno> & { cierreCajaStr?: string }>({
     cierreCaja: undefined,
-    qr: undefined,
+    qr: 0,
     cierreCajaStr: '',
-    qrStr: '',
     kilometraje: undefined,
     bateria: undefined,
     danosAuto: 'ninguno',
@@ -30,11 +67,22 @@ export const CerrarTurno = () => {
     fotoExterior: '',
     observaciones: '',
   });
+  const [gastosCierre, setGastosCierre] = useState<GastoCierreInput[]>([]);
 
   useEffect(() => {
     const cargarTurno = async () => {
       const aplicarTurno = (turno: Partial<Turno>) => {
         setTurnoInicio(turno);
+        setGastosCierre(
+          (turno.gastosCierre || []).map((gasto) => ({
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            tipo: gasto.tipo || '',
+            monto: gasto.monto,
+            montoStr: gasto.monto != null && gasto.monto > 0 ? String(gasto.monto) : '',
+            descripcion: gasto.descripcion || '',
+            foto: gasto.foto || '',
+          }))
+        );
         setFormData((prev) => ({
           ...prev,
           abejita: turno.abejita,
@@ -43,6 +91,7 @@ export const CerrarTurno = () => {
           kilometraje: turno.kilometraje,
           bateria: turno.bateria,
           danosAuto: turno.danosAuto || 'ninguno',
+          observaciones: turno.observaciones || '',
         }));
       };
 
@@ -118,11 +167,30 @@ export const CerrarTurno = () => {
     reader.readAsDataURL(file);
   };
 
+  // Diferencia = Cierre - Apertura - Total Gastos
   const calcularDiferencia = () => {
     const apertura = formData.aperturaCaja || 0;
     const cierre = formData.cierreCaja ?? (parseFloat((formData as { cierreCajaStr?: string }).cierreCajaStr ?? '') || 0);
-    const qr = formData.qr ?? (parseFloat((formData as { qrStr?: string }).qrStr ?? '') || 0);
-    return apertura + qr + cierre;
+    return cierre - apertura - totalGastos;
+  };
+
+  const totalGastos = gastosCierre.reduce((acc, gasto) => acc + (gasto.monto || 0), 0);
+
+  const addGasto = () => {
+    setGastosCierre((prev) => [...prev, createEmptyGasto()]);
+  };
+
+  const removeGasto = (id: string) => {
+    setGastosCierre((prev) => prev.filter((gasto) => gasto.id !== id));
+  };
+
+  const updateGasto = (id: string, patch: Partial<GastoCierreInput>) => {
+    setGastosCierre((prev) =>
+      prev.map((gasto) => {
+        if (gasto.id !== id) return gasto;
+        return { ...gasto, ...patch };
+      })
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -144,6 +212,20 @@ export const CerrarTurno = () => {
       return;
     }
 
+    const gastosPayload = gastosCierre.map((gasto) => ({
+      tipo: gasto.tipo.trim(),
+      monto: gasto.monto ?? parseFloat(gasto.montoStr || ''),
+      descripcion: gasto.descripcion.trim(),
+      foto: gasto.foto || undefined,
+    }));
+    const gastosInvalidos = gastosPayload.some(
+      (gasto) => !gasto.tipo || !Number.isFinite(gasto.monto) || Number(gasto.monto) <= 0
+    );
+    if (gastosInvalidos) {
+      toast.show('Cada gasto debe tener tipo y monto mayor a 0', 'info');
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -152,35 +234,29 @@ export const CerrarTurno = () => {
       const danos = deseaRegistrarDano ? formData.danosAuto || 'ninguno' : 'ninguno';
       const fotoExt = deseaRegistrarDano ? formData.fotoExterior : '';
 
-      const turnoCompleto = {
-        ...turnoInicio,
-        ...formData,
-        danosAuto: danos,
-        fotoExterior: fotoExt,
-        observaciones: formData.observaciones || '',
-        horaCierre,
-        ubicacionFin: {
-          ...location,
-          timestamp: ahora.toISOString(),
-        },
-        turnoCerrado: true,
-        updatedAt: ahora.toISOString(),
-      };
+      const cierreCajaNum =
+        formData.cierreCaja ?? (parseFloat((formData as { cierreCajaStr?: string }).cierreCajaStr ?? '') || 0);
 
-      // Guardar localmente sin fotos base64 (evita exceder cuota de localStorage)
-      const toSaveHistorial = { ...turnoCompleto };
-      delete (toSaveHistorial as Record<string, unknown>).fotoPantalla;
-      delete (toSaveHistorial as Record<string, unknown>).fotoExterior;
-      const turnosHistorial = JSON.parse(localStorage.getItem('turnos_historial') || '[]');
-      turnosHistorial.push(toSaveHistorial);
-      localStorage.setItem('turnos_historial', JSON.stringify(turnosHistorial));
-      localStorage.removeItem('turno_actual');
+      let turnoId = turnoInicio?.id;
 
-      if (turnosApi.isEnabled() && turnoInicio?.id) {
+      // Con backend: cerrar primero en el servidor; si falla, no limpiar estado local
+      // (el flujo anterior borraba turno_actual y mostraba éxito aunque el Sheet siguiera INICIADO).
+      if (turnosApi.isEnabled()) {
+        if (!turnoId && user?.driverName) {
+          const fresh = await turnosApi.getTurnoActivo(user.driverName);
+          turnoId = fresh?.id;
+        }
+        if (!turnoId) {
+          toast.show(
+            'No se encontró el turno activo en el servidor. Recarga la página; si el problema continúa, contacta soporte.',
+            'error'
+          );
+          return;
+        }
         try {
-          await turnosApi.cerrar(turnoInicio.id, {
-            cierreCaja: formData.cierreCaja ?? (parseFloat((formData as { cierreCajaStr?: string }).cierreCajaStr ?? '') || 0),
-            qr: formData.qr ?? (parseFloat((formData as { qrStr?: string }).qrStr ?? '') || 0),
+          await turnosApi.cerrar(turnoId, {
+            cierreCaja: cierreCajaNum,
+            gastos: gastosPayload,
             kilometraje: formData.kilometraje,
             bateria: formData.bateria,
             danosAuto: danos,
@@ -191,10 +267,41 @@ export const CerrarTurno = () => {
             observaciones: formData.observaciones || '',
           });
         } catch (backendError) {
-          console.error('Backend tardó o falló al cerrar turno, turno guardado localmente:', backendError);
-          // El turno ya fue cerrado localmente, no bloqueamos al usuario
+          console.error('Error al cerrar turno en el servidor:', backendError);
+          const msg =
+            backendError instanceof Error
+              ? backendError.message
+              : 'No se pudo cerrar el turno. Revisa tu conexión e intenta de nuevo.';
+          toast.show(msg, 'error');
+          return;
         }
       }
+
+      const turnoCompleto = {
+        ...turnoInicio,
+        ...formData,
+        id: turnoId ?? turnoInicio?.id,
+        danosAuto: danos,
+        fotoExterior: fotoExt,
+        observaciones: formData.observaciones || '',
+        gastosCierre: gastosPayload,
+        totalGastos,
+        horaCierre,
+        ubicacionFin: {
+          ...location,
+          timestamp: ahora.toISOString(),
+        },
+        turnoCerrado: true,
+        updatedAt: ahora.toISOString(),
+      };
+
+      const toSaveHistorial = { ...turnoCompleto };
+      delete (toSaveHistorial as Record<string, unknown>).fotoPantalla;
+      delete (toSaveHistorial as Record<string, unknown>).fotoExterior;
+      const turnosHistorial = JSON.parse(localStorage.getItem('turnos_historial') || '[]');
+      turnosHistorial.push(toSaveHistorial);
+      localStorage.setItem('turnos_historial', JSON.stringify(turnosHistorial));
+      localStorage.removeItem('turno_actual');
 
       toast.show('Turno cerrado exitosamente', 'success');
       navigate('/beezero/dashboard');
@@ -296,47 +403,138 @@ export const CerrarTurno = () => {
           />
         </div>
 
-        {/* QR - texto para evitar cero adelante */}
-        <div>
-          <label htmlFor="qr" className="block text-sm font-medium text-black mb-1">
-            QR (Bs)
-          </label>
-          <input
-            type="text"
-            inputMode="decimal"
-            id="qr"
-            value={(formData as { qrStr?: string }).qrStr ?? (formData.qr != null && formData.qr > 0 ? String(formData.qr) : '')}
-            onChange={(e) => {
-              const raw = e.target.value.replace(',', '.');
-              const soloNumeros = raw.replace(/[^0-9.]/g, '');
-              const partes = soloNumeros.split('.');
-              const valida = partes.length <= 2 && (partes[1]?.length ?? 0) <= 2;
-              const str = valida ? soloNumeros : ((formData as { qrStr?: string }).qrStr ?? '');
-              const num = parseFloat(str);
-              setFormData((prev) => ({ ...prev, qrStr: str, qr: str === '' ? undefined : (isNaN(num) ? undefined : Math.max(0, num)) }));
-            }}
-            placeholder="Ej: 0"
-            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
-          />
+        <div className="border-2 border-gray-200 rounded-lg p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <h4 className="text-base font-semibold text-black">Gastos adicionales (opcional)</h4>
+            <button
+              type="button"
+              onClick={addGasto}
+              className="bg-black text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:opacity-90 transition"
+            >
+              + Agregar gasto
+            </button>
+          </div>
+          {gastosCierre.length === 0 ? (
+            <p className="text-sm text-gray-500">No agregaste gastos aún.</p>
+          ) : (
+            <div className="space-y-3">
+              {gastosCierre.map((gasto) => (
+                <div key={gasto.id} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-start bg-gray-50 p-3 rounded-lg">
+                  <div className="md:col-span-4">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Tipo *</label>
+                    <select
+                      value={gasto.tipo}
+                      onChange={(e) => updateGasto(gasto.id, { tipo: e.target.value })}
+                      className="w-full border-2 border-gray-300 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
+                    >
+                      <option value="">Selecciona tipo</option>
+                      {TIPOS_GASTO.map((tipo) => (
+                        <option key={tipo} value={tipo}>
+                          {tipo}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="md:col-span-3">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Monto (Bs) *</label>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={gasto.montoStr}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(',', '.');
+                        const soloNumeros = raw.replace(/[^0-9.]/g, '');
+                        const partes = soloNumeros.split('.');
+                        const valida = partes.length <= 2 && (partes[1]?.length ?? 0) <= 2;
+                        const str = valida ? soloNumeros : gasto.montoStr;
+                        const num = parseFloat(str);
+                        updateGasto(gasto.id, {
+                          montoStr: str,
+                          monto: str === '' || isNaN(num) ? undefined : Math.max(0, num),
+                        });
+                      }}
+                      placeholder="Ej: 25"
+                      className="w-full border-2 border-gray-300 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
+                    />
+                  </div>
+                  <div className="md:col-span-4">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Descripción</label>
+                    <input
+                      type="text"
+                      value={gasto.descripcion}
+                      onChange={(e) => updateGasto(gasto.id, { descripcion: e.target.value })}
+                      placeholder="Opcional"
+                      className="w-full border-2 border-gray-300 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
+                    />
+                  </div>
+                  <div className="md:col-span-11">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Foto del gasto</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (file.size > 5 * 1024 * 1024) {
+                          toast.show('La imagen es muy grande. Máximo 5MB', 'error');
+                          return;
+                        }
+                        const reader = new FileReader();
+                        reader.onloadend = () => updateGasto(gasto.id, { foto: reader.result as string });
+                        reader.readAsDataURL(file);
+                      }}
+                      className="w-full border-2 border-gray-300 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow text-sm"
+                    />
+                    {gasto.foto && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <img src={gasto.foto} alt="Foto gasto" className="w-16 h-16 object-cover rounded-lg shadow" />
+                        <button
+                          type="button"
+                          onClick={() => updateGasto(gasto.id, { foto: '' })}
+                          className="text-xs text-red-500 hover:text-red-700"
+                        >
+                          Quitar foto
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <div className="md:col-span-1 flex md:justify-end">
+                    <button
+                      type="button"
+                      onClick={() => removeGasto(gasto.id)}
+                      className="mt-0 md:mt-1 text-red-600 hover:text-red-700 text-sm font-semibold"
+                    >
+                      Quitar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {totalGastos > 0 && (
+            <div className="flex justify-end">
+              <p className="text-sm font-semibold text-black">Total gastos: Bs {totalGastos.toFixed(2)}</p>
+            </div>
+          )}
         </div>
 
         {/* Resumen de Caja */}
         {(formData.cierreCaja ?? parseFloat((formData as { cierreCajaStr?: string }).cierreCajaStr ?? '')) > 0 && (
           <div className="bg-gray-50 rounded-lg p-4">
             <div className="flex justify-between mb-2">
-              <span className="text-gray-700">Apertura:</span>
-              <span className="font-semibold">Bs {formData.aperturaCaja}</span>
-            </div>
-            {(formData.qr ?? parseFloat((formData as { qrStr?: string }).qrStr ?? '')) > 0 && (
-              <div className="flex justify-between mb-2">
-                <span className="text-gray-700">QR:</span>
-              <span className="font-semibold">Bs {formData.qr ?? parseFloat((formData as { qrStr?: string }).qrStr ?? '')}</span>
-            </div>
-            )}
-            <div className="flex justify-between mb-2">
               <span className="text-gray-700">Cierre:</span>
               <span className="font-semibold">Bs {formData.cierreCaja ?? parseFloat((formData as { cierreCajaStr?: string }).cierreCajaStr ?? '')}</span>
             </div>
+            <div className="flex justify-between mb-2">
+              <span className="text-gray-700">Apertura:</span>
+              <span className="font-semibold text-red-600">- Bs {formData.aperturaCaja}</span>
+            </div>
+            {totalGastos > 0 && (
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-700">Total Gastos:</span>
+                <span className="font-semibold text-red-600">- Bs {totalGastos.toFixed(2)}</span>
+              </div>
+            )}
             <div className="border-t pt-2 mt-2 flex justify-between">
               <span className="font-bold text-black">Diferencia:</span>
               <span className={`font-bold ${calcularDiferencia() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -407,10 +605,10 @@ export const CerrarTurno = () => {
           />
         </div>
 
-        {/* Batería - después de kilometraje */}
+        {/* Batería Cierre - después de kilometraje */}
         <div>
           <label htmlFor="bateria" className="block text-sm font-medium text-black mb-1">
-            Batería
+            Batería Cierre
           </label>
           <input
             type="text"

@@ -1,38 +1,100 @@
 const express = require('express');
 const router = express.Router();
 const { appendRow, updateRowById, getRowById, getAllRows } = require('../services/googleSheets');
-const { uploadBeezeroPhoto, isS3Configured } = require('../services/s3Upload');
+const { uploadBeezeroPhoto, uploadBeezeroGastoPhoto, isS3Configured } = require('../services/s3Upload');
 const { optionalAuth } = require('../middleware/auth');
-const { touchSession, isSessionValid, getSession } = require('../services/sessionManager');
+const { touchSession, isSessionValid } = require('../services/sessionManager');
 
-// Middleware para validar sesión activa
-function validateSession(req, res, next) {
-  // Extraer userId del JWT (si existe) o del body/query
-  const userId = req.user?.username || req.body?.userId || req.query?.userId;
-  const sessionId = req.headers['x-session-id'] || req.body?.sessionId || req.query?.sessionId;
+function normalizeGastos(gastos) {
+  if (!Array.isArray(gastos)) return [];
+  return gastos
+    .map((gasto) => ({
+      tipo: typeof gasto?.tipo === 'string' ? gasto.tipo.trim() : '',
+      monto: Number(gasto?.monto) || 0,
+      descripcion: typeof gasto?.descripcion === 'string' ? gasto.descripcion.trim() : '',
+      foto: typeof gasto?.foto === 'string' ? gasto.foto : '',
+    }))
+    .filter((gasto) => gasto.tipo && gasto.monto > 0);
+}
 
-  if (!userId) {
-    // Si no hay userId, permitir continuar (para compatibilidad con modo demo)
-    return next();
+/**
+ * Escribe cada gasto en la hoja BeeZero_Gastos (1 fila por gasto).
+ * Columnas: ID Gasto | Turno ID | Tipo | Monto (Bs) | Descripción | Foto | Timestamp
+ */
+async function saveGastosToSheet(turnoId, abejita, gastos, timestamp) {
+  for (let i = 0; i < gastos.length; i++) {
+    const gasto = gastos[i];
+    const gastoId = `${turnoId}-${i + 1}`;
+
+    let fotoUrl = gasto.foto || '';
+    if (fotoUrl && fotoUrl.startsWith('data:image/') && isS3Configured()) {
+      try {
+        fotoUrl = await uploadBeezeroGastoPhoto({
+          dataUrl: fotoUrl,
+          turnoId,
+          abejita,
+          num: i + 1,
+        });
+        console.log(`[gastos] Foto gasto ${i + 1} subida a S3:`, fotoUrl);
+      } catch (err) {
+        console.error(`[gastos] Error subiendo foto gasto ${i + 1} a S3:`, err.message);
+        fotoUrl = '';
+      }
+    }
+
+    await appendRow('BeeZero_Gastos', [
+      gastoId,                  // A: ID Gasto
+      turnoId,                  // B: Turno ID
+      gasto.tipo,               // C: Tipo
+      gasto.monto,              // D: Monto (Bs)
+      gasto.descripcion || '',  // E: Descripción
+      fotoUrl,                  // F: Foto
+      timestamp,                // G: Timestamp
+    ]);
   }
+}
 
-  // Verificar si la sesión es válida
-  if (sessionId && !isSessionValid(userId, sessionId)) {
-    return res.status(401).json({
-      success: false,
-      error: 'Sesión inválida o expirada. Por favor inicia sesión nuevamente.',
-      code: 'SESSION_EXPIRED',
-    });
+// Middleware para validar sesión activa (async: soporta DynamoDB)
+async function validateSession(req, res, next) {
+  try {
+    const userId = req.user?.username || req.body?.userId || req.query?.userId;
+    const sessionId = req.headers['x-session-id'] || req.body?.sessionId || req.query?.sessionId;
+
+    if (!userId) {
+      return next();
+    }
+
+    if (sessionId) {
+      const valid = await isSessionValid(userId, sessionId);
+      if (!valid) {
+        return res.status(401).json({
+          success: false,
+          error: 'Sesión inválida o expirada. Por favor inicia sesión nuevamente.',
+          code: 'SESSION_EXPIRED',
+        });
+      }
+    }
+
+    await touchSession(userId);
+    next();
+  } catch (err) {
+    console.error('Error en validateSession:', err);
+    next(err);
   }
-
-  // Actualizar actividad de la sesión
-  touchSession(userId);
-  next();
 }
 
 /**
  * POST /api/turnos/iniciar
  * Registrar inicio de turno
+ *
+ * Columnas BeeZero:
+ * A: ID | B: Timestamp Creación | C: Hora Inicio | D: Hora Cierre | E: Fecha Inicio | F: Fecha Cierre
+ * G: Abejita | H: Auto (Placa) | I: Km Inicio | J: Km Cierre | K: Bateria Inicio | L: Bateria Cierre
+ * M: Apertura Caja | N: Cierre Caja | O: ID Gastos | P: Total Gastos | Q: Diferencia
+ * R: Daños Auto Inicio | S: Foto Tablero Inicio | T: Foto Ext Inicio
+ * U: Daños Auto Cierre | V: Foto Tablero Cierre | W: Foto Ext Cierre
+ * X: Ubic Inicio Lat | Y: Ubic Inicio Lng | Z: Ubic Cierre Lat | AA: Ubic Cierre Lng
+ * AB: Observaciones | AC: Timestamp Actualización | AD: Estado
  */
 router.post('/iniciar', optionalAuth, validateSession, async (req, res) => {
   try {
@@ -49,7 +111,6 @@ router.post('/iniciar', optionalAuth, validateSession, async (req, res) => {
       ubicacionInicio,
     } = req.body;
 
-    // Validaciones
     if (!abejita || !auto || aperturaCaja === undefined) {
       return res.status(400).json({
         success: false,
@@ -57,14 +118,11 @@ router.post('/iniciar', optionalAuth, validateSession, async (req, res) => {
       });
     }
 
-    // ID secuencial empezando en 1 (fila 1 = headers, fila 2 = ID 1, etc.)
     const rows = await getAllRows('BeeZero');
-    const nextId = rows.length; // 0 datos => 1, 1 dato => 2, ...
-    const id = nextId;
+    const id = rows.length; // 0 datos => 1, 1 dato => 2, ...
     const now = new Date().toISOString();
-    const fecha = now.split('T')[0]; // YYYY-MM-DD
+    const fecha = now.split('T')[0];
 
-    // Fotos: subir a S3 (beezero/tablero/ y beezero/danos/) si está configurado
     let urlFotoTableroInicio = '';
     let urlFotoExteriorInicio = '';
     if (isS3Configured()) {
@@ -91,37 +149,38 @@ router.post('/iniciar', optionalAuth, validateSession, async (req, res) => {
     }
 
     const rowValues = [
-      id, // A: ID
-      abejita, // B: Abejita
-      auto, // C: Auto (Placa)
-      kilometraje || '', // D: Kilometraje Inicio
-      '', // E: Kilometraje Cierre (vacío por ahora)
-      aperturaCaja, // F: Apertura Caja (Bs)
-      '', // G: Cierre Caja (Bs) (vacío)
-      '', // H: QR (Bs) (vacío)
-      '', // I: Diferencia (Bs) (vacío)
-      danosAuto || 'ninguno', // J: Daños Auto Inicio
-      '', // K: Daños Auto Cierre (vacío)
-      urlFotoTableroInicio, // L: Foto Tablero Inicio
-      urlFotoExteriorInicio, // M: Foto Exterior Inicio (daños)
-      '', // N: Foto Tablero Cierre (vacío)
-      '', // O: Foto Exterior Cierre (vacío)
-      horaInicio || '', // P: Hora Inicio
-      '', // Q: Hora Cierre (vacío)
-      fecha, // R: Fecha Inicio
-      '', // S: Fecha Cierre (vacío)
-      ubicacionInicio?.lat || '', // T: Ubicación Inicio (Lat)
-      ubicacionInicio?.lng || '', // U: Ubicación Inicio (Lng)
-      '', // V: Ubicación Cierre (Lat) (vacío)
-      '', // W: Ubicación Cierre (Lng) (vacío)
-      '', // X: Observaciones (vacío)
-      'INICIADO', // Y: Estado
-      now, // Z: Timestamp Creación
-      now, // AA: Timestamp Actualización
-      bateria ?? '', // AB: Bateria
+      id,                         // A: ID
+      now,                        // B: Timestamp Creación
+      horaInicio || '',           // C: Hora Inicio
+      '',                         // D: Hora Cierre
+      fecha,                      // E: Fecha Inicio
+      '',                         // F: Fecha Cierre
+      abejita,                    // G: Abejita
+      auto,                       // H: Auto (Placa)
+      kilometraje || '',          // I: Kilometraje Inicio
+      '',                         // J: Kilometraje Cierre
+      bateria ?? '',              // K: Bateria Inicio
+      '',                         // L: Bateria Cierre
+      aperturaCaja,               // M: Apertura Caja (Bs)
+      '',                         // N: Cierre Caja (Bs)
+      '',                         // O: ID Gastos
+      '',                         // P: Total Gastos (Bs)
+      '',                         // Q: Diferencia (Bs)
+      danosAuto || 'ninguno',     // R: Daños Auto Inicio
+      urlFotoTableroInicio,       // S: Foto Tablero Inicio
+      urlFotoExteriorInicio,      // T: Foto Exterior Inicio
+      '',                         // U: Daños Auto Cierre
+      '',                         // V: Foto Tablero Cierre
+      '',                         // W: Foto Exterior Cierre
+      ubicacionInicio?.lat || '', // X: Ubicación Inicio (Lat)
+      ubicacionInicio?.lng || '', // Y: Ubicación Inicio (Lng)
+      '',                         // Z: Ubicación Cierre (Lat)
+      '',                         // AA: Ubicación Cierre (Lng)
+      '',                         // AB: Observaciones
+      now,                        // AC: Timestamp Actualización
+      'INICIADO',                 // AD: Estado
     ];
 
-    // Agregar fila a Google Sheets
     await appendRow('BeeZero', rowValues);
 
     res.json({
@@ -148,13 +207,13 @@ router.post('/iniciar', optionalAuth, validateSession, async (req, res) => {
 /**
  * POST /api/turnos/:id/cerrar
  * Cerrar un turno existente
+ * Fórmula diferencia: Cierre - Apertura - Total Gastos
  */
 router.post('/:id/cerrar', optionalAuth, validateSession, async (req, res) => {
   try {
     const { id } = req.params;
     const {
       cierreCaja,
-      qr,
       kilometraje,
       bateria,
       danosAuto,
@@ -163,9 +222,9 @@ router.post('/:id/cerrar', optionalAuth, validateSession, async (req, res) => {
       horaCierre,
       ubicacionFin,
       observaciones,
+      gastos,
     } = req.body;
 
-    // Validaciones
     if (!cierreCaja) {
       return res.status(400).json({
         success: false,
@@ -173,7 +232,6 @@ router.post('/:id/cerrar', optionalAuth, validateSession, async (req, res) => {
       });
     }
 
-    // Obtener el turno existente
     const turnoExistente = await getRowById('BeeZero', id);
 
     if (!turnoExistente) {
@@ -193,13 +251,20 @@ router.post('/:id/cerrar', optionalAuth, validateSession, async (req, res) => {
     const now = new Date().toISOString();
     const fechaCierre = now.split('T')[0];
 
-    // Calcular diferencia (suma de apertura + QR + cierre)
+    const gastosNormalizados = normalizeGastos(gastos);
+    const totalGastos = gastosNormalizados.reduce((acc, gasto) => acc + gasto.monto, 0);
+
+    // Diferencia = Cierre - Apertura - Total Gastos
     const apertura = parseFloat(turnoExistente['Apertura Caja (Bs)']) || 0;
     const cierre = parseFloat(cierreCaja) || 0;
-    const qrMonto = parseFloat(qr) || 0;
-    const diferencia = apertura + qrMonto + cierre;
+    const diferencia = cierre - apertura - totalGastos;
 
-    // Fotos cierre: subir a S3 si está configurado
+    // Guardar gastos en BeeZero_Gastos (1 fila por gasto)
+    const gastoIds = gastosNormalizados.map((_, i) => `${id}-${i + 1}`);
+    if (gastosNormalizados.length > 0) {
+      await saveGastosToSheet(id, turnoExistente.Abejita || '', gastosNormalizados, now);
+    }
+
     let urlFotoTableroCierre = '';
     let urlFotoExteriorCierre = '';
     if (isS3Configured()) {
@@ -226,37 +291,38 @@ router.post('/:id/cerrar', optionalAuth, validateSession, async (req, res) => {
     }
 
     const rowValues = [
-      id, // A: ID
-      turnoExistente.Abejita, // B: Abejita
-      turnoExistente['Auto (Placa)'], // C: Auto
-      turnoExistente['Kilometraje Inicio'], // D: Kilometraje Inicio
-      kilometraje || '', // E: Kilometraje Cierre
-      turnoExistente['Apertura Caja (Bs)'], // F: Apertura Caja
-      cierreCaja, // G: Cierre Caja
-      qr || 0, // H: QR
-      diferencia.toFixed(2), // I: Diferencia
-      turnoExistente['Daños Auto Inicio'], // J: Daños Auto Inicio
-      danosAuto || 'ninguno', // K: Daños Auto Cierre
-      turnoExistente['Foto Tablero Inicio'], // L: Foto Tablero Inicio
-      turnoExistente['Foto Exterior Inicio'], // M: Foto Exterior Inicio
-      urlFotoTableroCierre, // N: Foto Tablero Cierre
-      urlFotoExteriorCierre, // O: Foto Exterior Cierre (daños)
-      turnoExistente['Hora Inicio'], // P: Hora Inicio
-      horaCierre || '', // Q: Hora Cierre
-      turnoExistente['Fecha Inicio'], // R: Fecha Inicio
-      fechaCierre, // S: Fecha Cierre
-      turnoExistente['Ubicación Inicio (Lat)'], // T: Ubicación Inicio (Lat)
-      turnoExistente['Ubicación Inicio (Lng)'], // U: Ubicación Inicio (Lng)
-      ubicacionFin?.lat || '', // V: Ubicación Cierre (Lat)
-      ubicacionFin?.lng || '', // W: Ubicación Cierre (Lng)
-      observaciones || '', // X: Observaciones
-      'CERRADO', // Y: Estado
-      turnoExistente['Timestamp Creación'], // Z: Timestamp Creación
-      now, // AA: Timestamp Actualización
-      bateria ?? turnoExistente.Bateria ?? '', // AB: Bateria
+      id,                                                                   // A: ID
+      turnoExistente['Timestamp Creación'],                                 // B: Timestamp Creación
+      turnoExistente['Hora Inicio'],                                        // C: Hora Inicio
+      horaCierre || '',                                                     // D: Hora Cierre
+      turnoExistente['Fecha Inicio'],                                       // E: Fecha Inicio
+      fechaCierre,                                                          // F: Fecha Cierre
+      turnoExistente.Abejita,                                               // G: Abejita
+      turnoExistente['Auto (Placa)'],                                       // H: Auto (Placa)
+      turnoExistente['Kilometraje Inicio'],                                  // I: Kilometraje Inicio
+      kilometraje || '',                                                    // J: Kilometraje Cierre
+      turnoExistente['Bateria Inicio'] || turnoExistente['Bateria'] || '', // K: Bateria Inicio
+      bateria ?? '',                                                        // L: Bateria Cierre
+      turnoExistente['Apertura Caja (Bs)'],                                 // M: Apertura Caja (Bs)
+      cierreCaja,                                                           // N: Cierre Caja (Bs)
+      gastoIds.length > 0 ? gastoIds.join(', ') : '',                      // O: ID Gastos
+      totalGastos.toFixed(2),                                               // P: Total Gastos (Bs)
+      diferencia.toFixed(2),                                                // Q: Diferencia (Bs)
+      turnoExistente['Daños Auto Inicio'],                                   // R: Daños Auto Inicio
+      turnoExistente['Foto Tablero Inicio'],                                 // S: Foto Tablero Inicio
+      turnoExistente['Foto Exterior Inicio'],                                // T: Foto Exterior Inicio
+      danosAuto || 'ninguno',                                               // U: Daños Auto Cierre
+      urlFotoTableroCierre,                                                 // V: Foto Tablero Cierre
+      urlFotoExteriorCierre,                                                // W: Foto Exterior Cierre
+      turnoExistente['Ubicación Inicio (Lat)'],                             // X: Ubicación Inicio (Lat)
+      turnoExistente['Ubicación Inicio (Lng)'],                             // Y: Ubicación Inicio (Lng)
+      ubicacionFin?.lat || '',                                              // Z: Ubicación Cierre (Lat)
+      ubicacionFin?.lng || '',                                              // AA: Ubicación Cierre (Lng)
+      observaciones || '',                                                  // AB: Observaciones
+      now,                                                                  // AC: Timestamp Actualización
+      'CERRADO',                                                            // AD: Estado
     ];
 
-    // Actualizar en Google Sheets
     await updateRowById('BeeZero', id, rowValues);
 
     res.json({
@@ -265,7 +331,8 @@ router.post('/:id/cerrar', optionalAuth, validateSession, async (req, res) => {
       data: {
         id,
         cierreCaja,
-        qr,
+        totalGastos: totalGastos.toFixed(2),
+        gastos: gastosNormalizados,
         diferencia: diferencia.toFixed(2),
         horaCierre,
         estado: 'CERRADO',
@@ -281,25 +348,63 @@ router.post('/:id/cerrar', optionalAuth, validateSession, async (req, res) => {
 });
 
 /**
+ * GET /api/turnos/:id/gastos
+ * Obtener gastos de un turno desde BeeZero_Gastos
+ */
+router.get('/:id/gastos', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const rows = await getAllRows('BeeZero_Gastos');
+
+    if (rows.length <= 1) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const headers = rows[0];
+    const dataRows = rows.slice(1);
+
+    const gastos = dataRows
+      .filter((row) => String(row[1]) === String(id)) // columna B = Turno ID
+      .map((row) => {
+        const obj = {};
+        headers.forEach((header, index) => {
+          obj[header] = row[index] || '';
+        });
+        return {
+          id: obj['ID Gasto'],
+          tipo: obj['Tipo'],
+          monto: parseFloat(obj['Monto (Bs)']) || 0,
+          descripcion: obj['Descripción'] || '',
+          foto: obj['Foto'] || '',
+          timestamp: obj['Timestamp'],
+        };
+      });
+
+    res.json({ success: true, data: gastos });
+  } catch (error) {
+    console.error('Error obteniendo gastos:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Error al obtener gastos',
+    });
+  }
+});
+
+/**
  * GET /api/turnos
  * Obtener todos los turnos
  */
 router.get('/', async (req, res) => {
   try {
     const rows = await getAllRows('BeeZero');
-    
+
     if (rows.length === 0) {
-      return res.json({
-        success: true,
-        data: [],
-      });
+      return res.json({ success: true, data: [] });
     }
 
-    // Primera fila son los headers
     const headers = rows[0];
     const dataRows = rows.slice(1);
 
-    // Convertir a objetos
     const turnos = dataRows.map((row) => {
       const obj = {};
       headers.forEach((header, index) => {
@@ -308,10 +413,7 @@ router.get('/', async (req, res) => {
       return obj;
     });
 
-    res.json({
-      success: true,
-      data: turnos,
-    });
+    res.json({ success: true, data: turnos });
   } catch (error) {
     console.error('Error obteniendo turnos:', error);
     res.status(500).json({
@@ -337,10 +439,7 @@ router.get('/:id', async (req, res) => {
       });
     }
 
-    res.json({
-      success: true,
-      data: turno,
-    });
+    res.json({ success: true, data: turno });
   } catch (error) {
     console.error('Error obteniendo turno:', error);
     res.status(500).json({

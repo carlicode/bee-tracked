@@ -1,8 +1,13 @@
 # 🚗🚴 Bee Tracked - Plataforma Multi-Usuario para Drivers
 
-Aplicación web móvil (PWA) que soporta dos tipos de usuarios con interfaces diferenciadas:
-- **BeeZero**: Conductores de auto (interfaz completa - tema amarillo) 🚗
-- **EcoDelivery**: Bikers de delivery (interfaz simplificada - tema verde) 🚴
+Aplicación web móvil (PWA) para ~110 usuarios con interfaces diferenciadas por rol:
+- **BeeZero**: Conductores de auto (tema amarillo) 🚗
+- **EcoDelivery**: Bikers de delivery (tema verde) 🚴
+- **Admin**: Panel de administración (tema púrpura) — carreras, turnos, dashboard en tiempo real
+- **Andi (RRHH)**: Anuncios y comunicaciones internas (tema naranja)
+
+**Producción:** https://d19ls0k7de9u6w.cloudfront.net  
+**API:** https://bxa273i618.execute-api.us-east-1.amazonaws.com/prod
 
 ## ✨ Funcionalidades por Plataforma
 
@@ -26,6 +31,18 @@ Aplicación web móvil (PWA) que soporta dos tipos de usuarios con interfaces di
 - 📊 **Historial de Deliveries** - Vista desde Google Sheet sincronizada
 - 📝 **Google Sheets** - Cada biker tiene su propia pestaña en "Carreras_bikers"
 - 💾 **Almacenamiento S3** - Fotos organizadas por tipo (Turnos/Deliveries)
+
+### 🛡️ Admin (Panel de administración)
+- 📊 **Dashboard en tiempo real** — turnos activos BeeZero + EcoDelivery, polling 30s, toasts al iniciar/cerrar
+- 🚗 **Carreras drivers** — consulta por pestaña, filtros de fecha, export Excel (.xlsx)
+- ⏰ **Turnos BeeZero / EcoDelivery** — historial completo desde Google Sheets
+- 🔐 Acceso restringido a usuarios tipo `admin` (Carli, Miguel, Ale)
+
+### 📢 Andi (RRHH)
+- 📣 **Anuncios** — crear avisos para todos, BeeZero o EcoDelivery
+- 🔔 **Modal obligatorio** al login para anuncios pendientes de lectura
+- 📋 **Gestión de anuncios** — listado, fechas de vigencia, audiencia
+- 🔐 Acceso restringido a usuarios tipo `rrhh`
 
 ## 🚀 Inicio Rápido
 
@@ -148,12 +165,12 @@ El frontend en producción se despliega con GitHub Actions (ver [docs/GITHUB_ACT
 - **Autenticación**: Amazon Cognito Identity SDK
 
 ### Backend
-- **Runtime**: Node.js + Express
+- **Runtime**: Node.js 18 + Express (local) / AWS Lambda (prod)
 - **Lenguaje**: JavaScript (CommonJS)
-- **Autenticación**: AWS Cognito + JWT
-- **Base de datos**: Google Sheets API
+- **Autenticación**: AWS Cognito + JWT + sesiones (`X-Session-Id`)
+- **Datos**: Google Sheets (operacional) + DynamoDB (sesiones, anuncios; migración híbrida en curso)
 - **Almacenamiento**: AWS S3 (SDK v3)
-- **Sesiones**: In-memory session manager
+- **Sesiones**: DynamoDB en producción, memoria en desarrollo
 
 ### Infraestructura
 - **Autenticación**: AWS Cognito User Pools
@@ -205,8 +222,10 @@ bee-tracked-photos/
 ### AWS Cognito - Grupos de Usuarios
 
 - **beezero**: Acceso a `/beezero/*` (conductores de auto)
-- **operador**: Acceso administrativo
+- **operador**: Acceso a `/ecodelivery/*` (operadores)
 - **ecodelivery**: Acceso a `/ecodelivery/*` (bikers de delivery)
+- **admin**: Acceso a `/admin/*` (panel administración)
+- **rrhh**: Acceso a `/andi/*` (anuncios RRHH)
 
 Configurado en User Pool: `us-east-1_REsVOVqcY`
 
@@ -222,20 +241,16 @@ bee-tracked/
 │   │   ├── pages/
 │   │   │   ├── Login.tsx             # Login con Cognito
 │   │   │   ├── beezero/              # 🚗 Páginas BeeZero
-│   │   │   │   ├── DashboardBeezero.tsx
-│   │   │   │   ├── IniciarTurno.tsx
-│   │   │   │   ├── CerrarTurno.tsx
-│   │   │   │   ├── NuevaCarrera.tsx
-│   │   │   │   ├── MisCarreras.tsx
-│   │   │   │   ├── MisTurnos.tsx
-│   │   │   │   └── DetalleTurno.tsx
-│   │   │   └── ecodelivery/          # 🚴 Páginas EcoDelivery
-│   │   │       ├── DashboardBiker.tsx
-│   │   │       ├── IniciarTurnoBiker.tsx
-│   │   │       ├── CerrarTurnoBiker.tsx
-│   │   │       ├── NuevoDelivery.tsx
-│   │   │       ├── MisDeliveries.tsx (sincronizado con Google Sheet)
-│   │   │       └── MisTurnos.tsx
+│   │   │   ├── ecodelivery/          # 🚴 Páginas EcoDelivery
+│   │   │   ├── admin/                # 🛡️ Panel admin
+│   │   │   │   ├── DashboardAdmin.tsx
+│   │   │   │   ├── DashboardLive.tsx   # Tiempo real
+│   │   │   │   ├── CarrerasDrivers.tsx
+│   │   │   │   └── TurnosBeezero.tsx
+│   │   │   └── andi/                 # 📢 RRHH
+│   │   │       ├── DashboardAndi.tsx
+│   │   │       ├── CrearAnuncio.tsx
+│   │   │       └── ListaAnuncios.tsx
 │   │   ├── components/
 │   │   │   ├── Layout.tsx
 │   │   │   ├── ThemeProvider.tsx
@@ -275,9 +290,13 @@ bee-tracked/
 │   │   ├── middleware/
 │   │   │   └── auth.js              # JWT validation
 │   │   ├── routes/
-│   │   │   ├── auth.js              # Rutas de autenticación
-│   │   │   ├── turnos.js            # Rutas de turnos BeeZero
-│   │   │   └── ecodelivery.js       # Rutas Ecodelivery (turnos + deliveries)
+│   │   │   ├── auth.js              # Autenticación + roles
+│   │   │   ├── turnos.js            # Turnos BeeZero
+│   │   │   ├── beezero.js           # Carreras BeeZero
+│   │   │   ├── ecodelivery.js       # Turnos + deliveries EcoDelivery
+│   │   │   ├── admin.js             # Panel admin (carreras, turnos, live)
+│   │   │   ├── andi.js              # CRUD anuncios (RRHH)
+│   │   │   └── announcements.js     # Anuncios pendientes / lectura
 │   │   ├── services/
 │   │   │   ├── googleSheets.js      # Integración Google Sheets API
 │   │   │   ├── s3Upload.js          # Subida de fotos a S3 (SDK v3)
@@ -292,13 +311,16 @@ bee-tracked/
 │   ├── usuarios-y-contraseñas-ecodelivery.md  # Roles de usuarios
 │   └── Biker-WhatsApp-unicos.csv              # Lista de bikers
 ├── docs/
-│   ├── SHEET_ECODELIVERY.md         # Documentación de Google Sheets
-│   ├── S3_STRUCTURE.md              # Estructura de carpetas S3
-│   └── GITHUB_ACTIONS_AWS.md       # Deploy con GitHub Actions
+│   ├── ARQUITECTURA_TECNICA.md      # Arquitectura híbrida Sheets + DynamoDB
+│   ├── SESSION_STORE.md             # Sesiones DynamoDB vs memoria
+│   ├── SHEET_ECODELIVERY.md
+│   ├── S3_STRUCTURE.md
+│   └── GITHUB_ACTIONS_AWS.md
 ├── scripts/
-│   ├── setup-cognito-roles.sh       # Crear grupos en Cognito
-│   ├── update-cognito-roles.sh      # Asignar usuarios a grupos
-│   └── deploy-secrets.sh            # (opcional) Subir secretos a AWS
+│   ├── deploy-frontend.sh           # Deploy manual frontend → S3 + CloudFront
+│   ├── setup-cognito-roles.sh
+│   ├── update-cognito-roles.sh
+│   └── deploy-secrets.sh
 ├── .github/workflows/
 │   └── deploy-aws.yml              # CI/CD: deploy frontend a S3 + CloudFront
 ├── apps-script/                     # ⚠️ Deprecated (usar backend/)
@@ -421,6 +443,19 @@ bee-tracked/
 - `GET /api/turnos/:id` - Obtener turno por ID
 - `GET /api/turnos` - Listar turnos
 
+#### Admin
+- `GET /api/admin/carreras/drivers` - Listar pestañas de drivers
+- `GET /api/admin/carreras/:tab` - Carreras de un driver (filtro `from`/`to`)
+- `GET /api/admin/turnos/beezero` - Historial turnos BeeZero
+- `GET /api/admin/turnos/ecodelivery` - Historial turnos EcoDelivery
+- `GET /api/admin/dashboard/live` - Turnos activos hoy (cache ~25s)
+
+#### Andi / Anuncios
+- `GET/POST /api/andi/anuncios` - Listar / crear anuncios (solo RRHH)
+- `PUT/DELETE /api/andi/anuncios/:id` - Editar / eliminar
+- `GET /api/announcements/pending` - Anuncios pendientes de lectura
+- `POST /api/announcements/:id/read` - Marcar como leído
+
 ---
 
 ## 🛠️ Desarrollo y Scripts
@@ -500,18 +535,30 @@ cd backend && node scripts/sync-cognito-from-sheet.js
 
 ## 🚀 Deploy a Producción
 
-### Frontend (automático con GitHub Actions)
+### URLs actuales
+| Servicio | URL |
+|----------|-----|
+| Frontend | https://d19ls0k7de9u6w.cloudfront.net |
+| API | https://bxa273i618.execute-api.us-east-1.amazonaws.com/prod |
 
-Cada **push a `main`** (con cambios en `frontend/`) despliega el frontend a **S3** e invalida **CloudFront**.
+### Frontend
 
-- **Configuración**: Ver [docs/GITHUB_ACTIONS_AWS.md](docs/GITHUB_ACTIONS_AWS.md) (secretos y variables en GitHub).
-- **URL de producción**: La que tenga tu distribución CloudFront (ej. `https://d19ls0k7de9u6w.cloudfront.net`).
+**Opción A — GitHub Actions:** cada push a `main` con cambios en `frontend/` despliega a S3 e invalida CloudFront. Ver [docs/GITHUB_ACTIONS_AWS.md](docs/GITHUB_ACTIONS_AWS.md).
 
-### Backend
+**Opción B — Manual:**
+```bash
+./scripts/deploy-frontend.sh
+```
 
-- **AWS Lambda + API Gateway**: Ya configurado; actualizar código con `aws lambda update-function-code`.
-- **Railway**: Ver [RAILWAY_DEPLOY.md](RAILWAY_DEPLOY.md).
-- **Manual (AWS/EC2)**: Ver [DEPLOY_AWS.md](DEPLOY_AWS.md) si aplica.
+### Backend (Lambda + API Gateway)
+
+```bash
+cd backend
+npm run deploy
+# equivalente: serverless deploy --stage prod --config serverless.deploy.yml
+```
+
+Requiere AWS CLI configurado y variables en `serverless.deploy.yml` / Parameter Store.
 
 ### Configurar S3 para acceso público a fotos (opcional)
 
@@ -557,14 +604,15 @@ aws s3api put-bucket-policy --bucket bee-tracked-photos --policy '{
 
 ## 🎯 Próximas Mejoras
 
-- [ ] Implementar URLs pre-firmadas para fotos en S3
-- [ ] Dashboard administrativo para operadores
-- [ ] Reportes y estadísticas por biker
+- [x] Dashboard administrativo (carreras, turnos, tiempo real)
+- [x] Anuncios RRHH (Andi) con modal al login
+- [ ] Sistema de permisos (solicitud / aprobación)
+- [ ] Paginación en listas (20 items/página)
+- [ ] Conteo de carreras del día en dashboard live
+- [ ] Migración completa Sheets → DynamoDB (escritura híbrida)
+- [ ] URLs pre-firmadas para fotos en S3
 - [ ] Notificaciones push
-- [ ] Modo offline completo con sincronización
-- [ ] Exportar datos a Excel/PDF
-- [ ] Integración con mapas para rutas
-- [ ] Chat de soporte integrado
+- [ ] Modo offline con sincronización
 
 ---
 

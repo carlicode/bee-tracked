@@ -1,6 +1,17 @@
 # Config para deploy (sin serverless-offline que causa conflicto)
 service: bee-tracked-backend
 
+custom:
+  sessionsTableName: bee-tracked-sessions-${sls:stage}
+  turnosTableName: bee-tracked-turnos-${sls:stage}
+  carrerasTableName: bee-tracked-carreras-${sls:stage}
+  kilometrajesTableName: bee-tracked-kilometrajes-${sls:stage}
+  anunciosTableName: bee-tracked-anuncios-${sls:stage}
+  lecturasTableName: bee-tracked-lecturas-${sls:stage}
+  permisosTableName: bee-tracked-permisos-${sls:stage}
+  usersTableName: bee-tracked-users-${sls:stage}
+  auditTableName: bee-tracked-audit-${sls:stage}
+
 provider:
   name: aws
   runtime: nodejs18.x
@@ -10,9 +21,21 @@ provider:
   memorySize: 512
   environment:
     NODE_ENV: production
+    STAGE: ${sls:stage}
     FRONTEND_URL: 'https://d19ls0k7de9u6w.cloudfront.net'
+    SESSION_STORE: dynamodb
+    SESSIONS_TABLE_NAME: ${self:custom.sessionsTableName}
+    TURNOS_TABLE: ${self:custom.turnosTableName}
+    CARRERAS_TABLE: ${self:custom.carrerasTableName}
+    KILOMETRAJES_TABLE: ${self:custom.kilometrajesTableName}
+    ANUNCIOS_TABLE: ${self:custom.anunciosTableName}
+    LECTURAS_TABLE: ${self:custom.lecturasTableName}
+    PERMISOS_TABLE: ${self:custom.permisosTableName}
+    USERS_TABLE: ${self:custom.usersTableName}
+    AUDIT_TABLE: ${self:custom.auditTableName}
     GOOGLE_SHEET_ID: '1L69tZzVSHlhuKGP9MCdcezOGPsYyjC2Mm-i03Hm5tM8'
     CARRERAS_BIKERS_SHEET_ID: '1OkM4FLSe0CsLo8w4o50xcVdzsUcHVzpaYRqhGBwJRcs'
+    CARRERAS_DRIVERS_SHEET_ID: '1OkM4FLSe0CsLo8w4o50xcVdzsUcHVzpaYRqhGBwJRcs'
     REGISTROS_SHEET_ID: '1a8M19WHhfM2SWKSiWbTIpVU76gdAFCJ9uv7y0fnPA4g'
     AWS_S3_BUCKET: bee-tracked-photos
     AWS_REGION_CUSTOM: us-east-1
@@ -38,6 +61,29 @@ provider:
             - s3:GetObject
           Resource:
             - arn:aws:s3:::bee-tracked-photos/*
+        - Effect: Allow
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:GetItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:BatchWriteItem
+          Resource:
+            - !GetAtt SessionsTable.Arn
+            - !GetAtt TurnosTable.Arn
+            - Fn::Join: ['', [!GetAtt TurnosTable.Arn, '/index/*']]
+            - !GetAtt CarrerasTable.Arn
+            - Fn::Join: ['', [!GetAtt CarrerasTable.Arn, '/index/*']]
+            - !GetAtt KilometrajesTable.Arn
+            - !GetAtt AnunciosTable.Arn
+            - Fn::Join: ['', [!GetAtt AnunciosTable.Arn, '/index/*']]
+            - !GetAtt LecturasTable.Arn
+            - !GetAtt PermisosTable.Arn
+            - Fn::Join: ['', [!GetAtt PermisosTable.Arn, '/index/*']]
+            - !GetAtt UsersTable.Arn
+            - !GetAtt AuditTable.Arn
 
 functions:
   api:
@@ -56,7 +102,7 @@ functions:
               - X-Amz-Security-Token
               - X-Amz-User-Agent
               - X-Session-Id
-            allowCredentials: true
+              - X-Request-Id
       - http:
           path: /{proxy+}
           method: ANY
@@ -70,7 +116,7 @@ functions:
               - X-Amz-Security-Token
               - X-Amz-User-Agent
               - X-Session-Id
-            allowCredentials: true
+              - X-Request-Id
 
 package:
   exclude:
@@ -82,4 +128,222 @@ package:
   include:
     - lambda.js
     - src/**
+    - data/**
     - node_modules/**
+
+resources:
+  Resources:
+    SessionsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.sessionsTableName}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+        TimeToLiveSpecification:
+          AttributeName: ttl
+          Enabled: true
+
+    TurnosTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.turnosTableName}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: S
+          - AttributeName: estado
+            AttributeType: S
+          - AttributeName: fecha
+            AttributeType: S
+          - AttributeName: tipo
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: estado-fecha-index
+            KeySchema:
+              - AttributeName: estado
+                KeyType: HASH
+              - AttributeName: fecha
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+          - IndexName: tipo-fecha-index
+            KeySchema:
+              - AttributeName: tipo
+                KeyType: HASH
+              - AttributeName: fecha
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+
+    CarrerasTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.carrerasTableName}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: S
+          - AttributeName: fecha
+            AttributeType: S
+          - AttributeName: carreraId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: fecha-index
+            KeySchema:
+              - AttributeName: fecha
+                KeyType: HASH
+              - AttributeName: carreraId
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+
+    KilometrajesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.kilometrajesTableName}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
+
+    AnunciosTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.anunciosTableName}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: N
+          - AttributeName: status
+            AttributeType: S
+          - AttributeName: startDate
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: status-startDate-index
+            KeySchema:
+              - AttributeName: status
+                KeyType: HASH
+              - AttributeName: startDate
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+
+    LecturasTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.lecturasTableName}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
+
+    PermisosTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.permisosTableName}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: S
+          - AttributeName: estado
+            AttributeType: S
+          - AttributeName: fecha
+            AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: estado-fecha-index
+            KeySchema:
+              - AttributeName: estado
+                KeyType: HASH
+              - AttributeName: fecha
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+          - IndexName: userId-fecha-index
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+              - AttributeName: fecha
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.usersTableName}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
+
+    AuditTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.auditTableName}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: entityId
+            AttributeType: S
+          - AttributeName: timestamp
+            AttributeType: N
+        KeySchema:
+          - AttributeName: entityId
+            KeyType: HASH
+          - AttributeName: timestamp
+            KeyType: RANGE

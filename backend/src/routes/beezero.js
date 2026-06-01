@@ -2,11 +2,13 @@ const express = require('express');
 const router = express.Router();
 const {
   getOrCreateSheetInSpreadsheet,
+  getOrCreateSheetAndRowCount,
   appendRowToSpreadsheet,
   getRowCountInSpreadsheet,
   getAllRowsFromSpreadsheet,
   getSheetsInSpreadsheet,
 } = require('../services/googleSheets');
+const { uploadBeezeroCarreraPhoto, isS3Configured } = require('../services/s3Upload');
 
 /** Sheet ID: Carreras_drivers (mismo que Carreras_bikers o configurable) */
 const getCarrerasSpreadsheetId = () =>
@@ -74,25 +76,30 @@ router.post('/carreras/registrar', async (req, res) => {
       });
     }
     const esPorHora = porHora === true || porHora === 'true' || String(porHora || '').toLowerCase() === 'si';
-    if (!esPorHora && (!lugarRecojo || !lugarDestino)) {
-      console.warn('[beezero] Validación fallida: faltan lugarRecojo/lugarDestino (esPorHora=false)', { esPorHora, lugarRecojo: !!lugarRecojo, lugarDestino: !!lugarDestino });
-      return res.status(400).json({
-        success: false,
-        error: 'Faltan lugarRecojo y lugarDestino (o marca Carrera por hora)',
-      });
-    }
+    // lugarRecojo/lugarDestino opcionales: el conductor puede dejar en blanco (incluso sin "Carrera por hora")
     console.log('[beezero] Validación OK, esPorHora:', esPorHora);
+
+    // Subir foto a S3 si viene como base64
+    let fotoUrl = foto || '';
+    if (foto && foto.startsWith('data:image/') && isS3Configured()) {
+      try {
+        fotoUrl = await uploadBeezeroCarreraPhoto({ dataUrl: foto, abejita, fecha });
+        console.log('[beezero] Foto subida a S3:', fotoUrl);
+      } catch (err) {
+        console.error('[beezero] Error subiendo foto a S3 (se continúa sin foto):', err.message);
+        fotoUrl = '';
+      }
+    }
 
     const ahora = new Date();
     const fechaCreacion = ahora.toLocaleDateString('en-CA', { timeZone: 'America/La_Paz' });
     const horaCreacion = ahora.toLocaleTimeString('en-GB', { timeZone: 'America/La_Paz', hour: '2-digit', minute: '2-digit', hour12: false });
-    const sheetTitle = await getOrCreateSheetInSpreadsheet(
+    const { sheetTitle, rowCount } = await getOrCreateSheetAndRowCount(
       spreadsheetId,
       abejita,
       CARRERAS_DRIVERS_HEADERS
     );
 
-    const rowCount = await getRowCountInSpreadsheet(spreadsheetId, sheetTitle);
     const carreraId = rowCount <= 1 ? 0 : rowCount - 1;
 
     const row = [
@@ -108,7 +115,7 @@ router.post('/carreras/registrar', async (req, res) => {
       esPorHora ? 0 : (distancia != null ? Number(distancia) : 0),
       precio != null && precio !== '' ? Number(precio) : 0,
       observaciones ? String(observaciones).trim() : '',
-      foto || '',
+      fotoUrl,
       fechaCreacion,
       horaCreacion,
       esPorHora ? 'si' : 'no',

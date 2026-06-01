@@ -34,6 +34,11 @@ export function setupAxiosInterceptors() {
         config.headers['X-Session-Id'] = sessionId;
       }
 
+      const username = storage.getUsername();
+      if (username && config.headers) {
+        config.headers['X-User-Id'] = username;
+      }
+
       return config;
     },
     (error) => Promise.reject(error)

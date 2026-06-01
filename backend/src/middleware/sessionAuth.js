@@ -1,0 +1,59 @@
+const { isSessionValid, getSession, touchSession } = require('../services/sessionManager');
+
+/**
+ * Valida sesión activa (X-Session-Id + X-User-Id).
+ * Expone req.authUser = { userId, userType, name }.
+ */
+async function sessionAuth(req, res, next) {
+  try {
+    const userId =
+      req.headers['x-user-id'] ||
+      req.user?.username ||
+      req.body?.userId ||
+      req.query?.userId;
+
+    const sessionId = req.headers['x-session-id'] || req.body?.sessionId;
+
+    if (!userId || !sessionId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Autenticación requerida',
+        code: 'AUTH_REQUIRED',
+      });
+    }
+
+    const valid = await isSessionValid(String(userId), String(sessionId));
+    if (!valid) {
+      return res.status(401).json({
+        success: false,
+        error: 'Tu sesión expiró. Inicia sesión de nuevo.',
+        code: 'SESSION_EXPIRED',
+      });
+    }
+
+    const session = await getSession(String(userId));
+    req.authUser = {
+      userId: String(userId),
+      userType: session?.userType || 'ecodelivery',
+      name: session?.name || String(userId),
+    };
+
+    await touchSession(String(userId));
+    next();
+  } catch (err) {
+    next(err);
+  }
+}
+
+function requireRrhh(req, res, next) {
+  if (req.authUser?.userType !== 'rrhh') {
+    return res.status(403).json({
+      success: false,
+      error: 'Solo RRHH puede acceder a este recurso',
+      code: 'FORBIDDEN',
+    });
+  }
+  next();
+}
+
+module.exports = { sessionAuth, requireRrhh };

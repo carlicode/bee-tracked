@@ -45,6 +45,8 @@ functions:
       - http:
           path: /
           method: ANY
+          # No combinar origin: * con allowCredentials: true: CORS inválido y el navegador bloquea el API (Failed to fetch).
+          # El front no envía cookies; el token va en Authorization. Omitir allowCredentials o false.
           cors:
             origin: '*'
             headers:
@@ -55,7 +57,6 @@ functions:
               - X-Amz-Security-Token
               - X-Amz-User-Agent
               - X-Session-Id
-            allowCredentials: true
       - http:
           path: /{proxy+}
           method: ANY
@@ -69,7 +70,6 @@ functions:
               - X-Amz-Security-Token
               - X-Amz-User-Agent
               - X-Session-Id
-            allowCredentials: true
 
 package:
   exclude:
@@ -81,6 +81,7 @@ package:
   include:
     - lambda.js
     - src/**
+    - data/**
     - node_modules/**
 
 plugins:

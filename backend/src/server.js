@@ -1,73 +1,88 @@
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
 
-// Cargar variables de entorno
-dotenv.config();
+// Valida env vars al arrancar
+const config = require('./config');
+const requestIdMiddleware = require('./middleware/requestId');
+const logger = require('./utils/logger');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middlewares: permitir frontend en desarrollo (5173, 3000, etc.)
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
   'http://127.0.0.1:5173',
   'http://127.0.0.1:3000',
 ];
-if (process.env.FRONTEND_URL && !allowedOrigins.includes(process.env.FRONTEND_URL)) {
-  allowedOrigins.push(process.env.FRONTEND_URL);
+if (config.app.frontendUrl && !allowedOrigins.includes(config.app.frontendUrl)) {
+  allowedOrigins.push(config.app.frontendUrl);
 }
+
 app.use(cors({
   origin: (origin, cb) => {
     if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
-    cb(null, true); // en desarrollo aceptar cualquier origin
+    cb(null, true);
   },
   credentials: true,
 }));
-app.use(express.json({ limit: '10mb' })); // Para las fotos en base64 (temporal)
+app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(requestIdMiddleware);
 
-// Health check
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', message: 'bee-tracked API is running' });
+  res.json({ status: 'ok', message: 'bee-tracked API is running', requestId: req.requestId });
 });
 
-// Routes
 const turnosRouter = require('./routes/turnos');
 const carrerasRouter = require('./routes/carreras');
 const authRouter = require('./routes/auth');
 const ecodeliveryRouter = require('./routes/ecodelivery');
 const beezeroRouter = require('./routes/beezero');
+const adminRouter = require('./routes/admin');
+const andiRouter = require('./routes/andi');
+const announcementsRouter = require('./routes/announcements');
 
 app.use('/api/turnos', turnosRouter);
 app.use('/api/carreras', carrerasRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/ecodelivery', ecodeliveryRouter);
 app.use('/api/beezero', beezeroRouter);
+app.use('/api/admin', adminRouter);
+app.use('/api/andi', andiRouter);
+app.use('/api/announcements', announcementsRouter);
 
-// Error handler
 app.use((err, req, res, next) => {
-  console.error('Error:', err);
-  res.status(err.status || 500).json({
+  logger.error('Unhandled error', {
+    requestId: req.requestId,
+    path: req.path,
+    method: req.method,
+    error: err.message,
+    stack: config.app.nodeEnv === 'development' ? err.stack : undefined,
+  });
+
+  res.status(err.status || err.statusCode || 500).json({
     success: false,
     error: err.message || 'Internal server error',
+    code: err.code,
+    requestId: req.requestId,
   });
 });
 
-// 404 handler
 app.use((req, res) => {
   res.status(404).json({
     success: false,
     error: 'Route not found',
+    requestId: req.requestId,
   });
 });
 
-// Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
+  logger.info('Server started', {
+    port: PORT,
+    nodeEnv: config.app.nodeEnv,
+    frontendUrl: config.app.frontendUrl,
+  });
 });
 
 module.exports = app;

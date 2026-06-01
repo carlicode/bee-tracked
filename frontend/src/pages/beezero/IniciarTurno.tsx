@@ -285,10 +285,10 @@ export const IniciarTurno = () => {
           />
         </div>
 
-        {/* Batería - después de kilometraje */}
+        {/* Batería Inicio - después de kilometraje */}
         <div>
           <label htmlFor="bateria" className="block text-sm font-medium text-black mb-1">
-            Batería
+            Batería Inicio
           </label>
           <input
             type="text"

@@ -27,6 +27,17 @@ import { Kilometraje } from './pages/ecodelivery/Kilometraje';
 import { MisKilometrajes } from './pages/ecodelivery/MisKilometrajes';
 import { MisTurnos as MisTurnosBiker } from './pages/ecodelivery/MisTurnos';
 
+// Admin
+import { DashboardAdmin } from './pages/admin/DashboardAdmin';
+import { CarrerasDrivers } from './pages/admin/CarrerasDrivers';
+import { TurnosBeezero } from './pages/admin/TurnosBeezero';
+import { DashboardLive } from './pages/admin/DashboardLive';
+
+// Andi (RRHH)
+import { DashboardAndi } from './pages/andi/DashboardAndi';
+import { CrearAnuncio } from './pages/andi/CrearAnuncio';
+import { ListaAnuncios } from './pages/andi/ListaAnuncios';
+
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
   
@@ -41,18 +52,57 @@ const DashboardRouter = () => {
   const { getUserType } = useAuth();
   const userType = getUserType();
 
-  // Ecodelivery y Operador usan la misma vista eco (acceso completo)
+  if (userType === 'admin') {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+  if (userType === 'rrhh') {
+    return <Navigate to="/andi/dashboard" replace />;
+  }
   if (userType === 'ecodelivery' || userType === 'operador') {
     return <Navigate to="/ecodelivery/dashboard" replace />;
   }
   return <Navigate to="/beezero/dashboard" replace />;
 };
 
-/** Operadores no deben ver BeeZero: redirige a eco */
-const OperadorGuard = ({ children }: { children: React.ReactNode }) => {
+/** Operadores y admins no usan BeeZero: redirige */
+const BeeZeroAccessGuard = ({ children }: { children: React.ReactNode }) => {
   const { getUserType } = useAuth();
-  if (getUserType() === 'operador') {
+  const t = getUserType();
+  if (t === 'operador') {
     return <Navigate to="/ecodelivery/dashboard" replace />;
+  }
+  if (t === 'admin') {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+  if (t === 'rrhh') {
+    return <Navigate to="/andi/dashboard" replace />;
+  }
+  return <>{children}</>;
+};
+
+const EcoDeliveryAccessGuard = ({ children }: { children: React.ReactNode }) => {
+  const { getUserType } = useAuth();
+  if (getUserType() === 'admin') {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+  if (getUserType() === 'rrhh') {
+    return <Navigate to="/andi/dashboard" replace />;
+  }
+  return <>{children}</>;
+};
+
+const AdminGuard = ({ children }: { children: React.ReactNode }) => {
+  const { getUserType } = useAuth();
+  if (getUserType() !== 'admin') {
+    return <Navigate to="/" replace />;
+  }
+  return <>{children}</>;
+};
+
+const RrhhGuard = ({ children }: { children: React.ReactNode }) => {
+  const { getUserType } = useAuth();
+  if (getUserType() !== 'rrhh') {
+    return <Navigate to="/" replace />;
   }
   return <>{children}</>;
 };
@@ -79,12 +129,12 @@ function AppContent() {
           }
         />
         
-        {/* BeeZero Routes — operadores no pueden acceder */}
+        {/* BeeZero — sin operadores ni admin */}
         <Route
           path="/beezero/dashboard"
           element={
             <PrivateRoute>
-              <OperadorGuard>
+              <BeeZeroAccessGuard>
                 {isAuthenticated() && (
                   <ThemeProvider userType={userType}>
                     <Layout>
@@ -92,7 +142,7 @@ function AppContent() {
                     </Layout>
                   </ThemeProvider>
                 )}
-              </OperadorGuard>
+              </BeeZeroAccessGuard>
             </PrivateRoute>
           }
         />
@@ -100,7 +150,7 @@ function AppContent() {
           path="/beezero/iniciar-turno"
           element={
             <PrivateRoute>
-              <OperadorGuard>
+              <BeeZeroAccessGuard>
                 {isAuthenticated() && (
                   <ThemeProvider userType={userType}>
                     <Layout>
@@ -108,7 +158,7 @@ function AppContent() {
                     </Layout>
                   </ThemeProvider>
                 )}
-              </OperadorGuard>
+              </BeeZeroAccessGuard>
             </PrivateRoute>
           }
         />
@@ -116,7 +166,7 @@ function AppContent() {
           path="/beezero/cerrar-turno"
           element={
             <PrivateRoute>
-              <OperadorGuard>
+              <BeeZeroAccessGuard>
                 {isAuthenticated() && (
                   <ThemeProvider userType={userType}>
                     <Layout>
@@ -124,7 +174,7 @@ function AppContent() {
                     </Layout>
                   </ThemeProvider>
                 )}
-              </OperadorGuard>
+              </BeeZeroAccessGuard>
             </PrivateRoute>
           }
         />
@@ -132,7 +182,7 @@ function AppContent() {
           path="/beezero/nueva-carrera"
           element={
             <PrivateRoute>
-              <OperadorGuard>
+              <BeeZeroAccessGuard>
                 {isAuthenticated() && (
                   <ThemeProvider userType={userType}>
                     <Layout>
@@ -140,7 +190,7 @@ function AppContent() {
                     </Layout>
                   </ThemeProvider>
                 )}
-              </OperadorGuard>
+              </BeeZeroAccessGuard>
             </PrivateRoute>
           }
         />
@@ -148,7 +198,7 @@ function AppContent() {
           path="/beezero/mis-carreras"
           element={
             <PrivateRoute>
-              <OperadorGuard>
+              <BeeZeroAccessGuard>
                 {isAuthenticated() && (
                   <ThemeProvider userType={userType}>
                     <Layout>
@@ -156,7 +206,7 @@ function AppContent() {
                     </Layout>
                   </ThemeProvider>
                 )}
-              </OperadorGuard>
+              </BeeZeroAccessGuard>
             </PrivateRoute>
           }
         />
@@ -164,7 +214,7 @@ function AppContent() {
           path="/beezero/mis-turnos"
           element={
             <PrivateRoute>
-              <OperadorGuard>
+              <BeeZeroAccessGuard>
                 {isAuthenticated() && (
                   <ThemeProvider userType={userType}>
                     <Layout>
@@ -172,7 +222,7 @@ function AppContent() {
                     </Layout>
                   </ThemeProvider>
                 )}
-              </OperadorGuard>
+              </BeeZeroAccessGuard>
             </PrivateRoute>
           }
         />
@@ -180,7 +230,7 @@ function AppContent() {
           path="/beezero/turno/:id"
           element={
             <PrivateRoute>
-              <OperadorGuard>
+              <BeeZeroAccessGuard>
                 {isAuthenticated() && (
                   <ThemeProvider userType={userType}>
                     <Layout>
@@ -188,7 +238,7 @@ function AppContent() {
                     </Layout>
                   </ThemeProvider>
                 )}
-              </OperadorGuard>
+              </BeeZeroAccessGuard>
             </PrivateRoute>
           }
         />
@@ -198,13 +248,15 @@ function AppContent() {
           path="/ecodelivery/dashboard"
           element={
             <PrivateRoute>
-              {isAuthenticated() && (
-                <ThemeProvider userType={userType}>
-                  <Layout>
-                    <DashboardBiker />
-                  </Layout>
-                </ThemeProvider>
-              )}
+              <EcoDeliveryAccessGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType={userType}>
+                    <Layout>
+                      <DashboardBiker />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </EcoDeliveryAccessGuard>
             </PrivateRoute>
           }
         />
@@ -212,13 +264,15 @@ function AppContent() {
           path="/ecodelivery/iniciar-turno"
           element={
             <PrivateRoute>
-              {isAuthenticated() && (
-                <ThemeProvider userType={userType}>
-                  <Layout>
-                    <IniciarTurnoBiker />
-                  </Layout>
-                </ThemeProvider>
-              )}
+              <EcoDeliveryAccessGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType={userType}>
+                    <Layout>
+                      <IniciarTurnoBiker />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </EcoDeliveryAccessGuard>
             </PrivateRoute>
           }
         />
@@ -226,13 +280,15 @@ function AppContent() {
           path="/ecodelivery/cerrar-turno"
           element={
             <PrivateRoute>
-              {isAuthenticated() && (
-                <ThemeProvider userType={userType}>
-                  <Layout>
-                    <CerrarTurnoBiker />
-                  </Layout>
-                </ThemeProvider>
-              )}
+              <EcoDeliveryAccessGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType={userType}>
+                    <Layout>
+                      <CerrarTurnoBiker />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </EcoDeliveryAccessGuard>
             </PrivateRoute>
           }
         />
@@ -240,13 +296,15 @@ function AppContent() {
           path="/ecodelivery/kilometraje"
           element={
             <PrivateRoute>
-              {isAuthenticated() && (
-                <ThemeProvider userType={userType}>
-                  <Layout>
-                    <Kilometraje />
-                  </Layout>
-                </ThemeProvider>
-              )}
+              <EcoDeliveryAccessGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType={userType}>
+                    <Layout>
+                      <Kilometraje />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </EcoDeliveryAccessGuard>
             </PrivateRoute>
           }
         />
@@ -254,13 +312,15 @@ function AppContent() {
           path="/ecodelivery/mis-kilometrajes"
           element={
             <PrivateRoute>
-              {isAuthenticated() && (
-                <ThemeProvider userType={userType}>
-                  <Layout>
-                    <MisKilometrajes />
-                  </Layout>
-                </ThemeProvider>
-              )}
+              <EcoDeliveryAccessGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType={userType}>
+                    <Layout>
+                      <MisKilometrajes />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </EcoDeliveryAccessGuard>
             </PrivateRoute>
           }
         />
@@ -268,13 +328,131 @@ function AppContent() {
           path="/ecodelivery/mis-turnos"
           element={
             <PrivateRoute>
-              {isAuthenticated() && (
-                <ThemeProvider userType={userType}>
-                  <Layout>
-                    <MisTurnosBiker />
-                  </Layout>
-                </ThemeProvider>
-              )}
+              <EcoDeliveryAccessGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType={userType}>
+                    <Layout>
+                      <MisTurnosBiker />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </EcoDeliveryAccessGuard>
+            </PrivateRoute>
+          }
+        />
+
+        {/* Admin */}
+        <Route
+          path="/admin/dashboard"
+          element={
+            <PrivateRoute>
+              <AdminGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType="admin">
+                    <Layout>
+                      <DashboardAdmin />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </AdminGuard>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin/dashboard/live"
+          element={
+            <PrivateRoute>
+              <AdminGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType="admin">
+                    <Layout>
+                      <DashboardLive />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </AdminGuard>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin/carreras-drivers"
+          element={
+            <PrivateRoute>
+              <AdminGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType="admin">
+                    <Layout>
+                      <CarrerasDrivers />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </AdminGuard>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin/turnos-beezero"
+          element={
+            <PrivateRoute>
+              <AdminGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType="admin">
+                    <Layout>
+                      <TurnosBeezero />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </AdminGuard>
+            </PrivateRoute>
+          }
+        />
+
+        {/* Andi (RRHH) */}
+        <Route
+          path="/andi/dashboard"
+          element={
+            <PrivateRoute>
+              <RrhhGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType="rrhh">
+                    <Layout>
+                      <DashboardAndi />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </RrhhGuard>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/andi/anuncios"
+          element={
+            <PrivateRoute>
+              <RrhhGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType="rrhh">
+                    <Layout>
+                      <ListaAnuncios />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </RrhhGuard>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/andi/anuncios/crear"
+          element={
+            <PrivateRoute>
+              <RrhhGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType="rrhh">
+                    <Layout>
+                      <CrearAnuncio />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </RrhhGuard>
             </PrivateRoute>
           }
         />

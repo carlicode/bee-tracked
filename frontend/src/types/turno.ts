@@ -3,7 +3,14 @@ export interface Turno {
   abejita: string; // Nombre del driver
   aperturaCaja: number;
   cierreCaja?: number;
-  qr?: number;
+  totalGastos?: number;
+  gastosCierre?: {
+    tipo: string;
+    monto: number;
+    descripcion?: string;
+    foto?: string;
+  }[];
+  qr?: number; // legacy - mantenido por compatibilidad con datos locales anteriores
   auto: string; // Placa del auto
   kilometraje?: number; // Km del odómetro
   bateria?: number; // Nivel de batería (ej. mV o %)

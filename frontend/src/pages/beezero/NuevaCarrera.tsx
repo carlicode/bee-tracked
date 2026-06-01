@@ -19,6 +19,7 @@ export const NuevaCarrera = () => {
   const [loading, setLoading] = useState(false);
   const [clientesApi, setClientesApi] = useState<string[]>([]);
   const clientesOpciones = [...new Set([...DEFAULT_CLIENTES, ...clientesApi])];
+  const [fotoPreview, setFotoPreview] = useState<string>('');
   
   const initialFormData = (): Partial<Carrera> => ({
     fecha: formatters.dateToInput(new Date()),
@@ -34,6 +35,7 @@ export const NuevaCarrera = () => {
     aCuenta: false,
     pagoPorQR: false,
     observaciones: '',
+    foto: '',
   });
 
   const [formData, setFormData] = useState<Partial<Carrera>>(initialFormData);
@@ -53,6 +55,18 @@ export const NuevaCarrera = () => {
     const parts = v.split('.');
     const sanitized = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : v;
     return sanitized.replace(/[^0-9.]/g, '');
+  };
+
+  const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      setFotoPreview(dataUrl);
+      setFormData((prev) => ({ ...prev, foto: dataUrl }));
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleClienteChange = async (value: string) => {
@@ -77,10 +91,6 @@ export const NuevaCarrera = () => {
 
     if (!formData.cliente) {
       toast.show('Por favor completa todos los campos requeridos', 'info');
-      return;
-    }
-    if (!porHora && (!formData.lugarRecojo || !formData.lugarDestino)) {
-      toast.show('Por favor completa Lugar de Recojo y Lugar de Destino', 'info');
       return;
     }
 
@@ -152,7 +162,16 @@ export const NuevaCarrera = () => {
       </div>
       <h2 className="text-2xl font-bold text-gray-900 mb-6">Registrar carrera</h2>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-4">
+      <form
+        onSubmit={handleSubmit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'BUTTON') {
+            e.preventDefault();
+          }
+        }}
+        className="bg-white rounded-lg shadow p-6 space-y-4"
+      >
+        {/* Fecha */}
         <div>
           <label htmlFor="fecha" className="block text-sm font-medium text-black mb-1">
             Fecha *
@@ -167,6 +186,7 @@ export const NuevaCarrera = () => {
           />
         </div>
 
+        {/* Cliente */}
         <div>
           <label htmlFor="cliente" className="block text-sm font-medium text-gray-700 mb-1">
             Cliente *
@@ -182,6 +202,7 @@ export const NuevaCarrera = () => {
           />
         </div>
 
+        {/* Hora Inicio + Hora Fin */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <TimeSelect
             label="Hora Inicio"
@@ -197,51 +218,16 @@ export const NuevaCarrera = () => {
           />
         </div>
 
-        <PorHoraCheckbox
-          checked={porHora}
-          onChange={(v) => setFormData((prev) => ({ ...prev, porHora: v }))}
-          checkboxClass="text-beezero-yellow focus:ring-beezero-yellow"
-        />
-
-        <div className="flex flex-wrap items-center gap-6">
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              id="aCuenta"
-              checked={formData.aCuenta ?? false}
-              onChange={(e) => setFormData((prev) => ({ ...prev, aCuenta: e.target.checked }))}
-              className="w-5 h-5 rounded border-2 border-gray-300 focus:ring-2 focus:ring-offset-0 text-beezero-yellow focus:ring-beezero-yellow"
-              aria-describedby="aCuenta-desc"
-            />
-            <label htmlFor="aCuenta" id="aCuenta-desc" className="text-sm font-medium text-black">
-              A cuenta
-            </label>
-          </div>
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              id="pagoPorQR"
-              checked={formData.pagoPorQR ?? false}
-              onChange={(e) => setFormData((prev) => ({ ...prev, pagoPorQR: e.target.checked }))}
-              className="w-5 h-5 rounded border-2 border-gray-300 focus:ring-2 focus:ring-offset-0 text-beezero-yellow focus:ring-beezero-yellow"
-              aria-describedby="pagoPorQR-desc"
-            />
-            <label htmlFor="pagoPorQR" id="pagoPorQR-desc" className="text-sm font-medium text-black">
-              Pago por QR
-            </label>
-          </div>
-        </div>
-
+        {/* Lugar de Recojo + Lugar de Destino */}
         {!porHora && (
           <>
             <div>
               <label htmlFor="lugarRecojo" className="block text-sm font-medium text-gray-700 mb-1">
-                Lugar de Recojo *
+                Lugar de Recojo
               </label>
               <input
                 type="text"
                 id="lugarRecojo"
-                required
                 value={formData.lugarRecojo}
                 onChange={(e) => setFormData((prev) => ({ ...prev, lugarRecojo: e.target.value }))}
                 className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
@@ -251,12 +237,11 @@ export const NuevaCarrera = () => {
 
             <div>
               <label htmlFor="lugarDestino" className="block text-sm font-medium text-gray-700 mb-1">
-                Lugar de Destino *
+                Lugar de Destino
               </label>
               <input
                 type="text"
                 id="lugarDestino"
-                required
                 value={formData.lugarDestino}
                 onChange={(e) => setFormData((prev) => ({ ...prev, lugarDestino: e.target.value }))}
                 className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
@@ -266,6 +251,40 @@ export const NuevaCarrera = () => {
           </>
         )}
 
+        {/* Pago por QR | A cuenta | Carrera por hora — una sola línea */}
+        <div className="flex flex-wrap items-center gap-5">
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="pagoPorQR"
+              checked={formData.pagoPorQR ?? false}
+              onChange={(e) => setFormData((prev) => ({ ...prev, pagoPorQR: e.target.checked }))}
+              className="w-5 h-5 rounded border-2 border-gray-300 focus:ring-2 focus:ring-offset-0 text-beezero-yellow focus:ring-beezero-yellow"
+            />
+            <label htmlFor="pagoPorQR" className="text-sm font-medium text-black">
+              Pago por QR
+            </label>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="aCuenta"
+              checked={formData.aCuenta ?? false}
+              onChange={(e) => setFormData((prev) => ({ ...prev, aCuenta: e.target.checked }))}
+              className="w-5 h-5 rounded border-2 border-gray-300 focus:ring-2 focus:ring-offset-0 text-beezero-yellow focus:ring-beezero-yellow"
+            />
+            <label htmlFor="aCuenta" className="text-sm font-medium text-black">
+              A cuenta
+            </label>
+          </div>
+          <PorHoraCheckbox
+            checked={porHora}
+            onChange={(v) => setFormData((prev) => ({ ...prev, porHora: v }))}
+            checkboxClass="text-beezero-yellow focus:ring-beezero-yellow"
+          />
+        </div>
+
+        {/* Tiempo + Distancia + Precio */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label htmlFor="tiempo" className="block text-sm font-medium text-gray-700 mb-1">
@@ -326,6 +345,50 @@ export const NuevaCarrera = () => {
           </div>
         </div>
 
+        {/* Foto */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Foto
+          </label>
+          <label
+            htmlFor="foto-input"
+            className="flex items-center gap-3 cursor-pointer w-full border-2 border-dashed border-gray-300 rounded-lg px-4 py-3 hover:border-beezero-yellow hover:bg-beezero-yellow/5 transition"
+          >
+            <svg className="w-6 h-6 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span className="text-sm text-gray-500">
+              {fotoPreview ? 'Cambiar foto' : 'Tomar o seleccionar foto'}
+            </span>
+            <input
+              id="foto-input"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFotoChange}
+            />
+          </label>
+          {fotoPreview && (
+            <div className="mt-2 relative inline-block">
+              <img
+                src={fotoPreview}
+                alt="Vista previa"
+                className="w-32 h-32 object-cover rounded-lg border-2 border-beezero-yellow"
+              />
+              <button
+                type="button"
+                onClick={() => { setFotoPreview(''); setFormData((prev) => ({ ...prev, foto: '' })); }}
+                className="absolute -top-2 -right-2 w-6 h-6 bg-black text-white rounded-full flex items-center justify-center text-xs font-bold hover:bg-gray-800"
+                aria-label="Quitar foto"
+              >
+                ×
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Observaciones */}
         <div>
           <label htmlFor="observaciones" className="block text-sm font-medium text-gray-700 mb-1">
             Observaciones
@@ -375,6 +438,7 @@ export const NuevaCarrera = () => {
                   setFormData(initialFormData());
                   setDistanciaStr('');
                   setPrecioStr('');
+                  setFotoPreview('');
                   setShowSuccessModal(false);
                 }}
                 className="w-full bg-black text-white px-4 py-3 rounded-lg font-semibold hover:bg-gray-800 transition"

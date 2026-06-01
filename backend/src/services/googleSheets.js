@@ -84,7 +84,7 @@ async function appendRow(sheetName, values) {
   try {
     const response = await sheets.spreadsheets.values.append({
       spreadsheetId,
-      range: `${sheetName}!A:AB`,
+      range: `${sheetName}!A:AD`,
       valueInputOption: 'USER_ENTERED',
       resource: {
         values: [values],
@@ -125,7 +125,7 @@ async function updateRowById(sheetName, id, values) {
     // Actualizar la fila (rowIndex + 1 porque las filas empiezan en 1)
     const updateResponse = await sheets.spreadsheets.values.update({
       spreadsheetId,
-      range: `${sheetName}!A${rowIndex + 1}:AB${rowIndex + 1}`,
+      range: `${sheetName}!A${rowIndex + 1}:AD${rowIndex + 1}`,
       valueInputOption: 'USER_ENTERED',
       resource: {
         values: [values],
@@ -150,7 +150,7 @@ async function getAllRows(sheetName) {
   try {
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: `${sheetName}!A:AB`,
+      range: `${sheetName}!A:AD`,
     });
 
     return response.data.values || [];
@@ -350,6 +350,58 @@ async function getAllRowsWithHeadersFromSpreadsheet(spreadsheetId, sheetName, ra
   }
 }
 
+/**
+ * Obtiene o crea una hoja y devuelve su título y cantidad de filas (incluye header) en una sola
+ * llamada cuando la hoja ya existe, reduciendo el total de roundtrips a la API de Sheets.
+ *
+ * Flujo para hoja existente: 1 llamada (values.get → rowCount + existencia)
+ * Flujo para hoja nueva:     3 llamadas (values.get falla → batchUpdate + values.update headers)
+ *                            rowCount devuelto = 1 (solo el header recién escrito)
+ *
+ * @param {string} spreadsheetId
+ * @param {string} sheetTitle - Nombre de la hoja (se sanitiza internamente)
+ * @param {string[]} headers  - Encabezados a escribir si la hoja se crea
+ * @returns {Promise<{ sheetTitle: string; rowCount: number }>}
+ */
+async function getOrCreateSheetAndRowCount(spreadsheetId, sheetTitle, headers) {
+  const sheets = await getSheetsClient();
+  const safeTitle = sanitizeSheetTitle(sheetTitle);
+
+  try {
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: `${safeTitle}!A:A`,
+    });
+    const rowCount = (res.data.values || []).length;
+    return { sheetTitle: safeTitle, rowCount };
+  } catch (err) {
+    // Google Sheets devuelve 400 con "Unable to parse range" cuando la hoja no existe
+    const isNotFound =
+      err.code === 400 ||
+      (err.message && err.message.includes('Unable to parse range'));
+    if (!isNotFound) throw err;
+
+    const addSheetRes = await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      resource: {
+        requests: [{ addSheet: { properties: { title: safeTitle } } }],
+      },
+    });
+    const newTitle = addSheetRes.data.replies[0].addSheet.properties.title;
+
+    if (headers && headers.length) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range: `${newTitle}!A1:${String.fromCharCode(64 + headers.length)}1`,
+        valueInputOption: 'USER_ENTERED',
+        resource: { values: [headers] },
+      });
+    }
+
+    return { sheetTitle: newTitle, rowCount: 1 };
+  }
+}
+
 module.exports = {
   initializeSheetsClient,
   appendRow,
@@ -359,6 +411,7 @@ module.exports = {
   getSheetsClient,
   sanitizeSheetTitle,
   getOrCreateSheetInSpreadsheet,
+  getOrCreateSheetAndRowCount,
   appendRowToSpreadsheet,
   getRowCountInSpreadsheet,
   getSheetsInSpreadsheet,

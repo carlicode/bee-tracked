@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import * as XLSX from 'xlsx';
+import { Link } from 'react-router-dom';
 import { adminApi, isAdminApiEnabled } from '../../services/adminApi';
 import {
   CARRERA_ADMIN_COLUMNS,
@@ -37,7 +37,10 @@ function exportXLSX(
   const ws = XLSX.utils.aoa_to_sheet(data);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Carreras');
-  XLSX.writeFile(wb, `carreras_${driverName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  XLSX.writeFile(
+    wb,
+    `carreras_${driverName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`,
+  );
 }
 
 export function CarrerasDrivers() {

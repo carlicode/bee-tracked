@@ -21,7 +21,7 @@ export interface Carrera {
   rowNumber?: number;
 }
 
-export type UserType = 'beezero' | 'operador' | 'ecodelivery';
+export type UserType = 'beezero' | 'operador' | 'ecodelivery' | 'admin' | 'rrhh';
 
 export interface User {
   email: string;

@@ -13,6 +13,12 @@ const PREFIX_ECODELIVERY_TURNOS = 'Registros_BeeTracked/Ecodelivery/Turnos/';
 /** Carpeta Ecodelivery Deliveries: Registros_BeeTracked/Ecodelivery/Deliveries/ */
 const PREFIX_ECODELIVERY_DELIVERIES = 'Registros_BeeTracked/Ecodelivery/Deliveries/';
 
+/** Carpeta BeeZero Carreras: beezero/carreras/ */
+const PREFIX_BEEZERO_CARRERAS = 'beezero/carreras/';
+
+/** Carpeta BeeZero Gastos Drivers: beezero/gastos drivers/ */
+const PREFIX_BEEZERO_GASTOS = 'beezero/gastos drivers/';
+
 let s3Client = null;
 
 function getS3() {
@@ -171,6 +177,68 @@ async function uploadEcodeliveryDeliveryPhoto({ dataUrl, username }) {
 }
 
 /**
+ * Sube foto de carrera BeeZero a S3
+ * Ruta: beezero/carreras/{abejita}_{fecha}_{timestamp}.ext
+ * @param {object} opts
+ * @param {string} opts.dataUrl - Imagen en base64 (data:image/...;base64,...)
+ * @param {string} opts.abejita - Nombre del driver (se sanitiza para el archivo)
+ * @param {string} opts.fecha - Fecha de la carrera (YYYY-MM-DD)
+ * @returns {Promise<string>} URL pública de la imagen
+ */
+async function uploadBeezeroCarreraPhoto({ dataUrl, abejita, fecha }) {
+  const s3 = getS3();
+  const { body, contentType, ext } = parseDataUrl(dataUrl);
+
+  const safeName = sanitizeUsername(abejita);
+  const safeDate = fecha ? String(fecha).slice(0, 10) : new Date().toISOString().slice(0, 10);
+  const timestamp = Date.now();
+  const key = `${PREFIX_BEEZERO_CARRERAS}${safeName}_${safeDate}_${timestamp}.${ext}`;
+
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: BUCKET,
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+    })
+  );
+
+  const url = `https://${BUCKET}.s3.${REGION}.amazonaws.com/${key}`;
+  return url;
+}
+
+/**
+ * Sube foto de gasto de driver BeeZero a S3
+ * Ruta: beezero/gastos drivers/{abejita}_{turnoId}_gasto-{num}_{timestamp}.ext
+ * @param {object} opts
+ * @param {string} opts.dataUrl - Imagen en base64 (data:image/...;base64,...)
+ * @param {string|number} opts.turnoId - ID del turno
+ * @param {string} opts.abejita - Nombre del driver (se sanitiza)
+ * @param {number} opts.num - Número del gasto dentro del turno (1, 2, ...)
+ * @returns {Promise<string>} URL pública de la imagen
+ */
+async function uploadBeezeroGastoPhoto({ dataUrl, turnoId, abejita, num }) {
+  const s3 = getS3();
+  const { body, contentType, ext } = parseDataUrl(dataUrl);
+
+  const safeName = sanitizeUsername(abejita || 'driver');
+  const timestamp = Date.now();
+  const key = `${PREFIX_BEEZERO_GASTOS}${safeName}_${turnoId}_gasto-${num}_${timestamp}.${ext}`;
+
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: BUCKET,
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+    })
+  );
+
+  const url = `https://${BUCKET}.s3.${REGION}.amazonaws.com/${key}`;
+  return url;
+}
+
+/**
  * Comprueba si S3 está configurado
  * En Lambda: solo necesita BUCKET (usa rol IAM automáticamente)
  * En local: necesita BUCKET y credenciales explícitas
@@ -195,9 +263,13 @@ module.exports = {
   uploadBeezeroPhoto,
   uploadEcodeliveryPhoto,
   uploadEcodeliveryDeliveryPhoto,
+  uploadBeezeroCarreraPhoto,
+  uploadBeezeroGastoPhoto,
   isS3Configured,
   PREFIX_TABLERO,
   PREFIX_DANOS,
   PREFIX_ECODELIVERY_TURNOS,
   PREFIX_ECODELIVERY_DELIVERIES,
+  PREFIX_BEEZERO_CARRERAS,
+  PREFIX_BEEZERO_GASTOS,
 };

@@ -41,15 +41,17 @@ function decodePayload(token: string): Record<string, unknown> {
   }
 }
 
-export type CognitoUserType = 'beezero' | 'operador' | 'ecodelivery';
+export type CognitoUserType = 'admin' | 'beezero' | 'operador' | 'ecodelivery' | 'rrhh';
 
 /**
  * Obtiene el tipo de usuario desde el idToken de Cognito (claim cognito:groups).
- * Prioridad: operador > beezero > ecodelivery. Operadores usan vista eco.
+ * Prioridad: admin > operador > beezero > ecodelivery.
  */
 export function getUserTypeFromToken(idToken: string): CognitoUserType {
   const payload = decodePayload(idToken);
   const groups = (payload['cognito:groups'] as string[] | undefined) || [];
+  if (groups.includes('admin')) return 'admin';
+  if (groups.includes('rrhh')) return 'rrhh';
   if (groups.includes('operador')) return 'operador';
   if (groups.includes('beezero')) return 'beezero';
   if (groups.includes('ecodelivery')) return 'ecodelivery';

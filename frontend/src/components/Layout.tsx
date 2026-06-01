@@ -19,15 +19,30 @@ export const Layout = ({ children }: LayoutProps) => {
     navigate('/');
   };
 
-  const headerClass = userType === 'beezero' 
-    ? 'bg-beezero-yellow' 
-    : 'bg-ecodelivery-green';
+  const headerClass =
+    userType === 'beezero'
+      ? 'bg-beezero-yellow'
+      : userType === 'admin'
+        ? 'bg-beeadmin-purple'
+        : userType === 'rrhh'
+          ? 'bg-orange-500'
+          : 'bg-ecodelivery-green';
 
-  const textClass = userType === 'beezero'
-    ? 'text-black'
-    : 'text-white';
+  const textClass =
+    userType === 'beezero'
+      ? 'text-black'
+      : userType === 'admin' || userType === 'rrhh'
+        ? 'text-white'
+        : 'text-white';
 
-  const subText = userType === 'beezero' ? 'Drivers' : 'Bikers';
+  const subText =
+    userType === 'beezero'
+      ? 'Drivers'
+      : userType === 'admin'
+        ? 'Admin'
+        : userType === 'rrhh'
+          ? 'RRHH'
+          : 'Bikers';
 
   return (
     <div className="min-h-screen bg-white">
@@ -59,7 +74,7 @@ export const Layout = ({ children }: LayoutProps) => {
                     className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors ${largeTextEnabled ? (userType === 'beezero' ? 'bg-black' : 'bg-white') : 'bg-gray-300'}`}
                   >
                     <span
-                      className={`inline-block h-5 w-5 transform rounded-full transition-transform shadow ${largeTextEnabled ? (userType === 'beezero' ? 'bg-beezero-yellow translate-x-6' : 'bg-ecodelivery-green translate-x-6') : 'bg-white translate-x-0.5'}`}
+                      className={`inline-block h-5 w-5 transform rounded-full transition-transform shadow ${largeTextEnabled ? (userType === 'beezero' ? 'bg-beezero-yellow translate-x-6' : userType === 'admin' ? 'bg-beeadmin-purple translate-x-6' : 'bg-ecodelivery-green translate-x-6') : 'bg-white translate-x-0.5'}`}
                     />
                   </button>
                 </label>

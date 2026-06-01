@@ -155,17 +155,6 @@ export const DashboardBeezero = () => {
           )}
         </DashboardCard>
 
-        {!turnoActual && (
-          <DashboardCard
-            to="/beezero/cerrar-turno"
-            icon={<IconStop />}
-            title="Cerrar Turno"
-            subtitle="Finaliza tu jornada laboral"
-            description="Registra cierre de caja, QR, fotos finales y más"
-            theme="beezero"
-          />
-        )}
-
         {cardsResto.map((card) => (
           <DashboardCard
             key={card.to}

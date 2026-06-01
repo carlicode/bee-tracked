@@ -22,6 +22,11 @@ export default {
           'gray-dark': '#1F2937',
           'gray-light': '#F9FAFB',
         },
+        'beeadmin': {
+          purple: '#7C3AED',
+          'purple-dark': '#6D28D9',
+          'purple-light': '#A78BFA',
+        },
       },
     },
   },

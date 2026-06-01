@@ -68,7 +68,7 @@ export const beezeroApi = {
       }>(
         url,
         payload,
-        { headers: { ...authHeaders(), 'Content-Type': 'application/json' }, timeout: 15000 }
+        { headers: { ...authHeaders(), 'Content-Type': 'application/json' }, timeout: 40000 }
       );
       if (!data.success || data.carreraId == null)
         throw new Error(data.error || 'Error al registrar la carrera');

@@ -13,6 +13,7 @@ function sheetRowToTurno(row: Record<string, unknown>): Turno {
     abejita: (row.Abejita as string) || '',
     auto: (row['Auto (Placa)'] as string) || '',
     aperturaCaja: parseFloat(String(row['Apertura Caja (Bs)'] || '0')) || 0,
+    totalGastos: row['Total Gastos'] ? parseFloat(String(row['Total Gastos'])) : undefined,
     kilometraje: row['Kilometraje Inicio'] ? parseInt(String(row['Kilometraje Inicio'])) : undefined,
     bateria: row.Bateria ? parseFloat(String(row.Bateria)) : undefined,
     danosAuto: (row['Daños Auto Inicio'] as string) || 'ninguno',
@@ -113,7 +114,7 @@ export const turnosApi = {
     id: string,
     payload: {
       cierreCaja: number;
-      qr?: number;
+      gastos?: { tipo: string; monto: number; descripcion?: string }[];
       kilometraje?: number | string;
       bateria?: number | string;
       danosAuto?: string;

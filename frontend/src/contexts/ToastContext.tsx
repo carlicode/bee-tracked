@@ -6,6 +6,7 @@ import {
   type ReactNode,
 } from 'react';
 import { useAuth } from '../services/auth';
+import type { UserType } from '../types';
 
 export type ToastType = 'success' | 'error' | 'info';
 
@@ -32,9 +33,10 @@ function ToastModal({
   type: ToastType;
   onClose: () => void;
   onCloseCallback?: () => void;
-  userType: 'beezero' | 'ecodelivery' | 'operador' | null;
+  userType: UserType | null;
 }) {
-  const theme = (userType === 'ecodelivery' || userType === 'operador') ? 'ecodelivery' : 'beezero';
+  const ecoLike = userType === 'ecodelivery' || userType === 'operador';
+  const theme = ecoLike ? 'ecodelivery' : userType === 'admin' ? 'admin' : 'beezero';
 
   const config = {
     success: {
@@ -43,9 +45,20 @@ function ToastModal({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       ),
-      bgClass: theme === 'beezero' ? 'bg-beezero-yellow' : 'bg-ecodelivery-green',
-      textClass: theme === 'beezero' ? 'text-black' : 'text-white',
-      buttonClass: theme === 'beezero' ? 'bg-black text-beezero-yellow hover:bg-gray-800' : 'bg-white text-ecodelivery-green hover:bg-gray-100',
+      bgClass:
+        theme === 'beezero'
+          ? 'bg-beezero-yellow'
+          : theme === 'admin'
+            ? 'bg-beeadmin-purple'
+            : 'bg-ecodelivery-green',
+      textClass:
+        theme === 'beezero' ? 'text-black' : 'text-white',
+      buttonClass:
+        theme === 'beezero'
+          ? 'bg-black text-beezero-yellow hover:bg-gray-800'
+          : theme === 'admin'
+            ? 'bg-white text-beeadmin-purple hover:bg-gray-100'
+            : 'bg-white text-ecodelivery-green hover:bg-gray-100',
     },
     error: {
       icon: (
@@ -63,9 +76,19 @@ function ToastModal({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       ),
-      bgClass: theme === 'beezero' ? 'bg-beezero-yellow' : 'bg-ecodelivery-green',
+      bgClass:
+        theme === 'beezero'
+          ? 'bg-beezero-yellow'
+          : theme === 'admin'
+            ? 'bg-beeadmin-purple'
+            : 'bg-ecodelivery-green',
       textClass: theme === 'beezero' ? 'text-black' : 'text-white',
-      buttonClass: theme === 'beezero' ? 'bg-black text-beezero-yellow hover:bg-gray-800' : 'bg-white text-ecodelivery-green hover:bg-gray-100',
+      buttonClass:
+        theme === 'beezero'
+          ? 'bg-black text-beezero-yellow hover:bg-gray-800'
+          : theme === 'admin'
+            ? 'bg-white text-beeadmin-purple hover:bg-gray-100'
+            : 'bg-white text-ecodelivery-green hover:bg-gray-100',
     },
   };
 

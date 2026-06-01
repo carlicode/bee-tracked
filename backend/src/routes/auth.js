@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { registerSession, invalidateSession } = require('../services/sessionManager');
 
-const DATA_DIR = path.join(__dirname, '../../..', 'data');
+const DATA_DIR = path.join(__dirname, '../..', 'data');
 const CREDENTIALS_PATH =
   process.env.ECODELIVERY_CREDENTIALS_PATH ||
   path.join(DATA_DIR, 'ecodelivery-credentials.csv');
@@ -36,7 +36,16 @@ function parseCsvFile(filePath, hasRolColumn = false) {
     parts.push(current.trim());
     if (parts.length >= 3) {
       const rol = hasRolColumn && parts.length >= 4 ? parts[3].trim() : 'Ecodelivery';
-      const userType = rol === 'Bee Zero' ? 'beezero' : rol === 'Operador' ? 'operador' : 'ecodelivery';
+const userType =
+        rol === 'Bee Zero'
+          ? 'beezero'
+          : rol === 'Operador'
+            ? 'operador'
+            : rol === 'Admin'
+              ? 'admin'
+              : rol === 'RRHH'
+                ? 'rrhh'
+                : 'ecodelivery';
       rows.push({ biker: parts[0], user: parts[1], password: parts[2], userType });
     }
   }
@@ -44,9 +53,12 @@ function parseCsvFile(filePath, hasRolColumn = false) {
 }
 
 function loadEcodeliveryCredentials() {
+  // usuarios-bee-tracked.csv tiene columna de rol → fuente principal
+  const withRoles = parseCsvFile(USUARIOS_BEE_TRACKED_PATH, true);
+  if (withRoles.length > 0) return withRoles;
+  // fallback: ecodelivery-credentials.csv (sin columna de rol → todos ecodelivery)
   const primary = parseCsvFile(CREDENTIALS_PATH, false);
-  if (primary.length > 0) return primary.map((r) => ({ ...r, userType: r.userType || 'ecodelivery' }));
-  return parseCsvFile(USUARIOS_BEE_TRACKED_PATH, true);
+  return primary.map((r) => ({ ...r, userType: 'ecodelivery' }));
 }
 
 /**
@@ -55,7 +67,7 @@ function loadEcodeliveryCredentials() {
  * Valida contra ecodelivery-credentials.csv (User + Password) o usuarios demo BeeZero.
  * Retorna sessionId para control de concurrencia.
  */
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
   try {
     const { user, password } = req.body || {};
     if (!user || !password) {
@@ -76,7 +88,7 @@ router.post('/login', (req, res) => {
     if (match) {
       const userId = match.user;
       const userType = match.userType || 'ecodelivery';
-      const sessionId = registerSession(userId, { userType, name: match.biker });
+      const sessionId = await registerSession(userId, { userType, name: match.biker });
       
       return res.json({
         success: true,
@@ -93,7 +105,7 @@ router.post('/login', (req, res) => {
     // BeeZero demo (patricia, etc.)
     const u = userTrim.toLowerCase();
     if (u === 'patricia') {
-      const sessionId = registerSession('patricia', { userType: 'beezero', name: 'Patricia' });
+      const sessionId = await registerSession('patricia', { userType: 'beezero', name: 'Patricia' });
       return res.json({
         success: true,
         user: {
@@ -106,7 +118,7 @@ router.post('/login', (req, res) => {
       });
     }
     if (u === 'beezero' || u === 'bee') {
-      const sessionId = registerSession(u, { userType: 'beezero', name: 'Driver BeeZero' });
+      const sessionId = await registerSession(u, { userType: 'beezero', name: 'Driver BeeZero' });
       return res.json({
         success: true,
         user: {
@@ -137,7 +149,7 @@ router.post('/login', (req, res) => {
  * Body: { userId } o extrae userId del token JWT
  * Invalida la sesión activa
  */
-router.post('/logout', (req, res) => {
+router.post('/logout', async (req, res) => {
   try {
     const userId = req.body?.userId || req.user?.username;
     if (!userId) {
@@ -147,7 +159,7 @@ router.post('/logout', (req, res) => {
       });
     }
 
-    invalidateSession(userId);
+    await invalidateSession(userId);
     
     res.json({
       success: true,
@@ -168,7 +180,7 @@ router.post('/logout', (req, res) => {
  * Registra sesión para usuario de Cognito después de login exitoso en frontend.
  * userType: 'beezero' | 'operador' | 'ecodelivery' (viene del claim cognito:groups en el frontend).
  */
-router.post('/cognito-login', (req, res) => {
+router.post('/cognito-login', async (req, res) => {
   try {
     const { idToken, username, name, userType } = req.body || {};
     if (!idToken || !username) {
@@ -178,11 +190,11 @@ router.post('/cognito-login', (req, res) => {
       });
     }
 
-    const allowedTypes = ['beezero', 'operador', 'ecodelivery'];
+    const allowedTypes = ['beezero', 'operador', 'ecodelivery', 'admin', 'rrhh'];
     const sessionUserType = userType && allowedTypes.includes(userType) ? userType : 'ecodelivery';
 
     // Registrar sesión (invalida sesiones anteriores del mismo usuario)
-    const sessionId = registerSession(username, {
+    const sessionId = await registerSession(username, {
       userType: sessionUserType,
       name: name || username,
       source: 'cognito',

@@ -4,6 +4,7 @@ import type { Turno } from '../../types/turno';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { formatters } from '../../utils/formatters';
 
+
 export const DetalleTurno = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -37,12 +38,13 @@ export const DetalleTurno = () => {
     }
   };
 
+  // Diferencia = Apertura - Cierre - Total Gastos
   const calcularDiferenciaCaja = () => {
     if (!turno) return 0;
     const apertura = turno.aperturaCaja || 0;
     const cierre = turno.cierreCaja || 0;
-    const qr = turno.qr || 0;
-    return cierre - apertura - qr;
+    const totalGastos = turno.totalGastos || (turno.gastosCierre || []).reduce((acc, g) => acc + (g.monto || 0), 0);
+    return apertura - cierre - totalGastos;
   };
 
 
@@ -65,6 +67,8 @@ export const DetalleTurno = () => {
   }
 
   const diferencia = calcularDiferenciaCaja();
+  const gastosCierre = turno.gastosCierre || [];
+  const totalGastos = turno.totalGastos || gastosCierre.reduce((acc, gasto) => acc + (gasto.monto || 0), 0);
 
   return (
     <div>
@@ -215,16 +219,16 @@ export const DetalleTurno = () => {
                   <span className="text-gray-700">Apertura:</span>
                   <span className="font-semibold">Bs {turno.aperturaCaja}</span>
                 </div>
-                {turno.qr && turno.qr > 0 && (
-                  <div className="flex justify-between mb-2">
-                    <span className="text-gray-700">QR:</span>
-                    <span className="font-semibold">Bs {turno.qr}</span>
-                  </div>
-                )}
                 <div className="flex justify-between mb-2">
                   <span className="text-gray-700">Cierre:</span>
-                  <span className="font-semibold">Bs {turno.cierreCaja}</span>
+                  <span className="font-semibold">- Bs {turno.cierreCaja}</span>
                 </div>
+                {totalGastos > 0 && (
+                  <div className="flex justify-between mb-2">
+                    <span className="text-gray-700">Total Gastos:</span>
+                    <span className="font-semibold text-red-600">- Bs {totalGastos.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="border-t pt-2 mt-2 flex justify-between">
                   <span className="font-bold text-black">Diferencia:</span>
                   <span className={`font-bold text-lg ${diferencia >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -237,6 +241,36 @@ export const DetalleTurno = () => {
                 <p className="text-sm text-gray-600">Daños al Auto</p>
                 <p className="font-medium text-black">{turno.danosAuto}</p>
               </div>
+
+              {gastosCierre.length > 0 && (
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-600 mb-2">Gastos adicionales</p>
+                  <div className="space-y-2">
+                    {gastosCierre.map((gasto, idx) => (
+                      <div key={`${gasto.tipo}-${idx}`} className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-medium text-black">{gasto.tipo}</p>
+                          {gasto.descripcion && (
+                            <p className="text-xs text-gray-500">{gasto.descripcion}</p>
+                          )}
+                        </div>
+                        <p className="font-semibold text-black whitespace-nowrap">Bs {(gasto.monto || 0).toFixed(2)}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="border-t mt-3 pt-2 flex justify-between">
+                    <span className="text-sm font-bold text-black">Total gastos</span>
+                    <span className="text-sm font-bold text-black">Bs {totalGastos.toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
+
+              {turno.observaciones && (
+                <div>
+                  <p className="text-sm text-gray-600">Información extra</p>
+                  <p className="font-medium text-black whitespace-pre-wrap">{turno.observaciones}</p>
+                </div>
+              )}
 
               {turno.ubicacionFin && (
                 <div>

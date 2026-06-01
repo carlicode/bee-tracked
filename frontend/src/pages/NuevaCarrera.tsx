@@ -57,10 +57,6 @@ export const NuevaCarrera = () => {
       toast.show('Por favor completa todos los campos requeridos', 'info');
       return;
     }
-    if (!porHora && (!formData.lugarRecojo || !formData.lugarDestino)) {
-      toast.show('Por favor completa Lugar de Recojo y Lugar de Destino', 'info');
-      return;
-    }
 
     try {
       setLoading(true);
@@ -154,12 +150,11 @@ export const NuevaCarrera = () => {
           <>
             <div>
               <label htmlFor="lugarRecojo" className="block text-sm font-medium text-gray-700 mb-1">
-                Lugar de Recojo *
+                Lugar de Recojo
               </label>
               <input
                 type="text"
                 id="lugarRecojo"
-                required
                 value={formData.lugarRecojo}
                 onChange={(e) => setFormData((prev) => ({ ...prev, lugarRecojo: e.target.value }))}
                 className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
@@ -169,12 +164,11 @@ export const NuevaCarrera = () => {
 
             <div>
               <label htmlFor="lugarDestino" className="block text-sm font-medium text-gray-700 mb-1">
-                Lugar de Destino *
+                Lugar de Destino
               </label>
               <input
                 type="text"
                 id="lugarDestino"
-                required
                 value={formData.lugarDestino}
                 onChange={(e) => setFormData((prev) => ({ ...prev, lugarDestino: e.target.value }))}
                 className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"

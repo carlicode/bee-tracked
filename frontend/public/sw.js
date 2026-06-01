@@ -27,6 +27,12 @@ self.addEventListener('fetch', (event) => {
     );
     return;
   }
-  event.respondWith(fetch(event.request));
+  // Passthrough a la red; .catch evita "Uncaught (in promise)" si la petición falla (CORS, offline).
+  event.respondWith(
+    fetch(event.request).catch((err) => {
+      console.warn('[sw] fetch error:', event.request.url, err);
+      return Response.error();
+    })
+  );
 });
 
