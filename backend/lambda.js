@@ -24,6 +24,7 @@ const adminAnunciosRouter = require('./src/routes/adminAnuncios');
 const andiRouter = require('./src/routes/andi');
 const announcementsRouter = require('./src/routes/announcements');
 const pushRouter = require('./src/routes/push');
+const permisosRouter = require('./src/routes/permisos');
 
 app.use('/api/auth', authRouter);
 app.use('/api/turnos', turnosRouter);
@@ -34,6 +35,7 @@ app.use('/api/admin/anuncios', adminAnunciosRouter);
 app.use('/api/andi', andiRouter);
 app.use('/api/announcements', announcementsRouter);
 app.use('/api/push', pushRouter);
+app.use('/api/permisos', permisosRouter);
 
 app.get('/api/health', (req, res) => {
   res.json({ success: true, message: 'API is running', requestId: req.requestId });

@@ -35,6 +35,8 @@ import { DashboardLive } from './pages/admin/DashboardLive';
 import { AnunciosAdmin } from './pages/admin/AnunciosAdmin';
 import { CarrerasBikers } from './pages/admin/CarrerasBikers';
 import { CrearAnuncio } from './pages/andi/CrearAnuncio';
+import { SolicitarPermiso } from './pages/permisos/SolicitarPermiso';
+import { GestionPermisos } from './pages/admin/GestionPermisos';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
@@ -224,6 +226,23 @@ function AppContent() {
           }
         />
         
+        <Route
+          path="/beezero/solicitar-permiso"
+          element={
+            <PrivateRoute>
+              <BeeZeroAccessGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType={userType}>
+                    <Layout>
+                      <SolicitarPermiso variant="beezero" />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </BeeZeroAccessGuard>
+            </PrivateRoute>
+          }
+        />
+
         {/* EcoDelivery Routes */}
         <Route
           path="/ecodelivery/dashboard"
@@ -322,6 +341,23 @@ function AppContent() {
           }
         />
 
+        <Route
+          path="/ecodelivery/solicitar-permiso"
+          element={
+            <PrivateRoute>
+              <EcoDeliveryAccessGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType={userType}>
+                    <Layout>
+                      <SolicitarPermiso variant="ecodelivery" />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </EcoDeliveryAccessGuard>
+            </PrivateRoute>
+          }
+        />
+
         {/* Admin */}
         <Route
           path="/admin/dashboard"
@@ -396,6 +432,22 @@ function AppContent() {
                   <ThemeProvider userType="admin">
                     <Layout>
                       <CarrerasBikers />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </AdminGuard>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin/permisos"
+          element={
+            <PrivateRoute>
+              <AdminGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType="admin">
+                    <Layout>
+                      <GestionPermisos />
                     </Layout>
                   </ThemeProvider>
                 )}
