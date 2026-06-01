@@ -3,617 +3,340 @@
 Aplicación web móvil (PWA) para ~110 usuarios con interfaces diferenciadas por rol:
 - **BeeZero**: Conductores de auto (tema amarillo) 🚗
 - **EcoDelivery**: Bikers de delivery (tema verde) 🚴
-- **Admin**: Panel de administración (tema púrpura) — carreras, turnos, dashboard en tiempo real
-- **Andi (RRHH)**: Anuncios y comunicaciones internas (tema naranja)
+- **Admin**: Panel de administración (tema púrpura) — anuncios, carreras, turnos, dashboard en tiempo real
+- ~~**Andi (RRHH)**~~: Rol unificado con Admin (ver abajo)
 
 **Producción:** https://d19ls0k7de9u6w.cloudfront.net  
 **API:** https://bxa273i618.execute-api.us-east-1.amazonaws.com/prod
 
+---
+
 ## ✨ Funcionalidades por Plataforma
 
 ### 🚗 BeeZero (Conductores de Auto)
-- 🔐 **Autenticación con AWS Cognito**
-- 🚗 **Registro de Carreras** - Carreras completas con cliente, precio, distancia, tiempo
-- ⏰ **Gestión de Turnos** - Control de caja, fotos de auto, daños
-- 📸 **Fotos** - Pantalla y exterior del vehículo (opcional)
-- 📍 **Geolocalización** - GPS automático en inicio/cierre
-- 💰 **Control de Caja** - Apertura, cierre, QR, diferencia
-- 📊 **Historial Completo** - Turnos y carreras detalladas
-- 📝 **Google Sheets** - Todos los datos se guardan automáticamente
+- 🔐 **Autenticación AWS Cognito**
+- 🚗 **Registro de Carreras** — cliente, precio, distancia, tiempo, foto
+- ⏰ **Gestión de Turnos** — control de caja, fotos tablero/exterior, daños, gastos
+- 📍 **Geolocalización** — GPS automático en inicio/cierre de turno
+- 📊 **Historial** — turnos y carreras detalladas
 
 ### 🚴 EcoDelivery (Bikers de Delivery)
-- 🔐 **Autenticación con AWS Cognito**
-- 📦 **Registro de Deliveries** - Cliente, origen, destino, distancia, por hora, notas
-- 🕐 **Hora Inicio/Fin** - Selección fácil con selectores HH:mm
-- 📸 **Foto opcional** - Para deliveries y turnos
-- ⚡ **Turnos Simplificados** - Inicio/cierre con ubicación automática
-- 📍 **Geolocalización Automática** - GPS en todos los registros
-- 📊 **Historial de Deliveries** - Vista desde Google Sheet sincronizada
-- 📝 **Google Sheets** - Cada biker tiene su propia pestaña en "Carreras_bikers"
-- 💾 **Almacenamiento S3** - Fotos organizadas por tipo (Turnos/Deliveries)
+- 🔐 **Autenticación AWS Cognito**
+- 📦 **Registro de Deliveries** — cliente, origen, destino, distancia, hora, foto
+- ⚡ **Turnos Simplificados** — inicio/cierre con un botón y GPS automático
+- 📊 **Historial de Deliveries** — sincronizado con Google Sheets (pestaña por biker)
 
-### 🛡️ Admin (Panel de administración)
-- 📊 **Dashboard en tiempo real** — turnos activos BeeZero + EcoDelivery, polling 30s, toasts al iniciar/cerrar
-- 🚗 **Carreras drivers** — consulta por pestaña, filtros de fecha, export Excel (.xlsx)
-- ⏰ **Turnos BeeZero / EcoDelivery** — historial completo desde Google Sheets
-- 🔐 Acceso restringido a usuarios tipo `admin` (Carli, Miguel, Ale)
+### 🛡️ Admin (Panel de Administración)
+- 📊 **Dashboard en tiempo real** — turnos activos BeeZero + EcoDelivery, polling 30s, toasts
+- 🚗 **Carreras drivers** — por pestaña, filtros de fecha, export Excel (.xlsx)
+- 🚴 **Carreras bikers** — por biker, filtros de fecha, totales km y por-hora
+- ⏰ **Turnos** — historial BeeZero y EcoDelivery con filtros por nombre, fecha, keyword
+- 📢 **Anuncios** — crear, listar, ver quién leyó, eliminar
+- 📄 **Paginación** — 50 filas por página en todas las tablas grandes
+- 🔔 **Push notifications** — se disparan al publicar un anuncio (Web Push)
+- 🔐 Acceso restringido a usuarios `admin` (incluye ex-rol `rrhh`)
 
-### 📢 Andi (RRHH)
-- 📣 **Anuncios** — crear avisos para todos, BeeZero o EcoDelivery
-- 🔔 **Modal obligatorio** al login para anuncios pendientes de lectura
-- 📋 **Gestión de anuncios** — listado, fechas de vigencia, audiencia
-- 🔐 Acceso restringido a usuarios tipo `rrhh`
+> **Nota roles:** El rol `rrhh` (ex-Andi) fue unificado con `admin`. Ambos ven el mismo panel en `/admin/dashboard`. Los usuarios `rrhh` en Cognito redirigen automáticamente a las rutas `/admin/*`.
 
-## 🚀 Inicio Rápido
+### 📢 Anuncios (desde Admin)
+- Crear avisos para todos, BeeZero o EcoDelivery con prioridad normal / importante / urgente
+- Modal obligatorio al login mostrando anuncios no leídos
+- Vista de estadísticas: quién leyó y cuándo
+- **Push notification** a los dispositivos suscritos al publicar
 
-### Prerrequisitos
-- Node.js 18+ y npm
-- Variables de entorno configuradas (ver sección de configuración)
+---
 
-### 1. Instalación
+## 🏗️ Stack Tecnológico
 
+### Frontend
+- **Framework**: React 18 + TypeScript + Vite
+- **Estilos**: TailwindCSS con temas dinámicos por rol
+- **Estado**: Context API + React Hooks
+- **PWA**: Service Worker (fetch cache + push notifications) + Manifest
+- **HTTP**: Axios con interceptores de auth y refresh
+- **Routing**: React Router v6
+
+### Backend
+- **Runtime**: Node.js 18 + Express en local / AWS Lambda en prod
+- **Auth**: AWS Cognito (JWT) + sesiones DynamoDB (`X-Session-Id`, `X-User-Id`)
+- **Datos**: Google Sheets (escritura drivers + live dashboard) + DynamoDB (lectura admin, anuncios, sesiones, suscripciones push)
+- **Fotos**: AWS S3 SDK v3
+- **Push**: `web-push` (VAPID), claves en AWS Secrets Manager (`bee-tracked/vapid`)
+
+### Infraestructura AWS
+| Servicio | Uso |
+|---|---|
+| Cognito User Pool `us-east-1_REsVOVqcY` | Autenticación |
+| Lambda + API Gateway | Backend serverless |
+| S3 `bee-tracked-photos` | Fotos de turnos/deliveries |
+| S3 + CloudFront | Frontend PWA |
+| DynamoDB | Sesiones, anuncios, lecturas, turnos, carreras, suscripciones push |
+| Secrets Manager `bee-tracked/*` | Credenciales Google, VAPID |
+
+### DynamoDB — Tablas en producción
+
+| Tabla | Uso |
+|---|---|
+| `bee-tracked-sessions-prod` | Sesiones activas |
+| `bee-tracked-turnos-prod` | Turnos BeeZero y EcoDelivery (lectura admin) |
+| `bee-tracked-carreras-prod` | Carreras drivers y bikers (lectura admin) |
+| `bee-tracked-anuncios-prod` | Anuncios creados |
+| `bee-tracked-lecturas-prod` | Registro de quién leyó cada anuncio |
+| `bee-tracked-push-subs-prod` | Suscripciones Web Push (TTL 90 días) |
+
+### Feature flags (serverless.deploy.yml)
+
+| Variable | Valor actual | Efecto |
+|---|---|---|
+| `DYNAMO_WRITE_ENABLED` | `true` | Nuevos turnos/carreras también se guardan en DynamoDB |
+| `DYNAMO_READ_ENABLED` | `true` | Admin lee turnos/carreras de DynamoDB (más rápido) |
+
+> El **live dashboard** siempre lee de Sheets (tiempo real). Cambiar los flags a `false` revierte al comportamiento anterior sin tocar código.
+
+---
+
+## 🔔 Push Notifications
+
+Las notificaciones push se envían a los drivers cuando el admin publica un anuncio.
+
+**Cómo funciona:**
+1. Al entrar al dashboard, el navegador pide permiso de notificaciones
+2. La suscripción se guarda en `bee-tracked-push-subs-prod` asociada al `userId`
+3. Al crear un anuncio, el backend llama a `pushService.notifyNewAnnouncement()` y envía a todos los suscriptores de la audiencia
+
+**Requisitos del dispositivo:**
+- Android: Chrome ≥ 80 (funciona desde el navegador directo)
+- iOS: Safari ≥ 16.4 **solo con la app instalada como PWA** (Compartir → Agregar a pantalla de inicio)
+
+**Claves VAPID:** guardadas en `AWS Secrets Manager` → `bee-tracked/vapid`. Para rotar:
 ```bash
-# Instalar dependencias del frontend
-cd frontend
-npm install
-
-# Instalar dependencias del backend
-cd ../backend
-npm install
+node -e "const wp=require('web-push'); console.log(JSON.stringify(wp.generateVAPIDKeys()))"
+aws secretsmanager update-secret --secret-id bee-tracked/vapid --region us-east-1 \
+  --secret-string '{"publicKey":"...","privateKey":"..."}'
+# Luego redeploy backend para que Lambda cargue las nuevas claves
 ```
 
-### 2. Configuración
+---
 
-#### Frontend (`frontend/.env`)
+## 📦 Arquitectura de Datos Híbrida
+
+Los drivers **siempre escriben a Google Sheets** (sin cambios para ellos).
+El backend además hace **dual write a DynamoDB** (best-effort, no bloquea al driver).
+El admin **lee de DynamoDB** para mayor velocidad; el live dashboard sigue leyendo Sheets.
+
+```
+Driver registra turno/carrera
+  → escribe en Sheets (siempre)
+  → también escribe en DynamoDB (best-effort, DYNAMO_WRITE_ENABLED)
+
+Admin ve Turnos / Carreras
+  → lee de DynamoDB  (DYNAMO_READ_ENABLED=true)
+
+Live dashboard
+  → sigue leyendo Sheets (tiempo real)
+```
+
+### Migración histórica
+
+Para poblar DynamoDB con datos históricos de Sheets:
+```bash
+cd backend
+STAGE=prod TURNOS_TABLE=bee-tracked-turnos-prod CARRERAS_TABLE=bee-tracked-carreras-prod \
+  node scripts/migrate-sheets-to-dynamo.js
+```
+
+El script es **idempotente**: re-corridas sobrescriben con los mismos datos, no duplican.
+
+---
+
+## 🔐 Autenticación y Roles
+
+### Cognito User Pool
+- **ID**: `us-east-1_REsVOVqcY`
+- **Client ID**: `29rgiplrp6t3aq2b58ee91i54v`
+
+### Grupos y acceso
+| Grupo Cognito | userType en app | Dashboard |
+|---|---|---|
+| `beezero` | `beezero` | `/beezero/dashboard` |
+| `ecodelivery` | `ecodelivery` | `/ecodelivery/dashboard` |
+| `operador` | `operador` | `/ecodelivery/dashboard` |
+| `admin` | `admin` | `/admin/dashboard` |
+| `rrhh` | `admin` (unificado) | `/admin/dashboard` |
+
+> Los usuarios del grupo `rrhh` se tratan como `admin` en toda la app (frontend + backend).
+
+### Sincronizar usuarios CSV → Cognito
+```bash
+cd backend
+node scripts/sync-cognito-from-csv.js
+```
+Lee `data/usuarios-bee-tracked.csv`, crea/actualiza/elimina usuarios y asigna grupos en Cognito.
+
+### Sesiones
+- 1 sesión activa por usuario (la más reciente desplaza a la anterior)
+- Timeout por inactividad: 10 minutos
+- Token refresh automático con interceptores Axios
+- Headers requeridos: `Authorization`, `X-Session-Id`, `X-User-Id`
+
+---
+
+## 📊 APIs y Endpoints
+
+### Auth
+- `POST /api/auth/login` — login CSV o Cognito
+- `POST /api/auth/logout` — cierra sesión
+- `POST /api/auth/refresh` — refresh token
+
+### BeeZero
+- `POST /api/turnos/iniciar` — iniciar turno
+- `POST /api/turnos/:id/cerrar` — cerrar turno
+- `POST /api/beezero/carreras/registrar` — registrar carrera
+
+### EcoDelivery
+- `POST /api/ecodelivery/turnos/iniciar`
+- `POST /api/ecodelivery/turnos/cerrar`
+- `POST /api/ecodelivery/deliveries/registrar`
+- `GET  /api/ecodelivery/deliveries/:bikerName`
+
+### Admin *(requiere `admin` o `rrhh`)*
+- `GET /api/admin/dashboard/live` — turnos activos hoy (cache 25s)
+- `GET /api/admin/carreras/drivers` — lista pestañas drivers
+- `GET /api/admin/carreras/:tab?from&to` — carreras de un driver
+- `GET /api/admin/carreras/bikers/tabs` — lista bikers
+- `GET /api/admin/carreras/bikers/:tab?from&to` — entregas de un biker
+- `GET /api/admin/turnos/beezero` — historial turnos BeeZero
+- `GET /api/admin/turnos/ecodelivery` — historial turnos EcoDelivery
+- `GET /api/admin/anuncios` — listar anuncios
+- `POST /api/admin/anuncios` — crear anuncio (dispara push)
+- `DELETE /api/admin/anuncios/:id` — eliminar (soft delete)
+- `GET /api/admin/anuncios/:id/stats` — estadísticas de lectura
+
+### Anuncios (drivers)
+- `GET  /api/announcements/pending` — anuncios no leídos del usuario
+- `POST /api/announcements/:id/read` — marcar como leído
+
+### Push
+- `GET    /api/push/vapid-public-key` — clave pública VAPID
+- `POST   /api/push/subscribe` — guardar suscripción
+- `DELETE /api/push/unsubscribe` — eliminar suscripción
+
+---
+
+## 🚀 Inicio Rápido Local
+
+### Prerrequisitos
+- Node.js 18+
+- AWS CLI configurado
+- Credenciales Google Sheets (archivo JSON de service account)
+
+### 1. Instalar dependencias
+```bash
+cd frontend && npm install
+cd ../backend && npm install
+```
+
+### 2. Configurar variables
+
+**`frontend/.env`**
 ```env
 VITE_API_URL=http://localhost:3001
 VITE_COGNITO_USER_POOL_ID=us-east-1_REsVOVqcY
 VITE_COGNITO_CLIENT_ID=29rgiplrp6t3aq2b58ee91i54v
 ```
 
-#### Backend (`backend/.env`)
+**`backend/.env`** (ver `backend/.env.example` para lista completa)
 ```env
-# Server
 PORT=3001
 NODE_ENV=development
-FRONTEND_URL=http://localhost:3000
-
-# AWS Cognito
-COGNITO_USER_POOL_ID=us-east-1_REsVOVqcY
-COGNITO_REGION=us-east-1
-
-# AWS S3
-AWS_S3_BUCKET=bee-tracked-photos
-AWS_REGION=us-east-1
-AWS_ACCESS_KEY_ID=tu-access-key
-AWS_SECRET_ACCESS_KEY=tu-secret-key
-
-# Google Sheets
 GOOGLE_SHEET_ID=1L69tZzVSHlhuKGP9MCdcezOGPsYyjC2Mm-i03Hm5tM8
 CARRERAS_BIKERS_SHEET_ID=1OkM4FLSe0CsLo8w4o50xcVdzsUcHVzpaYRqhGBwJRcs
-GOOGLE_CREDENTIALS_PATH=./google-credentials.json
+CARRERAS_DRIVERS_SHEET_ID=1OkM4FLSe0CsLo8w4o50xcVdzsUcHVzpaYRqhGBwJRcs
+GOOGLE_CREDENTIALS_PATH=../beezero-1710ecf4e5e0.json
+AWS_REGION=us-east-1
+# Para DynamoDB local (opcional):
+# DYNAMO_WRITE_ENABLED=true
+# DYNAMO_READ_ENABLED=false
+# Para push local (opcional):
+# VAPID_PUBLIC_KEY=...
+# VAPID_PRIVATE_KEY=...
 ```
 
-### 3. Ejecutar la Aplicación
-
-```bash
-# Terminal 1 - Backend
-cd backend
-npm run dev
-
-# Terminal 2 - Frontend
-cd frontend
-npm run dev
-```
-
-Abre http://localhost:3000
-
-### 4. Crear estructura en S3 (primera vez)
-
-```bash
-cd backend
-node scripts/create-s3-registros.js
-```
-
-Esto creará:
-```
-Registros_BeeTracked/
-├── Ecodelivery/
-│   ├── Turnos/
-│   └── Deliveries/
-└── Beezero/
-```
-
-### Compartir desde Celular
-
-**Opción 1: ngrok (Recomendado para demo)**
+### 3. Ejecutar
 ```bash
 # Terminal 1
-cd frontend
-npm run dev
+cd backend && npm run dev
 
 # Terminal 2
-ngrok http 3000
+cd frontend && npm run dev
 ```
 
-Copia la URL HTTPS que aparece y compártela.
-
-**Opción 2: IP Local (Misma WiFi)**
-```bash
-# Obtén tu IP
-ifconfig | grep "inet " | grep -v 127.0.0.1
-
-# Inicia la app
-cd frontend
-npm run dev
-```
-
-Comparte: `http://TU_IP:3000` (ej: http://192.168.0.6:3000)
-
-**Opción 3: Producción (AWS)**  
-El frontend en producción se despliega con GitHub Actions (ver [docs/GITHUB_ACTIONS_AWS.md](docs/GITHUB_ACTIONS_AWS.md)). Comparte la URL de CloudFront.
-
-## 🏗️ Stack Tecnológico
-
-### Frontend
-- **Framework**: React 18 + TypeScript + Vite
-- **Estilos**: TailwindCSS con sistema de temas dinámicos
-- **Estado**: Context API + React Hooks personalizados
-- **PWA**: Service Worker + Manifest para instalación
-- **HTTP Client**: Axios con interceptores
-- **Routing**: React Router v6
-- **Autenticación**: Amazon Cognito Identity SDK
-
-### Backend
-- **Runtime**: Node.js 18 + Express (local) / AWS Lambda (prod)
-- **Lenguaje**: JavaScript (CommonJS)
-- **Autenticación**: AWS Cognito + JWT + sesiones (`X-Session-Id`)
-- **Datos**: Google Sheets (operacional) + DynamoDB (sesiones, anuncios; migración híbrida en curso)
-- **Almacenamiento**: AWS S3 (SDK v3)
-- **Sesiones**: DynamoDB en producción, memoria en desarrollo
-
-### Infraestructura
-- **Autenticación**: AWS Cognito User Pools
-- **Almacenamiento**: AWS S3 (fotos)
-- **Base de datos**: Google Sheets (2 spreadsheets)
-- **Hosting**: AWS S3 + CloudFront (frontend) + AWS Lambda/API Gateway (backend)
-- **CI/CD**: GitHub Actions (deploy automático a AWS al push a `main`)
-
-### Servicios Externos
-- **AWS Cognito**: Autenticación y gestión de usuarios
-- **AWS S3**: Almacenamiento de fotos de turnos y deliveries
-- **Google Sheets API**: Base de datos en tiempo real
-- **Geolocation API**: Captura de ubicación GPS
-
-## 📦 Estructura de Datos
-
-### Google Sheets
-
-#### 1. Hoja "Ecodelivery" (Turnos)
-**Spreadsheet ID**: `1L69tZzVSHlhuKGP9MCdcezOGPsYyjC2Mm-i03Hm5tM8`
-
-Columnas:
-- TurnoId, Usuario, Fecha Inicio, Hora Inicio, Lat Inicio, Lng Inicio
-- Timestamp Inicio, Foto Inicio, Fecha Cierre, Hora Cierre
-- Lat Cierre, Lng Cierre, Timestamp Cierre, Foto Cierre
-- Estado, Timestamp Creación, Timestamp Actualización
-
-#### 2. Hoja "Carreras_bikers" (Deliveries)
-**Spreadsheet ID**: `1OkM4FLSe0CsLo8w4o50xcVdzsUcHVzpaYRqhGBwJRcs`
-
-Cada biker tiene su propia pestaña con columnas:
-- DeliveryId, Biker, Fecha Registro, Hora Registro
-- Cliente, Lugar Origen, Hora Inicio, Lugar Destino, Hora Fin
-- Distancia (km), Por Hora, Notas, Foto
-
-### AWS S3 - Estructura de Carpetas
-
-```
-bee-tracked-photos/
-└── Registros_BeeTracked/
-    ├── Ecodelivery/
-    │   ├── Turnos/          # Fotos de iniciar/cerrar turno
-    │   │   └── {usuario}_{YYYY-MM-DD}_{HH-mm-ss}_{inicio|cierre}.{ext}
-    │   └── Deliveries/      # Fotos de deliveries
-    │       └── {usuario}_{YYYY-MM-DD}_{HH-mm-ss}.{ext}
-    └── Beezero/             # Fotos de turnos BeeZero
-```
-
-### AWS Cognito - Grupos de Usuarios
-
-- **beezero**: Acceso a `/beezero/*` (conductores de auto)
-- **operador**: Acceso a `/ecodelivery/*` (operadores)
-- **ecodelivery**: Acceso a `/ecodelivery/*` (bikers de delivery)
-- **admin**: Acceso a `/admin/*` (panel administración)
-- **rrhh**: Acceso a `/andi/*` (anuncios RRHH)
-
-Configurado en User Pool: `us-east-1_REsVOVqcY`
-
-## 🎯 Estructura del Proyecto
-
-```
-bee-tracked/
-├── frontend/                          # Aplicación React PWA
-│   ├── public/
-│   │   ├── manifest.json             # Configuración PWA
-│   │   └── sw.js                     # Service Worker
-│   ├── src/
-│   │   ├── pages/
-│   │   │   ├── Login.tsx             # Login con Cognito
-│   │   │   ├── beezero/              # 🚗 Páginas BeeZero
-│   │   │   ├── ecodelivery/          # 🚴 Páginas EcoDelivery
-│   │   │   ├── admin/                # 🛡️ Panel admin
-│   │   │   │   ├── DashboardAdmin.tsx
-│   │   │   │   ├── DashboardLive.tsx   # Tiempo real
-│   │   │   │   ├── CarrerasDrivers.tsx
-│   │   │   │   └── TurnosBeezero.tsx
-│   │   │   └── andi/                 # 📢 RRHH
-│   │   │       ├── DashboardAndi.tsx
-│   │   │       ├── CrearAnuncio.tsx
-│   │   │       └── ListaAnuncios.tsx
-│   │   ├── components/
-│   │   │   ├── Layout.tsx
-│   │   │   ├── ThemeProvider.tsx
-│   │   │   ├── LoadingSpinner.tsx
-│   │   │   ├── TimeSelect.tsx        # Selector HH:mm
-│   │   │   └── CarreraCard.tsx
-│   │   ├── config/
-│   │   │   ├── constants.ts
-│   │   │   ├── routes.ts
-│   │   │   └── themes.ts
-│   │   ├── hooks/
-│   │   │   ├── useTheme.ts
-│   │   │   ├── useGeolocation.ts
-│   │   │   ├── useImageUpload.ts
-│   │   │   └── useInactivityTimeout.ts
-│   │   ├── services/
-│   │   │   ├── api.ts
-│   │   │   ├── api-mock.ts
-│   │   │   ├── auth.ts
-│   │   │   ├── cognito.ts           # AWS Cognito integration
-│   │   │   ├── ecodeliveryApi.ts    # API específica Ecodelivery
-│   │   │   ├── axiosInterceptor.ts
-│   │   │   └── storage.ts
-│   │   ├── types/
-│   │   │   ├── index.ts
-│   │   │   └── turno.ts
-│   │   ├── utils/
-│   │   │   ├── errors.ts
-│   │   │   ├── formatters.ts        # Formateadores de fecha/hora
-│   │   │   ├── geolocation.ts
-│   │   │   ├── image.ts
-│   │   │   └── validation.ts
-│   │   └── App.tsx
-│   └── package.json
-├── backend/                           # API Node.js + Express
-│   ├── src/
-│   │   ├── middleware/
-│   │   │   └── auth.js              # JWT validation
-│   │   ├── routes/
-│   │   │   ├── auth.js              # Autenticación + roles
-│   │   │   ├── turnos.js            # Turnos BeeZero
-│   │   │   ├── beezero.js           # Carreras BeeZero
-│   │   │   ├── ecodelivery.js       # Turnos + deliveries EcoDelivery
-│   │   │   ├── admin.js             # Panel admin (carreras, turnos, live)
-│   │   │   ├── andi.js              # CRUD anuncios (RRHH)
-│   │   │   └── announcements.js     # Anuncios pendientes / lectura
-│   │   ├── services/
-│   │   │   ├── googleSheets.js      # Integración Google Sheets API
-│   │   │   ├── s3Upload.js          # Subida de fotos a S3 (SDK v3)
-│   │   │   └── sessionManager.js    # Control de sesiones concurrentes
-│   │   └── server.js
-│   ├── scripts/
-│   │   ├── create-s3-registros.js   # Crear estructura S3
-│   │   ├── list-sheets.js           # Diagnóstico de sheets
-│   │   └── add-foto-column-carreras.js
-│   └── package.json
-├── data/
-│   ├── usuarios-y-contraseñas-ecodelivery.md  # Roles de usuarios
-│   └── Biker-WhatsApp-unicos.csv              # Lista de bikers
-├── docs/
-│   ├── ARQUITECTURA_TECNICA.md      # Arquitectura híbrida Sheets + DynamoDB
-│   ├── SESSION_STORE.md             # Sesiones DynamoDB vs memoria
-│   ├── SHEET_ECODELIVERY.md
-│   ├── S3_STRUCTURE.md
-│   └── GITHUB_ACTIONS_AWS.md
-├── scripts/
-│   ├── deploy-frontend.sh           # Deploy manual frontend → S3 + CloudFront
-│   ├── setup-cognito-roles.sh
-│   ├── update-cognito-roles.sh
-│   └── deploy-secrets.sh
-├── .github/workflows/
-│   └── deploy-aws.yml              # CI/CD: deploy frontend a S3 + CloudFront
-├── apps-script/                     # ⚠️ Deprecated (usar backend/)
-└── README.md
-```
-
-## 📱 Funcionalidades Detalladas
-
-### 🚗 BeeZero (Interfaz Completa - Amarillo)
-
-#### 1. Iniciar Turno
-- Captura automática de ubicación GPS
-- Hora de inicio automática (HH:mm)
-- Formulario con campos opcionales de fotos
-- Guardado en Google Sheet "Ecodelivery"
-
-#### 2. Nueva Carrera
-- Cliente (con autocompletado)
-- Fecha y horarios de inicio/fin (selectores HH:mm)
-- Lugar de recojo y destino
-- Tiempo de viaje y distancia
-- Precio en Bs
-- Observaciones opcionales
-
-#### 3. Cerrar Turno
-- Captura automática de ubicación GPS
-- Hora de cierre automática (HH:mm)
-- Fotos opcionales
-- Actualización del registro en Google Sheet
-
-#### 4. Historial
-- Ver turno actual en curso
-- Historial de turnos cerrados
-- Detalles completos de cada turno
-- Lista de carreras por fecha
-
-### 🚴 EcoDelivery (Interfaz Simplificada - Verde)
-
-#### 1. Iniciar Turno
-- **Un solo botón**: "Obtener Ubicación e Iniciar Turno"
-- Auto-captura: ubicación GPS, hora (HH:mm), usuario
-- Foto opcional
-- Guardado en Google Sheet "Ecodelivery"
-- Sin formularios complejos
-
-#### 2. Registrar Delivery
-- Biker (auto-completado con usuario actual)
-- Cliente
-- Lugar de origen y destino
-- Hora Inicio y Hora Fin (selectores HH:mm)
-- Distancia en km
-- **Carrera por hora** (checkbox)
-- **Notas** (textarea opcional)
-- **Foto** (opcional, sube a S3)
-- Se guarda en Google Sheet "Carreras_bikers" (pestaña del biker)
-
-#### 3. Cerrar Turno
-- **Un solo botón**: "Obtener Ubicación y Cerrar Turno"
-- Auto-captura: ubicación GPS, hora (HH:mm)
-- Foto opcional
-- Actualiza registro en Google Sheet
-
-#### 4. Historial
-- **Mis Deliveries**: Vista sincronizada con Google Sheet
-  - Muestra TODOS los deliveries del biker desde el sheet
-  - Incluye: cliente, origen, destino, distancia, por hora, notas
-  - Fotos ocultas (pendiente configurar acceso público en S3)
-- **Mis Turnos**: Historial de turnos cerrados
-
-## 🔐 Autenticación y Seguridad
-
-### AWS Cognito
-- **User Pool ID**: `us-east-1_REsVOVqcY`
-- **Client ID**: `29rgiplrp6t3aq2b58ee91i54v`
-- **Auth Flows**: `ALLOW_USER_PASSWORD_AUTH`, `ALLOW_REFRESH_TOKEN_AUTH`
-
-### Grupos y Roles
-- **beezero**: Conductores de auto → `/beezero/*`
-- **operador**: Acceso administrativo
-- **ecodelivery**: Bikers de delivery → `/ecodelivery/*`
-
-### Control de Sesiones
-- **Sesiones concurrentes**: Solo 1 sesión activa por usuario
-- **Timeout por inactividad**: 10 minutos
-- **Token refresh**: Automático con interceptores Axios
-- **Session ID**: Incluido en headers de todas las requests
-
-### Seguridad
-- JWT validation en backend
-- Session manager in-memory
-- CORS configurado para frontend específico
-- Credentials nunca en repositorio (.gitignore)
-
----
-
-## 📊 APIs y Endpoints
-
-### Backend Endpoints
-
-#### Autenticación
-- `POST /api/auth/login` - Login con Cognito
-- `POST /api/auth/logout` - Cerrar sesión
-- `POST /api/auth/refresh` - Refresh token
-
-#### Ecodelivery - Turnos
-- `POST /api/ecodelivery/turnos/iniciar` - Iniciar turno
-- `PUT /api/ecodelivery/turnos/:id/cerrar` - Cerrar turno
-- `GET /api/ecodelivery/turnos/:id` - Obtener turno por ID
-- `GET /api/ecodelivery/turnos` - Listar todos los turnos
-- `POST /api/ecodelivery/upload-photo` - Subir foto de turno
-
-#### Ecodelivery - Deliveries
-- `POST /api/ecodelivery/deliveries/registrar` - Registrar delivery
-- `GET /api/ecodelivery/deliveries/:bikerName` - Obtener deliveries del biker
-- `POST /api/ecodelivery/upload-delivery-photo` - Subir foto de delivery
-
-#### BeeZero - Turnos
-- `POST /api/turnos/iniciar` - Iniciar turno
-- `PUT /api/turnos/:id/cerrar` - Cerrar turno
-- `GET /api/turnos/:id` - Obtener turno por ID
-- `GET /api/turnos` - Listar turnos
-
-#### Admin
-- `GET /api/admin/carreras/drivers` - Listar pestañas de drivers
-- `GET /api/admin/carreras/:tab` - Carreras de un driver (filtro `from`/`to`)
-- `GET /api/admin/turnos/beezero` - Historial turnos BeeZero
-- `GET /api/admin/turnos/ecodelivery` - Historial turnos EcoDelivery
-- `GET /api/admin/dashboard/live` - Turnos activos hoy (cache ~25s)
-
-#### Andi / Anuncios
-- `GET/POST /api/andi/anuncios` - Listar / crear anuncios (solo RRHH)
-- `PUT/DELETE /api/andi/anuncios/:id` - Editar / eliminar
-- `GET /api/announcements/pending` - Anuncios pendientes de lectura
-- `POST /api/announcements/:id/read` - Marcar como leído
-
----
-
-## 🛠️ Desarrollo y Scripts
-
-### Comandos Disponibles
-
-```bash
-# Frontend
-cd frontend
-npm run dev               # Dev server en http://localhost:3000
-npm run build             # Build para producción
-npm run preview           # Preview del build
-npm run lint              # Linter ESLint
-
-# Backend
-cd backend
-npm run dev               # Dev server con nodemon en puerto 3001
-npm run start             # Producción
-node scripts/create-s3-registros.js    # Crear estructura S3
-node scripts/list-sheets.js            # Diagnóstico Google Sheets
-```
-
-### Scripts de Gestión
-
-```bash
-# Cognito (primera vez)
-bash scripts/setup-cognito-roles.sh      # Crear grupos
-bash scripts/update-cognito-roles.sh     # Asignar usuarios a grupos
-
-# Sincronizar usuarios desde Google Sheet con Cognito
-# Crea usuarios nuevos, elimina los que ya no están en la hoja, asigna grupos
-cd backend && node scripts/sync-cognito-from-sheet.js
-```
-
----
-
-## 🎨 Diseño y UX
-
-### Sistema de Temas Dinámicos
-- **BeeZero**: Amarillo (#FFD700) + Negro
-- **EcoDelivery**: Verde (#10B981) + Blanco/Negro
-- Logo y colores cambian según tipo de usuario
-- Responsive: Diseñado móvil primero
-- PWA: Instalable como app nativa
-
-### Componentes Personalizados
-- **TimeSelect**: Selector de hora HH:mm con selectores nativos
-- **Layout**: Sistema de theming dinámico
-- **LoadingSpinner**: Spinner con colores del tema activo
-- **ThemeProvider**: Context provider de temas
-
-### Mobile-First
-- Inputs con `font-size: 16px` para evitar zoom en iOS
-- Selectores nativos para mejor UX en móvil
-- Botones con `min-height: 48px` para touch targets
-- Diseño responsive con TailwindCSS
-
----
-
-## 💰 Costos Estimados
-
-### Desarrollo
-- Frontend/Backend: $0 (local)
-- Google Sheets API: $0
-- AWS Cognito: $0 (< 50,000 MAU)
-
-### Producción (estimado)
-- Frontend: S3 + CloudFront (~$1-2/mes)
-- Backend: Lambda + API Gateway (free tier o ~$1-5/mes)
-- AWS Cognito: $0 (< 50,000 MAU)
-- AWS S3 (fotos): ~$0.50-2/mes
-- Google Sheets API: $0
-
-**Total estimado: ~$3-10/mes**
+Abre http://localhost:5173
 
 ---
 
 ## 🚀 Deploy a Producción
 
-### URLs actuales
-| Servicio | URL |
-|----------|-----|
-| Frontend | https://d19ls0k7de9u6w.cloudfront.net |
-| API | https://bxa273i618.execute-api.us-east-1.amazonaws.com/prod |
-
 ### Frontend
-
-**Opción A — GitHub Actions:** cada push a `main` con cambios en `frontend/` despliega a S3 e invalida CloudFront. Ver [docs/GITHUB_ACTIONS_AWS.md](docs/GITHUB_ACTIONS_AWS.md).
-
-**Opción B — Manual:**
+**Automático:** cada push a `main` con cambios en `frontend/` dispara GitHub Actions.  
+**Manual:**
 ```bash
-./scripts/deploy-frontend.sh
+bash scripts/deploy-frontend.sh
 ```
 
 ### Backend (Lambda + API Gateway)
-
 ```bash
 cd backend
-npm run deploy
-# equivalente: serverless deploy --stage prod --config serverless.deploy.yml
+npx serverless deploy --stage prod --config serverless.deploy.yml
 ```
 
-Requiere AWS CLI configurado y variables en `serverless.deploy.yml` / Parameter Store.
+---
 
-### Configurar S3 para acceso público a fotos (opcional)
+## 🛠️ Scripts Útiles
 
 ```bash
-aws s3api put-bucket-policy --bucket bee-tracked-photos --policy '{
-  "Version": "2012-10-17",
-  "Statement": [{
-    "Sid": "PublicReadGetObject",
-    "Effect": "Allow",
-    "Principal": "*",
-    "Action": "s3:GetObject",
-    "Resource": "arn:aws:s3:::bee-tracked-photos/*"
-  }]
-}'
+# Sincronizar usuarios CSV → Cognito
+cd backend && node scripts/sync-cognito-from-csv.js
+
+# Migración histórica Sheets → DynamoDB
+cd backend
+STAGE=prod TURNOS_TABLE=bee-tracked-turnos-prod CARRERAS_TABLE=bee-tracked-carreras-prod \
+  node scripts/migrate-sheets-to-dynamo.js
+
+# Generar nuevas claves VAPID
+node -e "const wp=require('web-push'); console.log(JSON.stringify(wp.generateVAPIDKeys(),null,2))"
+
+# Deploy frontend manual
+bash scripts/deploy-frontend.sh
 ```
 
 ---
 
-## 📞 Documentación Adicional
+## 🎯 Estado del Proyecto
 
-- **Backend**: `backend/README.md`
-- **Google Sheets**: `docs/SHEET_ECODELIVERY.md`
-- **S3**: `docs/S3_STRUCTURE.md`
-- **Deploy con GitHub Actions**: `docs/GITHUB_ACTIONS_AWS.md`
-- **Ejecutar local**: `RUN.md`
+### Implementado ✅
+- [x] PWA instalable (Service Worker + Manifest)
+- [x] Autenticación Cognito + CSV fallback
+- [x] Turnos y carreras BeeZero
+- [x] Turnos y deliveries EcoDelivery
+- [x] Fotos a S3 (turnos y deliveries)
+- [x] Geolocalización automática
+- [x] Panel admin con dashboard en tiempo real (polling 30s)
+- [x] Carreras drivers con export Excel
+- [x] Carreras bikers
+- [x] Turnos BeeZero y EcoDelivery con filtros (nombre, fecha, keyword)
+- [x] Paginación client-side (50 filas/página) en todas las tablas
+- [x] Anuncios (crear, listar, ver lecturas, eliminar) — admin y drivers
+- [x] Modal obligatorio de anuncios al login
+- [x] Push notifications Web Push al publicar anuncios
+- [x] Roles `rrhh` y `admin` unificados
+- [x] Arquitectura híbrida Sheets + DynamoDB (dual write + lectura admin desde DynamoDB)
+- [x] Migración histórica Sheets → DynamoDB
 
-## 🔧 Troubleshooting
-
-### Error: "The requested module does not provide an export named 'useAuth'"
-- **Solución**: Importar desde `services/auth.ts` en lugar de `contexts/AuthContext.tsx`
-
-### Error 403 en fotos de S3
-- **Causa**: Bucket sin acceso público configurado
-- **Solución**: Las fotos están ocultas en el UI. Configurar bucket policy para habilitar.
-
-### Error: "EADDRINUSE: address already in use :::3001"
-- **Solución**: `lsof -ti :3001 | xargs kill -9`
-
-### Deliveries no aparecen en "Mis Deliveries"
-- **Solución**: Ahora se sincronizan con Google Sheet. Verificar que el backend esté corriendo.
-
----
-
-## 🎯 Próximas Mejoras
-
-- [x] Dashboard administrativo (carreras, turnos, tiempo real)
-- [x] Anuncios RRHH (Andi) con modal al login
-- [ ] Sistema de permisos (solicitud / aprobación)
-- [ ] Paginación en listas (20 items/página)
-- [ ] Conteo de carreras del día en dashboard live
-- [ ] Migración completa Sheets → DynamoDB (escritura híbrida)
-- [ ] URLs pre-firmadas para fotos en S3
-- [ ] Notificaciones push
-- [ ] Modo offline con sincronización
+### Pendiente 🔲
+- [ ] URLs pre-firmadas para fotos S3 (seguridad)
+- [ ] Modo offline con sincronización (IndexedDB)
 
 ---
 
-**Desarrollado con ❤️ para BeeZero y EcoDelivery**
+**Desarrollado para BeeZero y EcoDelivery**
