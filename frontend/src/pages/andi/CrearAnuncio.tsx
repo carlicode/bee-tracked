@@ -4,10 +4,8 @@ import { andiApi, type AnnouncementAudience, type AnnouncementPriority } from '.
 import { useToast } from '../../contexts/ToastContext';
 import { AnnouncementModal } from '../../components/AnnouncementModal';
 
-function tomorrowDate(): string {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return d.toISOString().split('T')[0];
+function todayDate(): string {
+  return new Date().toISOString().split('T')[0];
 }
 
 export function CrearAnuncio() {
@@ -15,7 +13,7 @@ export function CrearAnuncio() {
   const toast = useToast();
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
-  const [startDate, setStartDate] = useState(tomorrowDate());
+  const [startDate, setStartDate] = useState(todayDate());
   const [endDate, setEndDate] = useState('');
   const [audience, setAudience] = useState<AnnouncementAudience>('all');
   const [priority, setPriority] = useState<AnnouncementPriority>('normal');
@@ -85,7 +83,7 @@ export function CrearAnuncio() {
             <label className="block text-sm font-medium mb-1">Fecha inicio</label>
             <input
               type="date"
-              min={tomorrowDate()}
+              min={todayDate()}
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
               className="w-full border-2 border-gray-200 rounded-lg px-3 py-2"

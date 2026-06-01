@@ -63,9 +63,9 @@ function validateAnnouncementInput(body) {
     return { error: 'Prioridad inválida', code: 'VALIDATION_ERROR' };
   }
 
-  const today = new Date().toISOString().split('T')[0];
-  if (startDate < today) {
-    return { error: 'La fecha de inicio no puede ser pasada', code: 'INVALID_DATE' };
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  if (startDate <= yesterday) {
+    return { error: 'La fecha de inicio no puede ser anterior a hoy', code: 'INVALID_DATE' };
   }
   if (endDate && endDate < startDate) {
     return { error: 'La fecha fin debe ser posterior al inicio', code: 'INVALID_DATE' };

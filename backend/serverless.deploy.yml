@@ -102,6 +102,7 @@ functions:
               - X-Amz-Security-Token
               - X-Amz-User-Agent
               - X-Session-Id
+              - X-User-Id
               - X-Request-Id
       - http:
           path: /{proxy+}
@@ -116,6 +117,7 @@ functions:
               - X-Amz-Security-Token
               - X-Amz-User-Agent
               - X-Session-Id
+              - X-User-Id
               - X-Request-Id
 
 package:
