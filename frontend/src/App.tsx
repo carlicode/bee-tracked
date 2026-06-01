@@ -37,6 +37,7 @@ import { CarrerasBikers } from './pages/admin/CarrerasBikers';
 import { CrearAnuncio } from './pages/andi/CrearAnuncio';
 import { SolicitarPermiso } from './pages/permisos/SolicitarPermiso';
 import { GestionPermisos } from './pages/admin/GestionPermisos';
+import { NotFound } from './pages/NotFound';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
@@ -492,6 +493,8 @@ function AppContent() {
         <Route path="/andi/dashboard" element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="/andi/anuncios" element={<Navigate to="/admin/anuncios" replace />} />
         <Route path="/andi/anuncios/crear" element={<Navigate to="/admin/anuncios/crear" replace />} />
+
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );

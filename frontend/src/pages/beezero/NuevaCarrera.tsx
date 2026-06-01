@@ -7,6 +7,7 @@ import { beezeroApi, isBeezeroApiEnabled } from '../../services/beezeroApi';
 import { storage } from '../../services/storage';
 import { DEFAULT_CLIENTES } from '../../config/constants';
 import { formatters } from '../../utils/formatters';
+import { fileToCompressedBase64 } from '../../utils/image';
 import { TimeSelect } from '../../components/TimeSelect';
 import { PorHoraCheckbox } from '../../components/PorHoraCheckbox';
 import { ClienteSelect } from '../../components/ClienteSelect';
@@ -57,16 +58,16 @@ export const NuevaCarrera = () => {
     return sanitized.replace(/[^0-9.]/g, '');
   };
 
-  const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const dataUrl = ev.target?.result as string;
+    try {
+      const dataUrl = await fileToCompressedBase64(file);
       setFotoPreview(dataUrl);
       setFormData((prev) => ({ ...prev, foto: dataUrl }));
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'Error al procesar la imagen', 'error');
+    }
   };
 
   const handleClienteChange = async (value: string) => {

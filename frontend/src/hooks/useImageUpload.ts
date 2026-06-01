@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { fileToBase64, validateImageFile } from '../utils/image';
+import { fileToCompressedBase64, validateImageFile } from '../utils/image';
 import { logError } from '../utils/errors';
 
 export interface UseImageUploadReturn {
@@ -37,7 +37,7 @@ export const useImageUpload = (): UseImageUploadReturn => {
     setError(null);
 
     try {
-      const base64 = await fileToBase64(file);
+      const base64 = await fileToCompressedBase64(file);
       setImage(base64);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error al procesar la imagen';

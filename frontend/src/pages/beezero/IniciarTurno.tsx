@@ -6,6 +6,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { PLACAS_AUTO_ABEJITA } from '../../config/constants';
 import { turnosApi } from '../../services/turnosApi';
 import { formatters } from '../../utils/formatters';
+import { fileToCompressedBase64 } from '../../utils/image';
 import type { Turno } from '../../types/turno';
 
 export const IniciarTurno = () => {
@@ -60,23 +61,19 @@ export const IniciarTurno = () => {
     );
   };
 
-  const handlePhotoUpload = (field: 'fotoPantalla' | 'fotoExterior') => (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = (field: 'fotoPantalla' | 'fotoExterior') => async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast.show('La imagen es muy grande. Máximo 5MB', 'error');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
+    try {
+      const dataUrl = await fileToCompressedBase64(file);
       setFormData((prev) => ({
         ...prev,
-        [field]: reader.result as string,
+        [field]: dataUrl,
       }));
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'Error al procesar la imagen', 'error');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

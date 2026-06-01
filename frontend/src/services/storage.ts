@@ -98,5 +98,13 @@ export const storage = {
   removeItem: (key: string): void => {
     localStorage.removeItem(key);
   },
+
+  getTutorialCompleted: (userId: string): boolean => {
+    return localStorage.getItem(`tutorial_done_${userId}`) === '1';
+  },
+
+  setTutorialCompleted: (userId: string): void => {
+    localStorage.setItem(`tutorial_done_${userId}`, '1');
+  },
 };
 

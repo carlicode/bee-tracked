@@ -7,6 +7,7 @@ import { isCognitoConfigured, signIn as cognitoSignIn, getUserTypeFromToken } fr
 import { storage } from '../services/storage';
 import { announcementsApi, type Announcement } from '../services/andiApi';
 import { AnnouncementModal } from '../components/AnnouncementModal';
+import { TutorialModal } from '../components/TutorialModal';
 import type { User } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -28,6 +29,27 @@ export const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [pendingAnnouncements, setPendingAnnouncements] = useState<Announcement[]>([]);
   const [pendingPath, setPendingPath] = useState<string | null>(null);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [tutorialUserId, setTutorialUserId] = useState<string | null>(null);
+
+  const proceedToDashboard = (path: string) => {
+    navigate(path, { replace: true });
+    setPendingPath(null);
+    setShowTutorial(false);
+    setTutorialUserId(null);
+    setLoading(false);
+  };
+
+  const maybeShowTutorial = (path: string, userId: string) => {
+    if (!storage.getTutorialCompleted(userId)) {
+      setPendingPath(path);
+      setTutorialUserId(userId);
+      setShowTutorial(true);
+      setLoading(false);
+      return;
+    }
+    proceedToDashboard(path);
+  };
 
   const finishLogin = async (
     user: User,
@@ -39,12 +61,15 @@ export const Login = () => {
     login(user, token, sessionId);
     if (loginUsername) storage.setUsername(loginUsername);
 
+    const userId = loginUsername || user.driverName || user.email;
+
     if (API_BASE && user.userType !== 'rrhh' && user.userType !== 'admin') {
       try {
         const { announcements } = await announcementsApi.getPending();
         if (announcements.length > 0) {
           setPendingAnnouncements(announcements);
           setPendingPath(path);
+          setTutorialUserId(userId);
           setLoading(false);
           return;
         }
@@ -53,8 +78,7 @@ export const Login = () => {
       }
     }
 
-    navigate(path, { replace: true });
-    setLoading(false);
+    maybeShowTutorial(path, userId);
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -180,7 +204,7 @@ export const Login = () => {
 
     login({ email, name: userName, driverName: userName, userType });
     setLoading(false);
-    navigate(dashboardPath(userType), { replace: true });
+    maybeShowTutorial(dashboardPath(userType), usernameLower || userName);
   };
 
   return (
@@ -190,8 +214,23 @@ export const Login = () => {
           announcements={pendingAnnouncements}
           onComplete={() => {
             setPendingAnnouncements([]);
-            navigate(pendingPath, { replace: true });
-            setPendingPath(null);
+            const path = pendingPath;
+            const uid = tutorialUserId || storage.getUsername() || '';
+            if (path && uid) maybeShowTutorial(path, uid);
+            else if (path) proceedToDashboard(path);
+          }}
+        />
+      )}
+
+      {showTutorial && pendingPath && (
+        <TutorialModal
+          userType={
+            (storage.getUser()?.userType as User['userType']) || 'beezero'
+          }
+          onComplete={() => {
+            const uid = tutorialUserId || storage.getUsername() || '';
+            if (uid) storage.setTutorialCompleted(uid);
+            proceedToDashboard(pendingPath);
           }}
         />
       )}

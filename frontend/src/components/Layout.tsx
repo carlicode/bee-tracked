@@ -1,7 +1,8 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../services/auth';
 import { useAccessibility } from '../contexts/AccessibilityContext';
+import { TutorialModal } from './TutorialModal';
 
 interface LayoutProps {
   children: ReactNode;
@@ -11,6 +12,7 @@ export const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate();
   const { logout, getCurrentUser, getUserType } = useAuth();
   const { largeTextEnabled, toggleLargeText } = useAccessibility();
+  const [showTutorial, setShowTutorial] = useState(false);
   const user = getCurrentUser();
   const userType = getUserType() || 'beezero';
 
@@ -82,6 +84,15 @@ export const Layout = ({ children }: LayoutProps) => {
                   {user.driverName}
                 </span>
                 <button
+                  type="button"
+                  onClick={() => setShowTutorial(true)}
+                  className={`text-sm font-medium ${textClass} hover:opacity-70 transition w-8 h-8 rounded-full border-2 flex items-center justify-center ${userType === 'beezero' ? 'border-black/30' : 'border-white/50'}`}
+                  title="¿Cómo uso esto?"
+                  aria-label="Abrir tutorial de ayuda"
+                >
+                  ?
+                </button>
+                <button
                   onClick={handleLogout}
                   className={`text-sm font-medium ${textClass} hover:opacity-70 transition`}
                 >
@@ -95,6 +106,13 @@ export const Layout = ({ children }: LayoutProps) => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 bg-white">
         {children}
       </main>
+
+      {showTutorial && (
+        <TutorialModal
+          userType={userType}
+          onComplete={() => setShowTutorial(false)}
+        />
+      )}
     </div>
   );
 };

@@ -5,6 +5,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useAuth } from '../../services/auth';
 import { turnosApi } from '../../services/turnosApi';
 import { formatters } from '../../utils/formatters';
+import { fileToCompressedBase64 } from '../../utils/image';
 import type { Turno } from '../../types/turno';
 
 type GastoCierreInput = {
@@ -148,23 +149,19 @@ export const CerrarTurno = () => {
     );
   };
 
-  const handlePhotoUpload = (field: 'fotoPantalla' | 'fotoExterior') => (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = (field: 'fotoPantalla' | 'fotoExterior') => async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast.show('La imagen es muy grande. Máximo 5MB', 'error');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
+    try {
+      const dataUrl = await fileToCompressedBase64(file);
       setFormData((prev) => ({
         ...prev,
-        [field]: reader.result as string,
+        [field]: dataUrl,
       }));
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'Error al procesar la imagen', 'error');
+    }
   };
 
   // Diferencia = Cierre - Apertura - Total Gastos
@@ -472,16 +469,15 @@ export const CerrarTurno = () => {
                     <input
                       type="file"
                       accept="image/*"
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (!file) return;
-                        if (file.size > 5 * 1024 * 1024) {
-                          toast.show('La imagen es muy grande. Máximo 5MB', 'error');
-                          return;
+                        try {
+                          const dataUrl = await fileToCompressedBase64(file);
+                          updateGasto(gasto.id, { foto: dataUrl });
+                        } catch (err) {
+                          toast.show(err instanceof Error ? err.message : 'Error al procesar la imagen', 'error');
                         }
-                        const reader = new FileReader();
-                        reader.onloadend = () => updateGasto(gasto.id, { foto: reader.result as string });
-                        reader.readAsDataURL(file);
                       }}
                       className="w-full border-2 border-gray-300 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow text-sm"
                     />
