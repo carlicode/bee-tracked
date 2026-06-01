@@ -24,6 +24,28 @@ class HybridWrite {
       });
     }
   }
+
+  /**
+   * Sheets primero (fuente de verdad), DynamoDB best-effort.
+   * @param {Object} options
+   * @param {() => Promise<void>} options.sheets
+   * @param {() => Promise<void>} [options.dynamo]
+   * @param {string} options.context
+   */
+  async writeSheetsFirst({ sheets, dynamo, context }) {
+    await sheets();
+
+    if (!dynamo) return;
+
+    try {
+      await dynamo();
+    } catch (err) {
+      logger.warn('DynamoDB write failed (non-critical)', {
+        context,
+        error: err.message,
+      });
+    }
+  }
 }
 
 module.exports = new HybridWrite();

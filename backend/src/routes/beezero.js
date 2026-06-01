@@ -9,6 +9,7 @@ const {
   getSheetsInSpreadsheet,
 } = require('../services/googleSheets');
 const { uploadBeezeroCarreraPhoto, isS3Configured } = require('../services/s3Upload');
+const { saveCarreraToDynamo } = require('../services/dualWrite');
 
 /** Sheet ID: Carreras_drivers (mismo que Carreras_bikers o configurable) */
 const getCarrerasSpreadsheetId = () =>
@@ -124,6 +125,28 @@ router.post('/carreras/registrar', async (req, res) => {
     ];
 
     await appendRowToSpreadsheet(spreadsheetId, sheetTitle, row);
+
+    await saveCarreraToDynamo({
+      carreraId: String(carreraId),
+      nombre: String(abejita).trim(),
+      tipo: 'beezero',
+      fecha: String(fecha).trim(),
+      cliente: String(cliente).trim(),
+      horaInicio: horaInicio ? String(horaInicio).trim() : '',
+      horaFin: horaFin ? String(horaFin).trim() : '',
+      lugarRecojo: esPorHora ? '' : String(lugarRecojo || '').trim(),
+      lugarDestino: esPorHora ? '' : String(lugarDestino || '').trim(),
+      tiempo: tiempo ? String(tiempo).trim() : '',
+      distancia: esPorHora ? 0 : (distancia != null ? Number(distancia) : 0),
+      precio: precio != null && precio !== '' ? Number(precio) : 0,
+      observaciones: observaciones ? String(observaciones).trim() : '',
+      foto: fotoUrl,
+      fechaCreacion,
+      horaCreacion,
+      porHora: esPorHora ? 'si' : 'no',
+      aCuenta: (aCuenta === true || aCuenta === 'true' || String(aCuenta || '').toLowerCase() === 'si') ? 'si' : 'no',
+      pagoPorQR: (pagoPorQR === true || pagoPorQR === 'true' || String(pagoPorQR || '').toLowerCase() === 'si') ? 'si' : 'no',
+    });
 
     res.json({
       success: true,

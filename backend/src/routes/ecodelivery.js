@@ -13,6 +13,7 @@ const {
   getSheetsInSpreadsheet,
   getAllRowsFromSpreadsheet,
 } = require('../services/googleSheets');
+const { saveTurnoToDynamo, saveCarreraToDynamo } = require('../services/dualWrite');
 
 const SHEET_ECODELIVERY = 'Ecodelivery';
 const CARRERAS_BIKERS_HEADERS = [
@@ -174,6 +175,20 @@ router.post('/turnos/iniciar', async (req, res) => {
 
     await appendRow(SHEET_ECODELIVERY, row);
 
+    await saveTurnoToDynamo({
+      turnoId: String(turnoIdNum),
+      nombre: String(usuario).trim(),
+      tipo: 'ecodelivery',
+      fecha: String(fechaInicio),
+      horaInicio: String(horaInicio),
+      latInicio: latInicio != null ? Number(latInicio) : '',
+      lngInicio: lngInicio != null ? Number(lngInicio) : '',
+      timestampInicio: String(timestampInicio),
+      fotoInicio: fotoInicio || '',
+      estado: 'INICIADO',
+      createdAt: Number(timestampInicio) || Date.now(),
+    });
+
     res.json({
       success: true,
       turnoId: String(turnoIdNum),
@@ -245,6 +260,27 @@ router.post('/turnos/cerrar', async (req, res) => {
     ];
 
     await updateRowById(SHEET_ECODELIVERY, turnoId, row);
+
+    await saveTurnoToDynamo({
+      turnoId: String(turnoIdValue),
+      nombre: existing['Usuario'],
+      tipo: 'ecodelivery',
+      fecha: existing['Fecha Inicio'],
+      fechaCierre: String(fechaCierre),
+      horaInicio: existing['Hora Inicio'],
+      horaCierre: String(horaCierre),
+      latInicio: existing['Lat Inicio'],
+      lngInicio: existing['Lng Inicio'],
+      latCierre: latCierre != null ? Number(latCierre) : '',
+      lngCierre: lngCierre != null ? Number(lngCierre) : '',
+      timestampInicio: existing['Timestamp Inicio'],
+      timestampCierre: String(timestampCierre),
+      fotoInicio: existing['Foto Inicio'],
+      fotoCierre: fotoCierre || '',
+      estado: 'CERRADO',
+      createdAt: Date.parse(existing['Timestamp Creación']) || Date.now(),
+      updatedAt: Date.now(),
+    });
 
     res.json({
       success: true,
@@ -403,6 +439,23 @@ router.post('/deliveries/registrar', async (req, res) => {
     ];
 
     await appendRowToSpreadsheet(spreadsheetId, sheetTitle, row);
+
+    await saveCarreraToDynamo({
+      carreraId: String(deliveryId),
+      nombre: String(bikerName).trim(),
+      tipo: 'biker',
+      fecha,
+      horaRegistro: horaReg,
+      cliente: String(cliente).trim(),
+      horaInicio: horaIni,
+      horaFin: horaF,
+      lugarRecojo: String(lugarOrigen).trim(),
+      lugarDestino: String(lugarDestino).trim(),
+      distancia: Number(distancia),
+      porHora: porHora ? 'Sí' : 'No',
+      observaciones: notas ? String(notas).trim() : '',
+      foto: foto || '',
+    });
 
     res.json({
       success: true,

@@ -123,12 +123,12 @@ function ecodeliveryTurnoItem(obj, headers) {
   }, { removeUndefinedValues: true });
 }
 
-function carreraItem(obj, driverTab) {
-  const carreraId = obj.CarreraId || obj.ID || `${driverTab}-${obj.Fecha}-${obj['Hora Inicio']}`;
-  const nombre = obj.Abejita || driverTab;
+function carreraItem(obj, driverTab, tipo = 'beezero') {
+  const carreraId = obj.CarreraId || obj.DeliveryId || obj.ID || `${driverTab}-${obj.Fecha || obj['Fecha Registro']}-${obj['Hora Inicio']}`;
+  const nombre = obj.Abejita || obj.Biker || driverTab;
   const userId = slugUserId(nombre);
-  const fecha = obj.Fecha || '';
-  const createdAt = parseCreatedAt(obj['Fecha creación'] || obj['Fecha creacion'], fecha);
+  const fecha = obj.Fecha || obj['Fecha Registro'] || '';
+  const createdAt = parseCreatedAt(obj['Fecha creación'] || obj['Fecha creacion'] || obj['Fecha Registro'], fecha);
 
   return marshall({
     PK: `USER#${userId}`,
@@ -136,20 +136,24 @@ function carreraItem(obj, driverTab) {
     carreraId: String(carreraId),
     userId,
     nombre,
+    tipo,
     fecha,
     cliente: obj.Cliente || '',
     horaInicio: obj['Hora Inicio'] || '',
     horaFin: obj['Hora Fin'] || '',
-    lugarRecojo: obj['Lugar Recojo'] || '',
+    horaRegistro: obj['Hora Registro'] || '',
+    lugarRecojo: obj['Lugar Recojo'] || obj['Lugar Origen'] || '',
     lugarDestino: obj['Lugar Destino'] || '',
     tiempo: obj.Tiempo || '',
     distancia: obj['Distancia (km)'] || '',
     precio: obj['Precio (Bs)'] || '',
-    observaciones: obj.Observaciones || '',
+    observaciones: obj.Observaciones || obj.Notas || '',
     foto: obj.Foto || '',
-    porHora: obj['Por hora'] || '',
+    porHora: obj['Por hora'] || obj['Por Hora'] || '',
     aCuenta: obj['A cuenta'] || '',
     pagoPorQR: obj['Pago por QR'] || '',
+    fechaCreacion: obj['Fecha creación'] || obj['Fecha creacion'] || '',
+    horaCreacion: obj['Hora creación'] || obj['Hora creacion'] || '',
     createdAt,
     source: 'migration-sheets',
   }, { removeUndefinedValues: true });
@@ -212,15 +216,16 @@ async function migrateTurnosEcodelivery() {
   return items.length;
 }
 
-async function migrateCarreras() {
-  const spreadsheetId =
-    config.google.carrerasDriversSheetId || config.google.carreassBikersSheetId;
-  if (!spreadsheetId) {
-    console.log('\n⚠️  Sin CARRERAS_*_SHEET_ID, omitiendo carreras');
-    return 0;
-  }
+function detectCarreraTipo(headers) {
+  const norm = (headers || []).map((h) => String(h || '').trim().toLowerCase());
+  if (norm.includes('deliveryid')) return 'biker';
+  return 'beezero';
+}
 
-  console.log('\n📦 Migrando carreras drivers...');
+async function migrateCarrerasFromSpreadsheet(spreadsheetId, label) {
+  if (!spreadsheetId) return 0;
+
+  console.log(`\n📦 Migrando carreras (${label})...`);
   const tabs = filterDriverTabs(await getSheetsInSpreadsheet(spreadsheetId));
   let total = 0;
 
@@ -232,16 +237,38 @@ async function migrateCarreras() {
     );
     if (!headers.length || !rows.length) continue;
 
+    const tipo = detectCarreraTipo(headers);
     const items = rows
       .map((row) => rowToObject(headers, row))
-      .filter((obj) => obj.Fecha || obj.Cliente)
-      .map((obj) => carreraItem(obj, tab));
+      .filter((obj) => {
+        if (tipo === 'biker') {
+          return obj['Fecha Registro'] || obj.Fecha || obj.Cliente;
+        }
+        return obj.Fecha || obj.Cliente;
+      })
+      .map((obj) => carreraItem(obj, tab, tipo));
 
     if (items.length) {
-      console.log(`  → Pestaña "${tab}": ${items.length} carreras`);
+      console.log(`  → Pestaña "${tab}" (${tipo}): ${items.length} filas`);
       await batchWrite(config.dynamo.carrerasTable, items);
       total += items.length;
     }
+  }
+
+  return total;
+}
+
+async function migrateCarreras() {
+  const driversId = config.google.carrerasDriversSheetId;
+  const bikersId = config.google.carreassBikersSheetId;
+
+  let total = 0;
+  total += await migrateCarrerasFromSpreadsheet(driversId, 'drivers');
+
+  if (bikersId && bikersId !== driversId) {
+    total += await migrateCarrerasFromSpreadsheet(bikersId, 'bikers');
+  } else if (bikersId === driversId) {
+    console.log('\nℹ️  Drivers y bikers comparten spreadsheet — una sola pasada con detección por headers');
   }
 
   return total;
@@ -284,7 +311,7 @@ async function main() {
   console.log('\n=== RESUMEN ===');
   console.log(`Turnos BeeZero:     ${summary.turnosBeezero}`);
   console.log(`Turnos EcoDelivery: ${summary.turnosEcodelivery}`);
-  console.log(`Carreras:           ${summary.carreras}`);
+  console.log(`Carreras/entregas:  ${summary.carreras}`);
   if (summary.errors.length) {
     console.log('Errores:', summary.errors.join(' | '));
     process.exitCode = 1;

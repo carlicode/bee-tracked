@@ -41,6 +41,8 @@ provider:
     AWS_REGION_CUSTOM: us-east-1
     COGNITO_USER_POOL_ID: us-east-1_REsVOVqcY
     COGNITO_REGION: us-east-1
+    DYNAMO_WRITE_ENABLED: 'true'
+    DYNAMO_READ_ENABLED: 'false'
   iam:
     role:
       statements:

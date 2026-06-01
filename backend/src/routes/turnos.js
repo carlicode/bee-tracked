@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { appendRow, updateRowById, getRowById, getAllRows } = require('../services/googleSheets');
 const { uploadBeezeroPhoto, uploadBeezeroGastoPhoto, isS3Configured } = require('../services/s3Upload');
+const { saveTurnoToDynamo } = require('../services/dualWrite');
 const { optionalAuth } = require('../middleware/auth');
 const { touchSession, isSessionValid } = require('../services/sessionManager');
 
@@ -183,6 +184,25 @@ router.post('/iniciar', optionalAuth, validateSession, async (req, res) => {
 
     await appendRow('BeeZero', rowValues);
 
+    await saveTurnoToDynamo({
+      turnoId: id,
+      nombre: abejita,
+      tipo: 'beezero',
+      fecha,
+      horaInicio: horaInicio || '',
+      placa: auto,
+      kmInicio: kilometraje || '',
+      bateriaInicio: bateria ?? '',
+      aperturaCaja,
+      estado: 'INICIADO',
+      danosAutoInicio: danosAuto || 'ninguno',
+      ubicacionInicioLat: ubicacionInicio?.lat || '',
+      ubicacionInicioLng: ubicacionInicio?.lng || '',
+      fotoTableroInicio: urlFotoTableroInicio,
+      fotoExteriorInicio: urlFotoExteriorInicio,
+      createdAt: Date.now(),
+    });
+
     res.json({
       success: true,
       message: 'Turno iniciado exitosamente',
@@ -324,6 +344,40 @@ router.post('/:id/cerrar', optionalAuth, validateSession, async (req, res) => {
     ];
 
     await updateRowById('BeeZero', id, rowValues);
+
+    await saveTurnoToDynamo({
+      turnoId: id,
+      nombre: turnoExistente.Abejita,
+      tipo: 'beezero',
+      fecha: turnoExistente['Fecha Inicio'],
+      fechaCierre,
+      horaInicio: turnoExistente['Hora Inicio'],
+      horaCierre: horaCierre || '',
+      placa: turnoExistente['Auto (Placa)'],
+      kmInicio: turnoExistente['Kilometraje Inicio'],
+      kmFin: kilometraje || '',
+      bateriaInicio: turnoExistente['Bateria Inicio'] || turnoExistente['Bateria'] || '',
+      bateriaCierre: bateria ?? '',
+      aperturaCaja: turnoExistente['Apertura Caja (Bs)'],
+      cierreCaja,
+      totalGastos: totalGastos.toFixed(2),
+      diferencia: diferencia.toFixed(2),
+      gastoIds: gastoIds.length > 0 ? gastoIds.join(', ') : '',
+      danosAutoInicio: turnoExistente['Daños Auto Inicio'],
+      danosAutoCierre: danosAuto || 'ninguno',
+      fotoTableroInicio: turnoExistente['Foto Tablero Inicio'],
+      fotoExteriorInicio: turnoExistente['Foto Exterior Inicio'],
+      fotoTableroCierre: urlFotoTableroCierre,
+      fotoExteriorCierre: urlFotoExteriorCierre,
+      ubicacionInicioLat: turnoExistente['Ubicación Inicio (Lat)'],
+      ubicacionInicioLng: turnoExistente['Ubicación Inicio (Lng)'],
+      ubicacionCierreLat: ubicacionFin?.lat || '',
+      ubicacionCierreLng: ubicacionFin?.lng || '',
+      observaciones: observaciones || '',
+      estado: 'CERRADO',
+      createdAt: Date.parse(turnoExistente['Timestamp Creación']) || Date.now(),
+      updatedAt: Date.now(),
+    });
 
     res.json({
       success: true,

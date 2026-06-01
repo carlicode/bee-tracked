@@ -5,6 +5,9 @@ const {
   batchGetRowsWithHeadersFromSpreadsheet,
 } = require('../services/googleSheets');
 const { sessionAuth, requireAdmin } = require('../middleware/sessionAuth');
+const { isDynamoReadEnabled } = require('../services/dynamoUtils');
+const turnosService = require('../services/turnosService');
+const carrerasService = require('../services/carrerasService');
 
 const router = express.Router();
 
@@ -351,13 +354,6 @@ router.get('/carreras/bikers/tabs', async (req, res) => {
  */
 router.get('/carreras/bikers/:tab', async (req, res) => {
   try {
-    const sid = carrerasBikersSpreadsheetId() || carrerasDriversSpreadsheetId();
-    if (!sid) {
-      return res.status(500).json({
-        success: false,
-        error: 'CARRERAS_BIKERS_SHEET_ID no configurado',
-      });
-    }
     const rawTab = req.params.tab ? decodeURIComponent(req.params.tab) : '';
     const tab = rawTab.trim();
     if (!tab) {
@@ -365,6 +361,18 @@ router.get('/carreras/bikers/:tab', async (req, res) => {
     }
     const { from, to } = req.query;
 
+    if (isDynamoReadEnabled()) {
+      const { headers, rows } = await carrerasService.listCarrerasByTab(tab, 'biker', from, to);
+      return res.json({ success: true, tab, headers, entregas: rows });
+    }
+
+    const sid = carrerasBikersSpreadsheetId() || carrerasDriversSpreadsheetId();
+    if (!sid) {
+      return res.status(500).json({
+        success: false,
+        error: 'CARRERAS_BIKERS_SHEET_ID no configurado',
+      });
+    }
     const { headers, rows } = await getAllRowsWithHeadersFromSpreadsheet(
       sid,
       tab,
@@ -400,13 +408,6 @@ router.get('/carreras/bikers/:tab', async (req, res) => {
  */
 router.get('/carreras/:tab', async (req, res) => {
   try {
-    const sid = carrerasDriversSpreadsheetIdOrFallback();
-    if (!sid) {
-      return res.status(500).json({
-        success: false,
-        error: 'CARRERAS_DRIVERS_SHEET_ID o CARRERAS_BIKERS_SHEET_ID no configurado',
-      });
-    }
     const rawTab = req.params.tab ? decodeURIComponent(req.params.tab) : '';
     const tab = rawTab.trim();
     if (!tab) {
@@ -414,6 +415,18 @@ router.get('/carreras/:tab', async (req, res) => {
     }
     const { from, to } = req.query;
 
+    if (isDynamoReadEnabled()) {
+      const { headers, rows } = await carrerasService.listCarrerasByTab(tab, 'beezero', from, to);
+      return res.json({ success: true, tab, headers, carreras: rows });
+    }
+
+    const sid = carrerasDriversSpreadsheetIdOrFallback();
+    if (!sid) {
+      return res.status(500).json({
+        success: false,
+        error: 'CARRERAS_DRIVERS_SHEET_ID o CARRERAS_BIKERS_SHEET_ID no configurado',
+      });
+    }
     const { headers, rows } = await getAllRowsWithHeadersFromSpreadsheet(
       sid,
       tab,
@@ -451,6 +464,11 @@ router.get('/carreras/:tab', async (req, res) => {
  */
 router.get('/turnos/beezero', async (req, res) => {
   try {
+    if (isDynamoReadEnabled()) {
+      const { headers, turnos } = await turnosService.listTurnosForAdmin('beezero');
+      return res.json({ success: true, headers, turnos });
+    }
+
     const sid = turnosSpreadsheetId();
     if (!sid) {
       return res.status(500).json({
@@ -479,6 +497,11 @@ router.get('/turnos/beezero', async (req, res) => {
  */
 router.get('/turnos/ecodelivery', async (req, res) => {
   try {
+    if (isDynamoReadEnabled()) {
+      const { headers, turnos } = await turnosService.listTurnosForAdmin('ecodelivery');
+      return res.json({ success: true, headers, turnos });
+    }
+
     const sid = turnosSpreadsheetId();
     if (!sid) {
       return res.status(500).json({

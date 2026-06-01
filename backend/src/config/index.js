@@ -54,6 +54,14 @@ const config = {
     frontendUrl: optionalEnv('FRONTEND_URL', 'http://localhost:3000'),
     stage,
   },
+  features: {
+    dynamoWriteEnabled: ['1', 'true', 'yes', 'on'].includes(
+      String(process.env.DYNAMO_WRITE_ENABLED || '').trim().toLowerCase()
+    ),
+    dynamoReadEnabled: ['1', 'true', 'yes', 'on'].includes(
+      String(process.env.DYNAMO_READ_ENABLED || '').trim().toLowerCase()
+    ),
+  },
 };
 
 if (!config.google.carrerasDriversSheetId && !config.google.carreassBikersSheetId) {
