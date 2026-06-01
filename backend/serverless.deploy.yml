@@ -42,7 +42,7 @@ provider:
     COGNITO_USER_POOL_ID: us-east-1_REsVOVqcY
     COGNITO_REGION: us-east-1
     DYNAMO_WRITE_ENABLED: 'true'
-    DYNAMO_READ_ENABLED: 'false'
+    DYNAMO_READ_ENABLED: 'true'
   iam:
     role:
       statements:
