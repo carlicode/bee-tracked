@@ -11,6 +11,7 @@ custom:
   permisosTableName: bee-tracked-permisos-${sls:stage}
   usersTableName: bee-tracked-users-${sls:stage}
   auditTableName: bee-tracked-audit-${sls:stage}
+  pushSubsTableName: bee-tracked-push-subs-${sls:stage}
 
 provider:
   name: aws
@@ -33,6 +34,8 @@ provider:
     PERMISOS_TABLE: ${self:custom.permisosTableName}
     USERS_TABLE: ${self:custom.usersTableName}
     AUDIT_TABLE: ${self:custom.auditTableName}
+    PUSH_SUBS_TABLE: ${self:custom.pushSubsTableName}
+    VAPID_SUBJECT: 'mailto:admin@beezero.com'
     GOOGLE_SHEET_ID: '1L69tZzVSHlhuKGP9MCdcezOGPsYyjC2Mm-i03Hm5tM8'
     CARRERAS_BIKERS_SHEET_ID: '1OkM4FLSe0CsLo8w4o50xcVdzsUcHVzpaYRqhGBwJRcs'
     CARRERAS_DRIVERS_SHEET_ID: '1OkM4FLSe0CsLo8w4o50xcVdzsUcHVzpaYRqhGBwJRcs'
@@ -86,6 +89,7 @@ provider:
             - Fn::Join: ['', [!GetAtt PermisosTable.Arn, '/index/*']]
             - !GetAtt UsersTable.Arn
             - !GetAtt AuditTable.Arn
+            - !GetAtt PushSubsTable.Arn
 
 functions:
   api:
@@ -351,3 +355,18 @@ resources:
             KeyType: HASH
           - AttributeName: timestamp
             KeyType: RANGE
+
+    PushSubsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.pushSubsTableName}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+        TimeToLiveSpecification:
+          AttributeName: ttl
+          Enabled: true

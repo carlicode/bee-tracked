@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { DashboardCard } from '../../components/DashboardCard';
 import { storage } from '../../services/storage';
+import { isEcodeliveryApiEnabled } from '../../services/ecodeliveryApi';
+import { usePushSubscription } from '../../hooks/usePushSubscription';
 import type { TurnoSimple } from '../../types/turno';
 
 const IconPlay = () => (
@@ -37,6 +39,8 @@ const IconClock = () => (
 
 export const DashboardBiker = () => {
   const [turnoActual, setTurnoActual] = useState<TurnoSimple | null>(null);
+
+  usePushSubscription(isEcodeliveryApiEnabled());
 
   useEffect(() => {
     const turno = storage.getItem<TurnoSimple>('turno_actual_biker');

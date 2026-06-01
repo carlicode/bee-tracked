@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../services/auth';
 import { turnosApi } from '../../services/turnosApi';
+import { usePushSubscription } from '../../hooks/usePushSubscription';
 import { DashboardCard } from '../../components/DashboardCard';
 import type { Turno } from '../../types/turno';
 
@@ -65,6 +66,8 @@ export const DashboardBeezero = () => {
   const user = getCurrentUser();
   const [turnoActual, setTurnoActual] = useState<Turno | null>(null);
   const [loading, setLoading] = useState(true);
+
+  usePushSubscription(turnosApi.isEnabled());
 
   useEffect(() => {
     const cargarTurnoActual = async () => {

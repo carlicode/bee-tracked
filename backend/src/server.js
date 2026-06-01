@@ -43,6 +43,7 @@ const adminRouter = require('./routes/admin');
 const adminAnunciosRouter = require('./routes/adminAnuncios');
 const andiRouter = require('./routes/andi');
 const announcementsRouter = require('./routes/announcements');
+const pushRouter = require('./routes/push');
 
 app.use('/api/turnos', turnosRouter);
 app.use('/api/carreras', carrerasRouter);
@@ -53,6 +54,7 @@ app.use('/api/admin', adminRouter);
 app.use('/api/admin/anuncios', adminAnunciosRouter);
 app.use('/api/andi', andiRouter);
 app.use('/api/announcements', announcementsRouter);
+app.use('/api/push', pushRouter);
 
 app.use((err, req, res, next) => {
   logger.error('Unhandled error', {

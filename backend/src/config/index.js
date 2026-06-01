@@ -45,6 +45,7 @@ const config = {
     permisosTable: optionalEnv('PERMISOS_TABLE', `bee-tracked-permisos-${stage}`),
     usersTable: optionalEnv('USERS_TABLE', `bee-tracked-users-${stage}`),
     auditTable: optionalEnv('AUDIT_TABLE', `bee-tracked-audit-${stage}`),
+    pushSubsTable: optionalEnv('PUSH_SUBS_TABLE', `bee-tracked-push-subs-${stage}`),
   },
   s3: {
     bucket: optionalEnv('AWS_S3_BUCKET', 'bee-tracked-photos'),

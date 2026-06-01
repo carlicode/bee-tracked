@@ -237,6 +237,19 @@ async function createAnnouncement(body, createdBy, createdByName) {
     })
   );
 
+  try {
+    const pushService = require('./pushService');
+    await pushService.notifyNewAnnouncement({
+      announcementId,
+      title: validation.data.title,
+      message: validation.data.message,
+      audience: validation.data.audience,
+      priority: validation.data.priority,
+    });
+  } catch (err) {
+    console.warn('[push] Error enviando notificaciones:', err.message);
+  }
+
   return {
     announcementId,
     ...validation.data,
