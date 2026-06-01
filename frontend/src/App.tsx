@@ -32,11 +32,9 @@ import { DashboardAdmin } from './pages/admin/DashboardAdmin';
 import { CarrerasDrivers } from './pages/admin/CarrerasDrivers';
 import { TurnosBeezero } from './pages/admin/TurnosBeezero';
 import { DashboardLive } from './pages/admin/DashboardLive';
-
-// Andi (RRHH)
-import { DashboardAndi } from './pages/andi/DashboardAndi';
+import { AnunciosAdmin } from './pages/admin/AnunciosAdmin';
+import { CarrerasBikers } from './pages/admin/CarrerasBikers';
 import { CrearAnuncio } from './pages/andi/CrearAnuncio';
-import { ListaAnuncios } from './pages/andi/ListaAnuncios';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
@@ -52,11 +50,8 @@ const DashboardRouter = () => {
   const { getUserType } = useAuth();
   const userType = getUserType();
 
-  if (userType === 'admin') {
+  if (userType === 'admin' || userType === 'rrhh') {
     return <Navigate to="/admin/dashboard" replace />;
-  }
-  if (userType === 'rrhh') {
-    return <Navigate to="/andi/dashboard" replace />;
   }
   if (userType === 'ecodelivery' || userType === 'operador') {
     return <Navigate to="/ecodelivery/dashboard" replace />;
@@ -71,37 +66,23 @@ const BeeZeroAccessGuard = ({ children }: { children: React.ReactNode }) => {
   if (t === 'operador') {
     return <Navigate to="/ecodelivery/dashboard" replace />;
   }
-  if (t === 'admin') {
+  if (t === 'admin' || t === 'rrhh') {
     return <Navigate to="/admin/dashboard" replace />;
-  }
-  if (t === 'rrhh') {
-    return <Navigate to="/andi/dashboard" replace />;
   }
   return <>{children}</>;
 };
 
 const EcoDeliveryAccessGuard = ({ children }: { children: React.ReactNode }) => {
   const { getUserType } = useAuth();
-  if (getUserType() === 'admin') {
+  if (getUserType() === 'admin' || getUserType() === 'rrhh') {
     return <Navigate to="/admin/dashboard" replace />;
-  }
-  if (getUserType() === 'rrhh') {
-    return <Navigate to="/andi/dashboard" replace />;
   }
   return <>{children}</>;
 };
 
 const AdminGuard = ({ children }: { children: React.ReactNode }) => {
-  const { getUserType } = useAuth();
-  if (getUserType() !== 'admin') {
-    return <Navigate to="/" replace />;
-  }
-  return <>{children}</>;
-};
-
-const RrhhGuard = ({ children }: { children: React.ReactNode }) => {
-  const { getUserType } = useAuth();
-  if (getUserType() !== 'rrhh') {
+  const t = useAuth().getUserType();
+  if (t !== 'admin' && t !== 'rrhh') {
     return <Navigate to="/" replace />;
   }
   return <>{children}</>;
@@ -406,56 +387,59 @@ function AppContent() {
             </PrivateRoute>
           }
         />
+        <Route
+          path="/admin/carreras-bikers"
+          element={
+            <PrivateRoute>
+              <AdminGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType="admin">
+                    <Layout>
+                      <CarrerasBikers />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </AdminGuard>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin/anuncios"
+          element={
+            <PrivateRoute>
+              <AdminGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType="admin">
+                    <Layout>
+                      <AnunciosAdmin />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </AdminGuard>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin/anuncios/crear"
+          element={
+            <PrivateRoute>
+              <AdminGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType="admin">
+                    <Layout>
+                      <CrearAnuncio variant="admin" />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </AdminGuard>
+            </PrivateRoute>
+          }
+        />
 
-        {/* Andi (RRHH) */}
-        <Route
-          path="/andi/dashboard"
-          element={
-            <PrivateRoute>
-              <RrhhGuard>
-                {isAuthenticated() && (
-                  <ThemeProvider userType="rrhh">
-                    <Layout>
-                      <DashboardAndi />
-                    </Layout>
-                  </ThemeProvider>
-                )}
-              </RrhhGuard>
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/andi/anuncios"
-          element={
-            <PrivateRoute>
-              <RrhhGuard>
-                {isAuthenticated() && (
-                  <ThemeProvider userType="rrhh">
-                    <Layout>
-                      <ListaAnuncios />
-                    </Layout>
-                  </ThemeProvider>
-                )}
-              </RrhhGuard>
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/andi/anuncios/crear"
-          element={
-            <PrivateRoute>
-              <RrhhGuard>
-                {isAuthenticated() && (
-                  <ThemeProvider userType="rrhh">
-                    <Layout>
-                      <CrearAnuncio />
-                    </Layout>
-                  </ThemeProvider>
-                )}
-              </RrhhGuard>
-            </PrivateRoute>
-          }
-        />
+        {/* Rutas RRHH legacy → admin */}
+        <Route path="/andi/dashboard" element={<Navigate to="/admin/dashboard" replace />} />
+        <Route path="/andi/anuncios" element={<Navigate to="/admin/anuncios" replace />} />
+        <Route path="/andi/anuncios/crear" element={<Navigate to="/admin/anuncios/crear" replace />} />
       </Routes>
     </BrowserRouter>
   );

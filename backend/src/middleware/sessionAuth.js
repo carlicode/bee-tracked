@@ -46,14 +46,25 @@ async function sessionAuth(req, res, next) {
 }
 
 function requireRrhh(req, res, next) {
-  if (req.authUser?.userType !== 'rrhh') {
+  if (req.authUser?.userType !== 'rrhh' && req.authUser?.userType !== 'admin') {
     return res.status(403).json({
       success: false,
-      error: 'Solo RRHH puede acceder a este recurso',
+      error: 'Solo RRHH o administradores pueden acceder a este recurso',
       code: 'FORBIDDEN',
     });
   }
   next();
 }
 
-module.exports = { sessionAuth, requireRrhh };
+function requireAdmin(req, res, next) {
+  if (req.authUser?.userType !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      error: 'Solo administradores',
+      code: 'FORBIDDEN',
+    });
+  }
+  next();
+}
+
+module.exports = { sessionAuth, requireRrhh, requireAdmin };

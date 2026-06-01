@@ -20,6 +20,7 @@ const turnosRouter = require('./src/routes/turnos');
 const ecodeliveryRouter = require('./src/routes/ecodelivery');
 const beezeroRouter = require('./src/routes/beezero');
 const adminRouter = require('./src/routes/admin');
+const adminAnunciosRouter = require('./src/routes/adminAnuncios');
 const andiRouter = require('./src/routes/andi');
 const announcementsRouter = require('./src/routes/announcements');
 
@@ -28,6 +29,7 @@ app.use('/api/turnos', turnosRouter);
 app.use('/api/ecodelivery', ecodeliveryRouter);
 app.use('/api/beezero', beezeroRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/admin/anuncios', adminAnunciosRouter);
 app.use('/api/andi', andiRouter);
 app.use('/api/announcements', announcementsRouter);
 

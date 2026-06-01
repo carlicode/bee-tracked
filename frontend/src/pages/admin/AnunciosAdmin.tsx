@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { andiApi, type Announcement, type AnnouncementStats } from '../../services/andiApi';
+import { adminApi, type Announcement, type AnnouncementStats } from '../../services/adminApi';
 import { useToast } from '../../contexts/ToastContext';
 
 type Filter = 'all' | 'active' | 'expired';
@@ -11,7 +11,7 @@ const priorityColors: Record<string, string> = {
   urgent: 'bg-red-100 text-red-800',
 };
 
-export function ListaAnuncios() {
+export function AnunciosAdmin() {
   const toast = useToast();
   const [filter, setFilter] = useState<Filter>('all');
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -22,7 +22,7 @@ export function ListaAnuncios() {
   const load = async () => {
     setLoading(true);
     try {
-      const items = await andiApi.getAnnouncements(filter);
+      const items = await adminApi.getAnnouncements(filter);
       setAnnouncements(items);
     } catch {
       toast.show('Error cargando anuncios', 'error');
@@ -38,7 +38,7 @@ export function ListaAnuncios() {
   const handleDelete = async (id: string) => {
     if (!window.confirm('¿Eliminar este anuncio?')) return;
     try {
-      await andiApi.deleteAnnouncement(id);
+      await adminApi.deleteAnnouncement(id);
       toast.show('Anuncio eliminado', 'success');
       load();
     } catch {
@@ -52,7 +52,7 @@ export function ListaAnuncios() {
       return;
     }
     try {
-      const data = await andiApi.getStats(id);
+      const data = await adminApi.getAnnouncementStats(id);
       setStats((prev) => ({ ...prev, [id]: data }));
       setExpandedId(id);
     } catch {
@@ -64,14 +64,14 @@ export function ListaAnuncios() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Mis anuncios</h1>
-          <Link to="/andi/dashboard" className="text-sm text-orange-600 hover:underline">
+          <h1 className="text-2xl font-bold text-gray-900">Anuncios</h1>
+          <Link to="/admin/dashboard" className="text-sm text-beeadmin-purple hover:underline">
             ← Volver al panel
           </Link>
         </div>
         <Link
-          to="/andi/anuncios/crear"
-          className="rounded-lg bg-orange-600 px-4 py-2 text-white font-medium hover:bg-orange-700"
+          to="/admin/anuncios/crear"
+          className="rounded-lg bg-beeadmin-purple px-4 py-2 text-white font-medium hover:bg-beeadmin-purple-dark"
         >
           + Nuevo anuncio
         </Link>
@@ -84,7 +84,7 @@ export function ListaAnuncios() {
             type="button"
             onClick={() => setFilter(f)}
             className={`rounded-full px-4 py-1.5 text-sm font-medium ${
-              filter === f ? 'bg-orange-600 text-white' : 'bg-gray-100 text-gray-700'
+              filter === f ? 'bg-beeadmin-purple text-white' : 'bg-gray-100 text-gray-700'
             }`}
           >
             {f === 'all' ? 'Todos' : f === 'active' ? 'Activos' : 'Expirados'}
@@ -101,13 +101,14 @@ export function ListaAnuncios() {
       ) : (
         <div className="space-y-4">
           {announcements.map((a) => (
-            <div key={a.announcementId} className="rounded-2xl border-2 border-orange-100 bg-white p-5 shadow-sm">
+            <div key={a.announcementId} className="rounded-2xl border-2 border-violet-100 bg-white p-5 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-semibold text-gray-900">{a.title}</h2>
                   <p className="text-sm text-gray-600 mt-1">
                     {a.startDate}
                     {a.endDate ? ` → ${a.endDate}` : ''} · {a.audience}
+                    {a.createdByName ? ` · por ${a.createdByName}` : ''}
                   </p>
                 </div>
                 <span className={`rounded-full px-3 py-1 text-xs font-semibold ${priorityColors[a.priority]}`}>
@@ -123,22 +124,22 @@ export function ListaAnuncios() {
                   onClick={() => handleStats(a.announcementId)}
                   className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
                 >
-                  📊 Ver quién leyó
+                  Ver quién leyó
                 </button>
                 <button
                   type="button"
                   onClick={() => handleDelete(a.announcementId)}
                   className="rounded-lg border border-red-200 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50"
                 >
-                  🗑️ Eliminar
+                  Eliminar
                 </button>
               </div>
 
               {expandedId === a.announcementId && stats[a.announcementId] && (
-                <div className="mt-4 rounded-xl bg-orange-50 p-4 text-sm space-y-3">
+                <div className="mt-4 rounded-xl bg-violet-50 p-4 text-sm space-y-3">
                   <div className="flex gap-6">
                     <div>
-                      <p className="text-2xl font-bold text-orange-700">
+                      <p className="text-2xl font-bold text-beeadmin-purple">
                         {stats[a.announcementId].read}
                         <span className="text-base font-normal text-gray-500"> / {stats[a.announcementId].total}</span>
                       </p>
@@ -159,10 +160,10 @@ export function ListaAnuncios() {
                         {stats[a.announcementId].readUsers.map((r) => (
                           <span
                             key={r.userId}
-                            className="inline-flex items-center gap-1 rounded-full bg-white border border-orange-200 px-3 py-1 text-xs font-medium text-gray-800"
+                            className="inline-flex items-center gap-1 rounded-full bg-white border border-violet-200 px-3 py-1 text-xs font-medium text-gray-800"
                             title={r.readAt ? new Date(r.readAt).toLocaleString('es-BO') : ''}
                           >
-                            ✅ {r.nombre}
+                            {r.nombre}
                           </span>
                         ))}
                       </div>

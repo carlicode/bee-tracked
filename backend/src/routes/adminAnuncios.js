@@ -1,6 +1,5 @@
 const express = require('express');
-const config = require('../config');
-const { sessionAuth, requireRrhh } = require('../middleware/sessionAuth');
+const { sessionAuth, requireAdmin } = require('../middleware/sessionAuth');
 const { createRequestLogger } = require('../utils/logger');
 const {
   listAnnouncements,
@@ -12,21 +11,21 @@ const {
 
 const router = express.Router();
 
-router.use(sessionAuth, requireRrhh);
+router.use(sessionAuth, requireAdmin);
 
 /**
- * POST /api/andi/announcements
+ * POST /api/admin/anuncios
  */
-router.post('/announcements', async (req, res) => {
+router.post('/', async (req, res) => {
   const log = createRequestLogger(req);
 
   try {
     const { userId, name } = req.authUser;
     const announcement = await createAnnouncement(req.body, userId, name);
-    log.info('Anuncio creado', { announcementId: announcement.announcementId, createdBy: userId });
+    log.info('Anuncio creado (admin)', { announcementId: announcement.announcementId, createdBy: userId });
     res.json({ success: true, announcement });
   } catch (err) {
-    log.error('Error creando anuncio', { error: err.message });
+    log.error('Error creando anuncio (admin)', { error: err.message });
     res.status(err.statusCode || 500).json({
       success: false,
       error: err.message || 'Error al crear anuncio',
@@ -36,9 +35,9 @@ router.post('/announcements', async (req, res) => {
 });
 
 /**
- * GET /api/andi/announcements?status=active|expired|all
+ * GET /api/admin/anuncios?status=active|expired|all
  */
-router.get('/announcements', async (req, res) => {
+router.get('/', async (req, res) => {
   const log = createRequestLogger(req);
 
   try {
@@ -51,7 +50,7 @@ router.get('/announcements', async (req, res) => {
       total: announcements.length,
     });
   } catch (err) {
-    log.error('Error listando anuncios', { error: err.message });
+    log.error('Error listando anuncios (admin)', { error: err.message });
     res.status(500).json({
       success: false,
       error: err.message || 'Error al listar anuncios',
@@ -60,18 +59,18 @@ router.get('/announcements', async (req, res) => {
 });
 
 /**
- * DELETE /api/andi/announcements/:id
+ * DELETE /api/admin/anuncios/:id
  */
-router.delete('/announcements/:id', async (req, res) => {
+router.delete('/:id', async (req, res) => {
   const log = createRequestLogger(req);
 
   try {
     const announcementId = req.params.id;
     await softDeleteAnnouncement(announcementId);
-    log.info('Anuncio eliminado', { announcementId });
+    log.info('Anuncio eliminado (admin)', { announcementId });
     res.json({ success: true });
   } catch (err) {
-    log.error('Error eliminando anuncio', { error: err.message });
+    log.error('Error eliminando anuncio (admin)', { error: err.message });
     res.status(err.statusCode || 500).json({
       success: false,
       error: err.message || 'Error al eliminar anuncio',
@@ -81,16 +80,16 @@ router.delete('/announcements/:id', async (req, res) => {
 });
 
 /**
- * GET /api/andi/announcements/:id/stats
+ * GET /api/admin/anuncios/:id/stats
  */
-router.get('/announcements/:id/stats', async (req, res) => {
+router.get('/:id/stats', async (req, res) => {
   const log = createRequestLogger(req);
 
   try {
     const stats = await getAnnouncementStats(req.params.id);
     res.json({ success: true, stats });
   } catch (err) {
-    log.error('Error obteniendo stats', { error: err.message });
+    log.error('Error obteniendo stats (admin)', { error: err.message });
     res.status(err.statusCode || 500).json({
       success: false,
       error: err.message || 'Error al obtener estadísticas',

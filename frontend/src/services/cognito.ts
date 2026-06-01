@@ -50,8 +50,7 @@ export type CognitoUserType = 'admin' | 'beezero' | 'operador' | 'ecodelivery' |
 export function getUserTypeFromToken(idToken: string): CognitoUserType {
   const payload = decodePayload(idToken);
   const groups = (payload['cognito:groups'] as string[] | undefined) || [];
-  if (groups.includes('admin')) return 'admin';
-  if (groups.includes('rrhh')) return 'rrhh';
+  if (groups.includes('admin') || groups.includes('rrhh')) return 'admin';
   if (groups.includes('operador')) return 'operador';
   if (groups.includes('beezero')) return 'beezero';
   if (groups.includes('ecodelivery')) return 'ecodelivery';

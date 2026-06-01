@@ -13,8 +13,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 
 function dashboardPath(userType: User['userType']): string {
   if (userType === 'ecodelivery' || userType === 'operador') return '/ecodelivery/dashboard';
-  if (userType === 'admin') return '/admin/dashboard';
-  if (userType === 'rrhh') return '/andi/dashboard';
+  if (userType === 'admin' || userType === 'rrhh') return '/admin/dashboard';
   return '/beezero/dashboard';
 }
 

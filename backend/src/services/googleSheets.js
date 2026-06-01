@@ -402,6 +402,52 @@ async function getOrCreateSheetAndRowCount(spreadsheetId, sheetTitle, headers) {
   }
 }
 
+/**
+ * Escapa un nombre de hoja para notación A1 de Google Sheets.
+ */
+function quoteSheetName(sheetName) {
+  return `'${String(sheetName).replace(/'/g, "''")}'`;
+}
+
+/**
+ * Obtiene filas con headers de múltiples hojas en lotes (batchGet).
+ * @param {string} spreadsheetId
+ * @param {string[]} sheetNames
+ * @param {string} rangeSuffix - ej. 'A:AD'
+ * @param {number} chunkSize - hojas por request
+ * @returns {Promise<Array<{ headers: string[], rows: any[][] }>>}
+ */
+async function batchGetRowsWithHeadersFromSpreadsheet(
+  spreadsheetId,
+  sheetNames,
+  rangeSuffix = 'A:AD',
+  chunkSize = 15
+) {
+  if (!sheetNames.length) return [];
+
+  const sheets = await getSheetsClient();
+  const results = [];
+
+  for (let i = 0; i < sheetNames.length; i += chunkSize) {
+    const chunk = sheetNames.slice(i, i + chunkSize);
+    const ranges = chunk.map((name) => `${quoteSheetName(name)}!${rangeSuffix}`);
+    const res = await sheets.spreadsheets.values.batchGet({
+      spreadsheetId,
+      ranges,
+    });
+
+    for (const valueRange of res.data.valueRanges || []) {
+      const allRows = valueRange.values || [];
+      results.push({
+        headers: allRows[0] || [],
+        rows: allRows.slice(1),
+      });
+    }
+  }
+
+  return results;
+}
+
 module.exports = {
   initializeSheetsClient,
   appendRow,
@@ -417,4 +463,5 @@ module.exports = {
   getSheetsInSpreadsheet,
   getAllRowsFromSpreadsheet,
   getAllRowsWithHeadersFromSpreadsheet,
+  batchGetRowsWithHeadersFromSpreadsheet,
 };

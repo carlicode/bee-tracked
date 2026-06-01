@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { andiApi, type AnnouncementAudience, type AnnouncementPriority } from '../../services/andiApi';
+import { adminApi } from '../../services/adminApi';
 import { useToast } from '../../contexts/ToastContext';
 import { AnnouncementModal } from '../../components/AnnouncementModal';
 
@@ -8,7 +9,12 @@ function todayDate(): string {
   return new Date().toISOString().split('T')[0];
 }
 
-export function CrearAnuncio() {
+type CrearAnuncioProps = {
+  variant?: 'rrhh' | 'admin';
+};
+
+export function CrearAnuncio({ variant = 'rrhh' }: CrearAnuncioProps) {
+  const isAdmin = variant === 'admin';
   const navigate = useNavigate();
   const toast = useToast();
   const [title, setTitle] = useState('');
@@ -20,20 +26,32 @@ export function CrearAnuncio() {
   const [loading, setLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
+  const listPath = isAdmin ? '/admin/anuncios' : '/andi/anuncios';
+  const cancelPath = isAdmin ? '/admin/dashboard' : '/andi/dashboard';
+  const borderClass = isAdmin ? 'border-violet-100' : 'border-orange-100';
+  const submitClass = isAdmin
+    ? 'bg-beeadmin-purple hover:bg-beeadmin-purple-dark'
+    : 'bg-orange-600 hover:bg-orange-700';
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      await andiApi.createAnnouncement({
+      const input = {
         title,
         message,
         startDate,
         endDate: endDate || undefined,
         audience,
         priority,
-      });
+      };
+      if (isAdmin) {
+        await adminApi.createAnnouncement(input);
+      } else {
+        await andiApi.createAnnouncement(input);
+      }
       toast.show('Anuncio publicado correctamente', 'success');
-      navigate('/andi/anuncios');
+      navigate(listPath);
     } catch (err: unknown) {
       const msg = err && typeof err === 'object' && 'response' in err
         ? (err as { response?: { data?: { error?: string } } }).response?.data?.error
@@ -51,7 +69,7 @@ export function CrearAnuncio() {
         <p className="text-gray-600 text-sm mt-1">Los usuarios lo verán al iniciar sesión.</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-2xl border-2 border-orange-100 p-6 space-y-5 shadow-sm">
+      <form onSubmit={handleSubmit} className={`bg-white rounded-2xl border-2 ${borderClass} p-6 space-y-5 shadow-sm`}>
         <div>
           <label className="block text-sm font-medium mb-1">Título</label>
           <input
@@ -144,7 +162,7 @@ export function CrearAnuncio() {
           </button>
           <button
             type="button"
-            onClick={() => navigate('/andi/dashboard')}
+            onClick={() => navigate(cancelPath)}
             className="px-4 py-2 rounded-lg border-2 border-gray-300 hover:bg-gray-50"
           >
             Cancelar
@@ -152,7 +170,7 @@ export function CrearAnuncio() {
           <button
             type="submit"
             disabled={loading}
-            className="px-6 py-2 rounded-lg bg-orange-600 text-white font-semibold hover:bg-orange-700 disabled:opacity-50"
+            className={`px-6 py-2 rounded-lg text-white font-semibold disabled:opacity-50 ${submitClass}`}
           >
             {loading ? 'Publicando...' : 'Publicar anuncio'}
           </button>

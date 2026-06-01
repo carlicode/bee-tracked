@@ -40,6 +40,7 @@ const authRouter = require('./routes/auth');
 const ecodeliveryRouter = require('./routes/ecodelivery');
 const beezeroRouter = require('./routes/beezero');
 const adminRouter = require('./routes/admin');
+const adminAnunciosRouter = require('./routes/adminAnuncios');
 const andiRouter = require('./routes/andi');
 const announcementsRouter = require('./routes/announcements');
 
@@ -49,6 +50,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/ecodelivery', ecodeliveryRouter);
 app.use('/api/beezero', beezeroRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/admin/anuncios', adminAnunciosRouter);
 app.use('/api/andi', andiRouter);
 app.use('/api/announcements', announcementsRouter);
 

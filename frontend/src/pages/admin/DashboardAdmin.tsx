@@ -23,17 +23,41 @@ export function DashboardAdmin() {
         </Link>
 
         <Link to="/admin/carreras-drivers" className={cardBase}>
-          <h2 className="text-xl font-semibold text-gray-900">Carreras drivers</h2>
+          <h2 className="text-xl font-semibold text-gray-900">Carreras abejitas</h2>
           <p className="mt-2 text-gray-600 text-sm">
-            Pestaña por driver, filtros por rango de fechas y resumen de totales.
+            Pestaña por abejita (BeeZero), filtros por rango de fechas y resumen de totales.
+          </p>
+          <span className="mt-4 inline-flex text-beeadmin-purple font-medium text-sm">Abrir →</span>
+        </Link>
+
+        <Link to="/admin/carreras-bikers" className={cardBase}>
+          <h2 className="text-xl font-semibold text-gray-900">Carreras bikers</h2>
+          <p className="mt-2 text-gray-600 text-sm">
+            Pestaña por biker (EcoDelivery), filtros por rango de fechas y km totales.
           </p>
           <span className="mt-4 inline-flex text-beeadmin-purple font-medium text-sm">Abrir →</span>
         </Link>
 
         <Link to="/admin/turnos-beezero" className={cardBase}>
-          <h2 className="text-xl font-semibold text-gray-900">Turnos BeeZero</h2>
+          <h2 className="text-xl font-semibold text-gray-900">Turnos</h2>
           <p className="mt-2 text-gray-600 text-sm">
-            Historial de turnos de drivers (hoja beezero del libro de turnos).
+            Historial de turnos: abejitas (BeeZero) y bikers (EcoDelivery).
+          </p>
+          <span className="mt-4 inline-flex text-beeadmin-purple font-medium text-sm">Abrir →</span>
+        </Link>
+
+        <Link to="/admin/anuncios/crear" className={cardBase}>
+          <h2 className="text-xl font-semibold text-gray-900">Crear anuncio</h2>
+          <p className="mt-2 text-gray-600 text-sm">
+            Publica un mensaje para abejitas, bikers o todos. Lo verán al iniciar sesión.
+          </p>
+          <span className="mt-4 inline-flex text-beeadmin-purple font-medium text-sm">Crear →</span>
+        </Link>
+
+        <Link to="/admin/anuncios" className={cardBase}>
+          <h2 className="text-xl font-semibold text-gray-900">Anuncios</h2>
+          <p className="mt-2 text-gray-600 text-sm">
+            Ver anuncios activos, quién los leyó y eliminarlos si hace falta.
           </p>
           <span className="mt-4 inline-flex text-beeadmin-purple font-medium text-sm">Abrir →</span>
         </Link>

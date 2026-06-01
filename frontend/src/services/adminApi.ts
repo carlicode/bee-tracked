@@ -1,5 +1,10 @@
 import axios, { AxiosError } from 'axios';
 import { storage } from './storage';
+import type {
+  Announcement,
+  AnnouncementStats,
+  CreateAnnouncementInput,
+} from './andiApi';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -10,9 +15,11 @@ export function isAdminApiEnabled(): boolean {
 function authHeaders(): Record<string, string> {
   const token = storage.getToken();
   const sessionId = storage.getSessionId();
+  const username = storage.getUsername();
   const headers: Record<string, string> = {};
   if (token && token !== 'demo-token') headers.Authorization = `Bearer ${token}`;
   if (sessionId) headers['X-Session-Id'] = sessionId;
+  if (username) headers['X-User-Id'] = username;
   return headers;
 }
 
@@ -58,6 +65,8 @@ export interface LiveDashboardResponse {
     fecha: string;
   };
 }
+
+export type { Announcement, AnnouncementStats };
 
 export const adminApi = {
   async getDriverTabs(): Promise<AdminDriverTabsResponse> {
@@ -177,6 +186,94 @@ export const adminApi = {
         fecha: new Date().toISOString().slice(0, 10),
       },
     };
+  },
+
+  async getBikerTabs(): Promise<AdminDriverTabsResponse> {
+    if (!API_BASE) throw new Error('Backend no configurado (VITE_API_URL)');
+    const { data } = await axios.get<{
+      success: boolean;
+      tabs?: string[];
+      allTabs?: string[];
+      error?: string;
+    }>(`${API_BASE}/api/admin/carreras/bikers/tabs`, {
+      headers: authHeaders(),
+      timeout: 20000,
+    });
+    if (!data.success) throw new Error(data.error || 'Error al listar bikers');
+    return { tabs: data.tabs || [], allTabs: data.allTabs || [] };
+  },
+
+  async getEntregasByBiker(
+    tab: string,
+    from?: string,
+    to?: string,
+  ): Promise<{ headers: string[]; entregas: Record<string, string>[]; tab: string }> {
+    if (!API_BASE) throw new Error('Backend no configurado (VITE_API_URL)');
+    const q = new URLSearchParams();
+    if (from) q.set('from', from);
+    if (to) q.set('to', to);
+    const qs = q.toString();
+    const { data } = await axios.get<{
+      success: boolean;
+      tab?: string;
+      headers?: string[];
+      entregas?: Record<string, string>[];
+      error?: string;
+    }>(`${API_BASE}/api/admin/carreras/bikers/${encodeURIComponent(tab)}${qs ? `?${qs}` : ''}`, {
+      headers: authHeaders(),
+      timeout: 60000,
+    });
+    if (!data.success) throw new Error(data.error || 'Error al obtener entregas');
+    return { tab: data.tab || tab, headers: data.headers || [], entregas: data.entregas || [] };
+  },
+
+  async getAnnouncements(status?: 'active' | 'expired' | 'all'): Promise<Announcement[]> {
+    if (!API_BASE) throw new Error('Backend no configurado (VITE_API_URL)');
+    const { data } = await axios.get<{
+      success: boolean;
+      announcements?: Announcement[];
+      error?: string;
+    }>(`${API_BASE}/api/admin/anuncios`, {
+      headers: authHeaders(),
+      params: status ? { status } : undefined,
+      timeout: 20000,
+    });
+    if (!data.success)
+      throw new Error(data.error || 'Error al listar anuncios');
+    return data.announcements || [];
+  },
+
+  async deleteAnnouncement(id: string): Promise<void> {
+    if (!API_BASE) throw new Error('Backend no configurado (VITE_API_URL)');
+    const { data } = await axios.delete<{ success: boolean; error?: string }>(
+      `${API_BASE}/api/admin/anuncios/${id}`,
+      { headers: authHeaders(), timeout: 20000 }
+    );
+    if (!data.success)
+      throw new Error(data.error || 'Error al eliminar anuncio');
+  },
+
+  async getAnnouncementStats(id: string): Promise<AnnouncementStats> {
+    if (!API_BASE) throw new Error('Backend no configurado (VITE_API_URL)');
+    const { data } = await axios.get<{ success: boolean; stats: AnnouncementStats; error?: string }>(
+      `${API_BASE}/api/admin/anuncios/${id}/stats`,
+      { headers: authHeaders(), timeout: 20000 }
+    );
+    if (!data.success)
+      throw new Error(data.error || 'Error al obtener estadísticas');
+    return data.stats;
+  },
+
+  async createAnnouncement(input: CreateAnnouncementInput): Promise<Announcement> {
+    if (!API_BASE) throw new Error('Backend no configurado (VITE_API_URL)');
+    const { data } = await axios.post<{ success: boolean; announcement: Announcement; error?: string }>(
+      `${API_BASE}/api/admin/anuncios`,
+      input,
+      { headers: authHeaders(), timeout: 20000 }
+    );
+    if (!data.success)
+      throw new Error(data.error || 'Error al crear anuncio');
+    return data.announcement;
   },
 
   parseError(err: unknown): string {

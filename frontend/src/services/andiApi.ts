@@ -27,13 +27,19 @@ export interface CreateAnnouncementInput {
   priority: AnnouncementPriority;
 }
 
+export interface AnnouncementReader {
+  userId: string;
+  nombre: string;
+  readAt: number | null;
+}
+
 export interface AnnouncementStats {
   total: number;
   read: number;
   pending: number;
   percentage: number;
   pendingUsers: string[];
-  readUsers: string[];
+  readUsers: AnnouncementReader[];
 }
 
 export const announcementsApi = {

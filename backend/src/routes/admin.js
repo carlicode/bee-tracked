@@ -2,11 +2,23 @@ const express = require('express');
 const {
   getSheetsInSpreadsheet,
   getAllRowsWithHeadersFromSpreadsheet,
+  batchGetRowsWithHeadersFromSpreadsheet,
 } = require('../services/googleSheets');
+const { sessionAuth, requireAdmin } = require('../middleware/sessionAuth');
 
 const router = express.Router();
 
+router.use(sessionAuth, requireAdmin);
+
 function carrerasDriversSpreadsheetId() {
+  return process.env.CARRERAS_DRIVERS_SHEET_ID || '';
+}
+
+function carrerasBikersSpreadsheetId() {
+  return process.env.CARRERAS_BIKERS_SHEET_ID || '';
+}
+
+function carrerasDriversSpreadsheetIdOrFallback() {
   return (
     process.env.CARRERAS_DRIVERS_SHEET_ID ||
     process.env.CARRERAS_BIKERS_SHEET_ID ||
@@ -184,6 +196,58 @@ async function readTurnosSheet(sid, sheetCandidates) {
   throw lastErr || new Error('No se pudo leer la hoja de turnos');
 }
 
+function countRowsForToday(sheetsData) {
+  const today = todayYmd();
+  let count = 0;
+
+  for (const sheet of sheetsData) {
+    if (!sheet.headers.length) continue;
+    const fechaKey =
+      findHeaderKey(sheet.headers, 'Fecha') ||
+      sheet.headers.find((h) => String(h).trim().toLowerCase() === 'fecha') ||
+      'Fecha';
+    const fechaIndex = sheet.headers.indexOf(fechaKey);
+    if (fechaIndex === -1) continue;
+
+    for (const row of sheet.rows) {
+      const fechaVal = row[fechaIndex];
+      if (normalizeFecha(fechaVal) === today) count += 1;
+    }
+  }
+
+  return count;
+}
+
+async function countCarrerasHoyInSpreadsheet(spreadsheetId) {
+  if (!spreadsheetId) return 0;
+
+  const tabs = filterDriverTabs(await getSheetsInSpreadsheet(spreadsheetId));
+  if (!tabs.length) return 0;
+
+  const sheetsData = await batchGetRowsWithHeadersFromSpreadsheet(
+    spreadsheetId,
+    tabs,
+    'A:AD'
+  );
+  return countRowsForToday(sheetsData);
+}
+
+async function countCarrerasHoy() {
+  const bikersId = carrerasBikersSpreadsheetId();
+  const driversId = carrerasDriversSpreadsheetId();
+
+  if (bikersId && driversId && bikersId === driversId) {
+    return countCarrerasHoyInSpreadsheet(bikersId);
+  }
+
+  const [bikersCount, driversCount] = await Promise.all([
+    countCarrerasHoyInSpreadsheet(bikersId),
+    countCarrerasHoyInSpreadsheet(driversId),
+  ]);
+
+  return bikersCount + driversCount;
+}
+
 async function buildLiveDashboardPayload() {
   const sid = turnosSpreadsheetId();
   if (!sid) {
@@ -192,9 +256,10 @@ async function buildLiveDashboardPayload() {
     throw err;
   }
 
-  const [beezeroSheet, ecodeliverySheet] = await Promise.all([
+  const [beezeroSheet, ecodeliverySheet, carrerasHoy] = await Promise.all([
     readTurnosSheet(sid, ['BeeZero', 'beezero']),
     readTurnosSheet(sid, ['Ecodelivery']),
+    countCarrerasHoy(),
   ]);
 
   const beezeroActivos = beezeroSheet.rows
@@ -223,7 +288,7 @@ async function buildLiveDashboardPayload() {
     },
     resumen: {
       totalActivos,
-      carrerasHoy: 0,
+      carrerasHoy,
       timestamp: new Date().toISOString(),
       fecha: todayYmd(),
     },
@@ -232,11 +297,11 @@ async function buildLiveDashboardPayload() {
 
 /**
  * GET /api/admin/carreras/drivers
- * Lista nombres de pestañas (drivers) del spreadsheet de carreras.
+ * Lista nombres de pestañas (drivers) del spreadsheet de carreras BeeZero.
  */
 router.get('/carreras/drivers', async (req, res) => {
   try {
-    const sid = carrerasDriversSpreadsheetId();
+    const sid = carrerasDriversSpreadsheetIdOrFallback();
     if (!sid) {
       return res.status(500).json({
         success: false,
@@ -256,12 +321,86 @@ router.get('/carreras/drivers', async (req, res) => {
 });
 
 /**
+ * GET /api/admin/carreras/bikers/tabs
+ * Lista pestañas del spreadsheet de entregas EcoDelivery (CARRERAS_BIKERS_SHEET_ID).
+ */
+router.get('/carreras/bikers/tabs', async (req, res) => {
+  try {
+    const sid = carrerasBikersSpreadsheetId() || carrerasDriversSpreadsheetId();
+    if (!sid) {
+      return res.status(500).json({
+        success: false,
+        error: 'CARRERAS_BIKERS_SHEET_ID no configurado',
+      });
+    }
+    const all = await getSheetsInSpreadsheet(sid);
+    const bikers = filterDriverTabs(all);
+    res.json({ success: true, tabs: bikers, allTabs: all });
+  } catch (err) {
+    console.error('[admin] carreras/bikers/tabs', err);
+    res.status(500).json({
+      success: false,
+      error: err.message || 'Error al listar pestañas de bikers',
+    });
+  }
+});
+
+/**
+ * GET /api/admin/carreras/bikers/:tab
+ * Filas de entregas de un biker; query: from, to (YYYY-MM-DD)
+ */
+router.get('/carreras/bikers/:tab', async (req, res) => {
+  try {
+    const sid = carrerasBikersSpreadsheetId() || carrerasDriversSpreadsheetId();
+    if (!sid) {
+      return res.status(500).json({
+        success: false,
+        error: 'CARRERAS_BIKERS_SHEET_ID no configurado',
+      });
+    }
+    const rawTab = req.params.tab ? decodeURIComponent(req.params.tab) : '';
+    const tab = rawTab.trim();
+    if (!tab) {
+      return res.status(400).json({ success: false, error: 'Pestaña requerida' });
+    }
+    const { from, to } = req.query;
+
+    const { headers, rows } = await getAllRowsWithHeadersFromSpreadsheet(
+      sid,
+      tab,
+      'A:AD'
+    );
+
+    if (!headers.length) {
+      return res.json({ success: true, tab, entregas: [], headers: [] });
+    }
+
+    const fechaKey =
+      headers.find((h) => String(h).trim().toLowerCase() === 'fecha registro') ||
+      headers.find((h) => String(h).trim().toLowerCase() === 'fecha') ||
+      'Fecha Registro';
+
+    const objects = rows
+      .map((row) => rowToObject(headers, row))
+      .filter((obj) => inDateRange(obj[fechaKey] || obj['Fecha Registro'] || obj['Fecha'] || '', from, to));
+
+    res.json({ success: true, tab, headers, entregas: objects });
+  } catch (err) {
+    console.error('[admin] carreras/bikers/:tab', err);
+    res.status(500).json({
+      success: false,
+      error: err.message || 'Error al leer entregas de biker',
+    });
+  }
+});
+
+/**
  * GET /api/admin/carreras/:tab
  * Filas de carreras de una pestaña; query: from, to (YYYY-MM-DD) sobre columna Fecha
  */
 router.get('/carreras/:tab', async (req, res) => {
   try {
-    const sid = carrerasDriversSpreadsheetId();
+    const sid = carrerasDriversSpreadsheetIdOrFallback();
     if (!sid) {
       return res.status(500).json({
         success: false,
