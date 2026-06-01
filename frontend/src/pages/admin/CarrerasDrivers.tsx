@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import * as XLSX from 'xlsx';
 import { Link } from 'react-router-dom';
 import { adminApi, isAdminApiEnabled } from '../../services/adminApi';
+import { usePagination } from '../../hooks/usePagination';
+import { Pagination } from '../../components/Pagination';
 import {
   CARRERA_ADMIN_COLUMNS,
   buildCarreraHeaderMap,
@@ -116,6 +118,8 @@ export function CarrerasDrivers() {
       return val.toLowerCase().includes(q);
     });
   }, [carreras, clienteFilter, headerMap]);
+
+  const pagination = usePagination(filteredCarreras, 50);
 
   const stats = useMemo(() => {
     let totalBs = 0;
@@ -272,7 +276,7 @@ export function CarrerasDrivers() {
                   </td>
                 </tr>
               ) : (
-                filteredCarreras.map((row, i) => (
+                pagination.pageItems.map((row, i) => (
                   <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-violet-50/40'}>
                     {CARRERA_ADMIN_COLUMNS.map((col) => {
                       const raw = pickMapped(row, headerMap, col);
@@ -293,6 +297,15 @@ export function CarrerasDrivers() {
             </tbody>
           </table>
         </div>
+        <Pagination
+          page={pagination.page}
+          totalPages={pagination.totalPages}
+          totalItems={pagination.totalItems}
+          pageSize={pagination.pageSize}
+          onGoTo={pagination.goTo}
+          onPrev={pagination.prev}
+          onNext={pagination.next}
+        />
       </div>
     </div>
   );

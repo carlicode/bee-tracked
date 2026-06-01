@@ -1,6 +1,8 @@
 import { useMemo, useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { adminApi, isAdminApiEnabled } from '../../services/adminApi';
+import { usePagination } from '../../hooks/usePagination';
+import { Pagination } from '../../components/Pagination';
 
 /** YYYY-MM-DD → DD-MM-YYYY */
 function formatDate(s: string): string {
@@ -38,6 +40,24 @@ const BIKER_COLS: { label: string; aliases: string[]; isDate?: boolean }[] = [
 
 function normHeader(s: string): string {
   return s.trim().toLowerCase().replace(/\s+/g, ' ').normalize('NFD').replace(/\p{Diacritic}/gu, '');
+}
+
+function normStr(s: string): string {
+  return normHeader(String(s || ''));
+}
+
+/** Normaliza fechas de sheet a YYYY-MM-DD para comparar con inputs date */
+function normalizeFecha(val: string): string {
+  const s = String(val || '').trim();
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+  const dmy = s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
+  if (dmy) {
+    const dd = dmy[1].padStart(2, '0');
+    const mm = dmy[2].padStart(2, '0');
+    return `${dmy[3]}-${mm}-${dd}`;
+  }
+  return s;
 }
 
 function resolveKeys(
@@ -81,9 +101,61 @@ export function TurnosBeezero() {
   const [sheetHeaders, setSheetHeaders] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [filterNombre, setFilterNombre] = useState('');
+  const [filterDesde, setFilterDesde] = useState('');
+  const [filterHasta, setFilterHasta] = useState('');
+  const [filterKeyword, setFilterKeyword] = useState('');
 
   const colDefs = tipo === 'beezero' ? DRIVER_COLS : BIKER_COLS;
   const keyMap = useMemo(() => resolveKeys(sheetHeaders, colDefs), [sheetHeaders, colDefs]);
+  const nombreLabel = tipo === 'beezero' ? 'Abejita' : 'Biker';
+
+  const clearFilters = () => {
+    setFilterNombre('');
+    setFilterDesde('');
+    setFilterHasta('');
+    setFilterKeyword('');
+  };
+
+  const handleTipoChange = (next: TipoTurnos) => {
+    clearFilters();
+    setTipo(next);
+  };
+
+  const filteredTurnos = useMemo(() => {
+    let rows = turnos;
+
+    if (filterNombre.trim()) {
+      const q = normStr(filterNombre);
+      rows = rows.filter((r) => normStr(pick(r, keyMap, nombreLabel)).includes(q));
+    }
+
+    if (filterDesde || filterHasta) {
+      rows = rows.filter((r) => {
+        const f = normalizeFecha(pick(r, keyMap, 'Fecha Inicio'));
+        if (filterDesde && f < filterDesde) return false;
+        if (filterHasta && f > filterHasta) return false;
+        return true;
+      });
+    }
+
+    if (filterKeyword.trim()) {
+      const q = normStr(filterKeyword);
+      rows = rows.filter((r) =>
+        colDefs.some(({ label }) => normStr(pick(r, keyMap, label)).includes(q)),
+      );
+    }
+
+    return rows;
+  }, [turnos, filterNombre, filterDesde, filterHasta, filterKeyword, keyMap, colDefs, nombreLabel]);
+
+  const hasActiveFilters =
+    Boolean(filterNombre.trim()) ||
+    Boolean(filterDesde) ||
+    Boolean(filterHasta) ||
+    Boolean(filterKeyword.trim());
+
+  const pagination = usePagination(filteredTurnos, 50);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -140,7 +212,7 @@ export function TurnosBeezero() {
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => setTipo('beezero')}
+            onClick={() => handleTipoChange('beezero')}
             className={`px-4 py-2 rounded-lg text-sm font-medium border-2 transition ${
               tipo === 'beezero'
                 ? 'bg-beeadmin-purple text-white border-beeadmin-purple'
@@ -151,7 +223,7 @@ export function TurnosBeezero() {
           </button>
           <button
             type="button"
-            onClick={() => setTipo('ecodelivery')}
+            onClick={() => handleTipoChange('ecodelivery')}
             className={`px-4 py-2 rounded-lg text-sm font-medium border-2 transition ${
               tipo === 'ecodelivery'
                 ? 'bg-beeadmin-purple text-white border-beeadmin-purple'
@@ -162,11 +234,72 @@ export function TurnosBeezero() {
           </button>
         </div>
 
+        <div className="flex flex-wrap gap-4 items-end pt-2 border-t border-violet-100">
+          <div className="min-w-[180px]">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {nombreLabel}
+            </label>
+            <input
+              type="text"
+              value={filterNombre}
+              onChange={(e) => setFilterNombre(e.target.value)}
+              placeholder={`Filtrar por ${nombreLabel.toLowerCase()}…`}
+              className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-beeadmin-purple focus:border-beeadmin-purple"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Desde</label>
+            <input
+              type="date"
+              value={filterDesde}
+              onChange={(e) => setFilterDesde(e.target.value)}
+              className="border-2 border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-beeadmin-purple"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
+            <input
+              type="date"
+              value={filterHasta}
+              onChange={(e) => setFilterHasta(e.target.value)}
+              className="border-2 border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-beeadmin-purple"
+            />
+          </div>
+          <div className="min-w-[220px] flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Palabra clave</label>
+            <input
+              type="text"
+              value={filterKeyword}
+              onChange={(e) => setFilterKeyword(e.target.value)}
+              placeholder="Buscar en cualquier columna…"
+              className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-beeadmin-purple focus:border-beeadmin-purple"
+            />
+          </div>
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50"
+            >
+              Limpiar
+            </button>
+          )}
+        </div>
+
         <p className="text-gray-500 text-sm">
           {tipo === 'beezero' ? (
-            <>Hoja <code className="bg-violet-50 px-1 rounded">beezero</code> — {turnos.length} registros</>
+            <>Hoja <code className="bg-violet-50 px-1 rounded">beezero</code></>
           ) : (
-            <>Hoja <code className="bg-violet-50 px-1 rounded">Ecodelivery</code> — {turnos.length} registros</>
+            <>Hoja <code className="bg-violet-50 px-1 rounded">Ecodelivery</code></>
+          )}
+          {' — '}
+          {hasActiveFilters ? (
+            <>
+              Mostrando <strong className="text-gray-700">{filteredTurnos.length}</strong> de{' '}
+              {turnos.length} turnos
+            </>
+          ) : (
+            <>{turnos.length} registros</>
           )}
         </p>
 
@@ -192,17 +325,19 @@ export function TurnosBeezero() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {turnos.length === 0 && !loading ? (
+              {filteredTurnos.length === 0 && !loading ? (
                 <tr>
                   <td
                     colSpan={colDefs.length}
                     className="px-4 py-8 text-center text-gray-500"
                   >
-                    Sin turnos o no se pudieron leer las columnas.
+                    {turnos.length === 0
+                      ? 'Sin turnos o no se pudieron leer las columnas.'
+                      : 'Ningún turno coincide con los filtros.'}
                   </td>
                 </tr>
               ) : (
-                turnos.map((row, i) => {
+                pagination.pageItems.map((row, i) => {
                   const estado = pick(row, keyMap, 'Estado');
                   return (
                     <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-violet-50/40'}>
@@ -234,6 +369,15 @@ export function TurnosBeezero() {
             </tbody>
           </table>
         </div>
+        <Pagination
+          page={pagination.page}
+          totalPages={pagination.totalPages}
+          totalItems={pagination.totalItems}
+          pageSize={pagination.pageSize}
+          onGoTo={pagination.goTo}
+          onPrev={pagination.prev}
+          onNext={pagination.next}
+        />
       </div>
     </div>
   );
