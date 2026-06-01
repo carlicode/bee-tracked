@@ -58,14 +58,24 @@ function parseCreatedAt(value, fallbackDate) {
 async function batchWrite(tableName, items) {
   if (!items.length) return;
 
-  for (let i = 0; i < items.length; i += BATCH_SIZE) {
-    const chunk = items.slice(i, i + BATCH_SIZE);
+  // Deduplicar por PK+SK (última ocurrencia gana, como un upsert)
+  const seen = new Map();
+  for (const item of items) {
+    const { PK, SK } = item;
+    const pk = PK ? (PK.S || '') : '';
+    const sk = SK ? (SK.S || '') : '';
+    seen.set(`${pk}#${sk}`, item);
+  }
+  const deduped = Array.from(seen.values());
+
+  for (let i = 0; i < deduped.length; i += BATCH_SIZE) {
+    const chunk = deduped.slice(i, i + BATCH_SIZE);
     const requestItems = {
       [tableName]: chunk.map((Item) => ({ PutRequest: { Item } })),
     };
 
     await dynamo.send(new BatchWriteItemCommand({ RequestItems: requestItems }));
-    console.log(`  ✓ ${Math.min(i + BATCH_SIZE, items.length)}/${items.length} en ${tableName}`);
+    console.log(`  ✓ ${Math.min(i + BATCH_SIZE, deduped.length)}/${deduped.length} en ${tableName}`);
   }
 }
 
@@ -208,7 +218,10 @@ async function migrateTurnosEcodelivery() {
     .map((row) => rowToObject(headers, row))
     .filter((obj) => {
       const id = obj.ID || obj.Id || obj[headers[0]];
-      return id !== undefined && String(id).trim() !== '';
+      if (id === undefined || String(id).trim() === '') return false;
+      // GSI estado-fecha-index requiere fecha no vacía
+      const fecha = obj['Fecha Inicio'] || obj.fechaInicio || obj[headers[2]] || '';
+      return fecha.trim() !== '';
     })
     .map((obj) => ecodeliveryTurnoItem(obj, headers));
 
