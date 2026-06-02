@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { ecodeliveryApi, isEcodeliveryApiEnabled } from '../../services/ecodeliveryApi';
 import { useAuth } from '../../services/auth';
 import { LinkableText } from '../../components/LinkableText';
+import { Pagination } from '../../components/Pagination';
+import { usePagination } from '../../hooks/usePagination';
 import type { KilometrajeRegistro } from '../../types';
 
 export const MisKilometrajes = () => {
@@ -36,6 +38,8 @@ export const MisKilometrajes = () => {
     };
     loadRegistros();
   }, [bikerName]);
+
+  const pagination = usePagination(registros, 20);
 
   const getRegistroLabel = (r: KilometrajeRegistro) => {
     const cliente = (r['Cliente'] ?? r['cliente'] ?? '').toString();
@@ -121,7 +125,7 @@ export const MisKilometrajes = () => {
 
       {!error && registros.length > 0 && (
         <div className="space-y-4">
-          {registros.map((reg, index) => (
+          {pagination.pageItems.map((reg, index) => (
             <div
               key={reg.id + index}
               className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition border-l-4 border-ecodelivery-green"
@@ -151,6 +155,15 @@ export const MisKilometrajes = () => {
               </div>
             </div>
           ))}
+          <Pagination
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            totalItems={pagination.totalItems}
+            pageSize={pagination.pageSize}
+            onGoTo={pagination.goTo}
+            onPrev={pagination.prev}
+            onNext={pagination.next}
+          />
         </div>
       )}
     </div>

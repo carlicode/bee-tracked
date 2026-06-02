@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { Turno } from '../../types/turno';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
+import { Pagination } from '../../components/Pagination';
+import { usePagination } from '../../hooks/usePagination';
 import { formatters } from '../../utils/formatters';
 
 export const MisTurnos = () => {
@@ -51,6 +53,8 @@ export const MisTurnos = () => {
     return cierre - apertura - qr;
   };
 
+  const cerrados = turnos.filter((t) => t.turnoCerrado);
+  const pagination = usePagination(cerrados, 20);
 
   if (loading) {
     return <LoadingSpinner />;
@@ -136,7 +140,7 @@ export const MisTurnos = () => {
       <div className="space-y-4">
         <h3 className="text-xl font-bold text-black mb-4">Historial de Turnos</h3>
         
-        {turnos.filter(t => t.turnoCerrado).length === 0 ? (
+        {cerrados.length === 0 ? (
           <div className="bg-white rounded-lg shadow-md p-8 text-center border-2 border-gray-200">
             <p className="text-gray-700 mb-4">No hay turnos cerrados aún</p>
             {!turnoActual && (
@@ -149,9 +153,8 @@ export const MisTurnos = () => {
             )}
           </div>
         ) : (
-          turnos
-            .filter(t => t.turnoCerrado)
-            .map((turno, index) => {
+          <>
+            {pagination.pageItems.map((turno, index) => {
               const diferencia = calcularDiferenciaCaja(turno);
               return (
                 <div
@@ -205,7 +208,17 @@ export const MisTurnos = () => {
                   </div>
                 </div>
               );
-            })
+            })}
+            <Pagination
+              page={pagination.page}
+              totalPages={pagination.totalPages}
+              totalItems={pagination.totalItems}
+              pageSize={pagination.pageSize}
+              onGoTo={pagination.goTo}
+              onPrev={pagination.prev}
+              onNext={pagination.next}
+            />
+          </>
         )}
       </div>
     </div>

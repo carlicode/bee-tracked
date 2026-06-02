@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth';
 import { CarreraCard } from '../../components/CarreraCard';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
+import { Pagination } from '../../components/Pagination';
+import { usePagination } from '../../hooks/usePagination';
 import { apiService } from '../../services/api';
 import { beezeroApi, isBeezeroApiEnabled } from '../../services/beezeroApi';
 import { formatters } from '../../utils/formatters';
@@ -47,6 +49,7 @@ export const MisCarreras = () => {
 
   const totalPrecio = carreras.reduce((sum, c) => sum + c.precio, 0);
   const totalCarreras = carreras.length;
+  const pagination = usePagination(carreras, 20);
 
   return (
     <div>
@@ -112,9 +115,18 @@ export const MisCarreras = () => {
         </div>
       ) : (
         <div>
-          {carreras.map((carrera, index) => (
+          {pagination.pageItems.map((carrera, index) => (
             <CarreraCard key={index} carrera={carrera} />
           ))}
+          <Pagination
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            totalItems={pagination.totalItems}
+            pageSize={pagination.pageSize}
+            onGoTo={pagination.goTo}
+            onPrev={pagination.prev}
+            onNext={pagination.next}
+          />
         </div>
       )}
     </div>

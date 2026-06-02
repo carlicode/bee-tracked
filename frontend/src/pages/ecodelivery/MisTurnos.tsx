@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Pagination } from '../../components/Pagination';
+import { usePagination } from '../../hooks/usePagination';
 import { storage } from '../../services/storage';
 import type { TurnoSimple } from '../../types/turno';
 
@@ -28,6 +30,8 @@ export const MisTurnos = () => {
 
     loadTurnos();
   }, []);
+
+  const pagination = usePagination(turnos, 20);
 
   if (loading) {
     return (
@@ -86,7 +90,7 @@ export const MisTurnos = () => {
       ) : (
         <div className="space-y-4">
           <h3 className="text-lg font-bold text-black">Historial</h3>
-          {turnos.map((turno, index) => (
+          {pagination.pageItems.map((turno, index) => (
             <div
               key={index}
               className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition border-l-4 border-gray-300"
@@ -120,6 +124,15 @@ export const MisTurnos = () => {
               </div>
             </div>
           ))}
+          <Pagination
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            totalItems={pagination.totalItems}
+            pageSize={pagination.pageSize}
+            onGoTo={pagination.goTo}
+            onPrev={pagination.prev}
+            onNext={pagination.next}
+          />
         </div>
       )}
     </div>
