@@ -448,6 +448,64 @@ async function batchGetRowsWithHeadersFromSpreadsheet(
   return results;
 }
 
+function normHeaderForTab(s) {
+  return String(s || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '');
+}
+
+/** Clasifica pestaña por fila 1: carreras driver (BeeZero) vs entregas biker (EcoDelivery). */
+function classifyCarreraTabHeaders(headers) {
+  const norms = (headers || []).map((h) => normHeaderForTab(h));
+  if (norms.some((h) => h === 'biker' || h === 'deliveryid')) return 'biker';
+  if (norms.some((h) => h === 'abejita' || h === 'carreraid')) return 'driver';
+  return 'unknown';
+}
+
+function filterNonPersonTabs(names) {
+  return (names || []).filter((n) => {
+    if (!n || typeof n !== 'string') return false;
+    const lower = n.toLowerCase();
+    if (lower === 'registros') return false;
+    if (lower.includes('backup')) return false;
+    return true;
+  });
+}
+
+/**
+ * Lista pestañas de un spreadsheet según encabezados de fila 1 (evita mezclar drivers y bikers).
+ * @param {'driver'|'biker'} kind
+ */
+async function listCarreraTabsByKind(spreadsheetId, kind) {
+  const all = await getSheetsInSpreadsheet(spreadsheetId);
+  const candidates = filterNonPersonTabs(all);
+  if (!candidates.length) return [];
+
+  const sheets = await getSheetsClient();
+  const matched = [];
+
+  for (let i = 0; i < candidates.length; i += 15) {
+    const chunk = candidates.slice(i, i + 15);
+    const ranges = chunk.map((name) => `${quoteSheetName(name)}!1:1`);
+    const res = await sheets.spreadsheets.values.batchGet({
+      spreadsheetId,
+      ranges,
+    });
+    const valueRanges = res.data.valueRanges || [];
+    for (let j = 0; j < chunk.length; j++) {
+      const headers = valueRanges[j]?.values?.[0] || [];
+      if (classifyCarreraTabHeaders(headers) === kind) {
+        matched.push(chunk[j]);
+      }
+    }
+  }
+
+  return matched.sort((a, b) => a.localeCompare(b, 'es'));
+}
+
 module.exports = {
   initializeSheetsClient,
   appendRow,
@@ -464,4 +522,6 @@ module.exports = {
   getAllRowsFromSpreadsheet,
   getAllRowsWithHeadersFromSpreadsheet,
   batchGetRowsWithHeadersFromSpreadsheet,
+  classifyCarreraTabHeaders,
+  listCarreraTabsByKind,
 };

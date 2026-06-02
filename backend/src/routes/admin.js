@@ -3,6 +3,8 @@ const {
   getSheetsInSpreadsheet,
   getAllRowsWithHeadersFromSpreadsheet,
   batchGetRowsWithHeadersFromSpreadsheet,
+  classifyCarreraTabHeaders,
+  listCarreraTabsByKind,
 } = require('../services/googleSheets');
 const { sessionAuth, requireAdmin } = require('../middleware/sessionAuth');
 const { isDynamoReadEnabled, slugUserId } = require('../services/dynamoUtils');
@@ -341,7 +343,7 @@ router.get('/carreras/drivers', async (req, res) => {
       });
     }
     const all = await getSheetsInSpreadsheet(sid);
-    const drivers = filterDriverTabs(all);
+    const drivers = await listCarreraTabsByKind(sid, 'driver');
     res.json({ success: true, tabs: drivers, allTabs: all });
   } catch (err) {
     console.error('[admin] carreras/drivers', err);
@@ -358,7 +360,12 @@ router.get('/carreras/drivers', async (req, res) => {
  */
 router.get('/carreras/bikers/tabs', async (req, res) => {
   try {
-    const sid = carrerasBikersSpreadsheetId() || carrerasDriversSpreadsheetId();
+    if (isDynamoReadEnabled()) {
+      const tabs = await carrerasService.listTabs('biker');
+      return res.json({ success: true, tabs, allTabs: tabs });
+    }
+
+    const sid = carrerasBikersSpreadsheetId();
     if (!sid) {
       return res.status(500).json({
         success: false,
@@ -366,7 +373,7 @@ router.get('/carreras/bikers/tabs', async (req, res) => {
       });
     }
     const all = await getSheetsInSpreadsheet(sid);
-    const bikers = filterDriverTabs(all);
+    const bikers = await listCarreraTabsByKind(sid, 'biker');
     res.json({ success: true, tabs: bikers, allTabs: all });
   } catch (err) {
     console.error('[admin] carreras/bikers/tabs', err);
@@ -395,7 +402,7 @@ router.get('/carreras/bikers/:tab', async (req, res) => {
       return res.json({ success: true, tab, headers, entregas: rows });
     }
 
-    const sid = carrerasBikersSpreadsheetId() || carrerasDriversSpreadsheetId();
+    const sid = carrerasBikersSpreadsheetId();
     if (!sid) {
       return res.status(500).json({
         success: false,
@@ -410,6 +417,15 @@ router.get('/carreras/bikers/:tab', async (req, res) => {
 
     if (!headers.length) {
       return res.json({ success: true, tab, entregas: [], headers: [] });
+    }
+
+    if (classifyCarreraTabHeaders(headers) === 'driver') {
+      return res.status(400).json({
+        success: false,
+        error:
+          'Esta pestaña es de driver (BeeZero). Usa Carreras drivers, no Carreras bikers.',
+        code: 'WRONG_SHEET_KIND',
+      });
     }
 
     const fechaKey =
