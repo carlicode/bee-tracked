@@ -99,12 +99,13 @@ export const storage = {
     localStorage.removeItem(key);
   },
 
+  /** Incrementar TUTORIAL_VERSION tras demo/cambio de flujo para que todos vean el tutorial de nuevo */
   getTutorialCompleted: (userId: string): boolean => {
-    return localStorage.getItem(`tutorial_done_${userId}`) === '1';
+    return localStorage.getItem(`tutorial_done_v2_${userId}`) === '1';
   },
 
   setTutorialCompleted: (userId: string): void => {
-    localStorage.setItem(`tutorial_done_${userId}`, '1');
+    localStorage.setItem(`tutorial_done_v2_${userId}`, '1');
   },
 };
 
