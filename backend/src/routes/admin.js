@@ -87,6 +87,17 @@ function todayYmd() {
   return new Date().toLocaleDateString('en-CA', { timeZone: TZ_LA_PAZ });
 }
 
+/** Hoy en La Paz, o mañana (turnos legacy guardados con fecha UTC). */
+function isFechaTurnoActivoHoy(fechaNorm) {
+  const hoy = todayYmd();
+  if (fechaNorm === hoy) return true;
+  const [y, m, d] = hoy.split('-').map(Number);
+  const manana = new Date(Date.UTC(y, m - 1, d + 1))
+    .toISOString()
+    .slice(0, 10);
+  return fechaNorm === manana;
+}
+
 function normHeader(s) {
   return String(s || '')
     .trim()
@@ -168,7 +179,7 @@ function mapActiveTurno(obj, headers, tipo) {
 
   const fecha = normalizeFecha(obj[fechaKey] || '');
   const estado = normalizeEstado(obj[estadoKey] || '');
-  if (fecha !== todayYmd() || estado !== 'INICIADO') return null;
+  if (!isFechaTurnoActivoHoy(fecha) || estado !== 'INICIADO') return null;
 
   const nombre = String(obj[nombreKey] || '').trim();
   const horaInicio = String(obj[horaKey] || '').trim();

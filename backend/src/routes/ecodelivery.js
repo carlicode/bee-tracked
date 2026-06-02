@@ -14,6 +14,7 @@ const {
   getAllRowsFromSpreadsheet,
 } = require('../services/googleSheets');
 const { saveTurnoToDynamo, saveCarreraToDynamo } = require('../services/dualWrite');
+const { todayYmdLaPaz } = require('../utils/dateLaPaz');
 
 const SHEET_ECODELIVERY = 'Ecodelivery';
 const CARRERAS_BIKERS_HEADERS = [
@@ -157,11 +158,12 @@ router.post('/turnos/iniciar', async (req, res) => {
 
     const turnoIdNum = await getNextTurnoId();
     const now = new Date().toISOString();
+    const fechaInicioBolivia = todayYmdLaPaz();
 
     const row = [
       turnoIdNum,
       String(usuario).trim(),
-      String(fechaInicio),
+      fechaInicioBolivia,
       String(horaInicio),
       latInicio != null ? Number(latInicio) : '',
       lngInicio != null ? Number(lngInicio) : '',
@@ -179,7 +181,7 @@ router.post('/turnos/iniciar', async (req, res) => {
       turnoId: String(turnoIdNum),
       nombre: String(usuario).trim(),
       tipo: 'ecodelivery',
-      fecha: String(fechaInicio),
+      fecha: fechaInicioBolivia,
       horaInicio: String(horaInicio),
       latInicio: latInicio != null ? Number(latInicio) : '',
       lngInicio: lngInicio != null ? Number(lngInicio) : '',
@@ -235,6 +237,7 @@ router.post('/turnos/cerrar', async (req, res) => {
     }
 
     const updatedAt = new Date().toISOString();
+    const fechaCierreBolivia = todayYmdLaPaz();
     // TurnoId se guarda como número en la hoja; mantener igual al actualizar
     // Soportar tanto 'TurnoId' como 'turnoId' (case-insensitive)
     const turnoIdValue = existing['TurnoId'] || existing['turnoId'] || turnoId;
@@ -248,7 +251,7 @@ router.post('/turnos/cerrar', async (req, res) => {
       existing['Lng Inicio'],
       existing['Timestamp Inicio'],
       existing['Foto Inicio'],
-      String(fechaCierre),
+      fechaCierreBolivia,
       String(horaCierre),
       latCierre != null ? Number(latCierre) : '',
       lngCierre != null ? Number(lngCierre) : '',
@@ -266,7 +269,7 @@ router.post('/turnos/cerrar', async (req, res) => {
       nombre: existing['Usuario'],
       tipo: 'ecodelivery',
       fecha: existing['Fecha Inicio'],
-      fechaCierre: String(fechaCierre),
+      fechaCierre: fechaCierreBolivia,
       horaInicio: existing['Hora Inicio'],
       horaCierre: String(horaCierre),
       latInicio: existing['Lat Inicio'],

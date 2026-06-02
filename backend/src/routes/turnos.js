@@ -4,6 +4,7 @@ const { appendRow, updateRowById, getRowById, getAllRows } = require('../service
 const { uploadBeezeroPhoto, uploadBeezeroGastoPhoto } = require('../services/s3Upload');
 const { resolvePhotoField } = require('../services/photoUrl');
 const { saveTurnoToDynamo } = require('../services/dualWrite');
+const { todayYmdLaPaz } = require('../utils/dateLaPaz');
 const { optionalAuth } = require('../middleware/auth');
 const { touchSession, isSessionValid } = require('../services/sessionManager');
 
@@ -116,7 +117,7 @@ router.post('/iniciar', optionalAuth, validateSession, async (req, res) => {
     const rows = await getAllRows('BeeZero');
     const id = rows.length; // 0 datos => 1, 1 dato => 2, ...
     const now = new Date().toISOString();
-    const fecha = now.split('T')[0];
+    const fecha = todayYmdLaPaz();
 
     const urlFotoTableroInicio = await resolvePhotoField(fotoPantalla, (dataUrl) =>
       uploadBeezeroPhoto({ dataUrl, turnoId: id, tipo: 'tablero', momento: 'inicio' })
@@ -245,7 +246,7 @@ router.post('/:id/cerrar', optionalAuth, validateSession, async (req, res) => {
     }
 
     const now = new Date().toISOString();
-    const fechaCierre = now.split('T')[0];
+    const fechaCierre = todayYmdLaPaz();
 
     const gastosNormalizados = normalizeGastos(gastos);
     const totalGastos = gastosNormalizados.reduce((acc, gasto) => acc + gasto.monto, 0);
