@@ -4,7 +4,7 @@ const { appendRow, updateRowById, getRowById, getAllRows } = require('../service
 const { uploadBeezeroPhoto, uploadBeezeroGastoPhoto } = require('../services/s3Upload');
 const { resolvePhotoField } = require('../services/photoUrl');
 const { saveTurnoToDynamo } = require('../services/dualWrite');
-const { todayYmdLaPaz } = require('../utils/dateLaPaz');
+const { todayYmdLaPaz, normalizeFechaYmd, isFechaTurnoHoyLaPaz } = require('../utils/dateLaPaz');
 const { optionalAuth } = require('../middleware/auth');
 const { touchSession, isSessionValid } = require('../services/sessionManager');
 
@@ -92,6 +92,35 @@ async function validateSession(req, res, next) {
  * X: Ubic Inicio Lat | Y: Ubic Inicio Lng | Z: Ubic Cierre Lat | AA: Ubic Cierre Lng
  * AB: Observaciones | AC: Timestamp Actualización | AD: Estado
  */
+function findTurnoIniciadoAbierto(rows, abejita) {
+  if (!rows?.length) return null;
+  const headers = rows[0];
+  const dataRows = rows.slice(1);
+  const abejitaNorm = String(abejita || '').trim().toLowerCase();
+  let best = null;
+
+  for (const row of dataRows) {
+    const obj = {};
+    headers.forEach((header, index) => {
+      obj[header] = row[index] != null ? String(row[index]) : '';
+    });
+    const estado = String(obj.Estado || '')
+      .trim()
+      .toUpperCase();
+    if (estado !== 'INICIADO') continue;
+    const nombre = String(obj.Abejita || '').trim().toLowerCase();
+    if (nombre !== abejitaNorm) continue;
+    const fecha = normalizeFechaYmd(obj['Fecha Inicio'] || '');
+    if (!isFechaTurnoHoyLaPaz(fecha)) continue;
+    const id = obj.ID ?? obj.Id ?? '';
+    const idNum = Number(id);
+    if (!best || idNum > Number(best.id)) {
+      best = { id: String(id), row: obj };
+    }
+  }
+  return best;
+}
+
 router.post('/iniciar', optionalAuth, validateSession, async (req, res) => {
   try {
     const {
@@ -115,6 +144,16 @@ router.post('/iniciar', optionalAuth, validateSession, async (req, res) => {
     }
 
     const rows = await getAllRows('BeeZero');
+    const turnoAbierto = findTurnoIniciadoAbierto(rows, abejita);
+    if (turnoAbierto) {
+      return res.status(400).json({
+        success: false,
+        error: `Ya tienes un turno activo (ID ${turnoAbierto.id}). Ciérralo antes de iniciar otro.`,
+        code: 'TURNO_ACTIVO_EXISTS',
+        turnoId: turnoAbierto.id,
+      });
+    }
+
     const id = rows.length; // 0 datos => 1, 1 dato => 2, ...
     const now = new Date().toISOString();
     const fecha = todayYmdLaPaz();

@@ -169,7 +169,7 @@ export function DashboardLive() {
           </Link>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Dashboard en tiempo real</h1>
           <p className="mt-1 text-gray-600 text-sm">
-            Turnos activos hoy · actualización automática cada 30s
+            Turnos activos hoy (hora Bolivia, GMT-4) · actualización automática cada 30s
             {resumen?.timestamp && (
               <span className="text-gray-400"> · {formatRelativeTime(resumen.timestamp)}</span>
             )}

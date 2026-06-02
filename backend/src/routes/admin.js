@@ -6,6 +6,12 @@ const {
 } = require('../services/googleSheets');
 const { sessionAuth, requireAdmin } = require('../middleware/sessionAuth');
 const { isDynamoReadEnabled, slugUserId } = require('../services/dynamoUtils');
+const {
+  todayYmdLaPaz,
+  normalizeFechaYmd,
+  isFechaTurnoHoyLaPaz,
+  calcularTiempoTranscurrido,
+} = require('../utils/dateLaPaz');
 const turnosService = require('../services/turnosService');
 const carrerasService = require('../services/carrerasService');
 const permisosService = require('../services/permisosService');
@@ -81,21 +87,8 @@ function filterDriverTabs(names) {
 const LIVE_CACHE_TTL_MS = 25 * 1000;
 let liveDashboardCache = { data: null, expiresAt: 0 };
 
-const TZ_LA_PAZ = 'America/La_Paz';
-
 function todayYmd() {
-  return new Date().toLocaleDateString('en-CA', { timeZone: TZ_LA_PAZ });
-}
-
-/** Hoy en La Paz, o mañana (turnos legacy guardados con fecha UTC). */
-function isFechaTurnoActivoHoy(fechaNorm) {
-  const hoy = todayYmd();
-  if (fechaNorm === hoy) return true;
-  const [y, m, d] = hoy.split('-').map(Number);
-  const manana = new Date(Date.UTC(y, m - 1, d + 1))
-    .toISOString()
-    .slice(0, 10);
-  return fechaNorm === manana;
+  return todayYmdLaPaz();
 }
 
 function normHeader(s) {
@@ -130,40 +123,7 @@ function normalizeEstado(val) {
 }
 
 function normalizeFecha(val) {
-  const s = String(val || '').trim();
-  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
-  const dmy = s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
-  if (dmy) {
-    const dd = dmy[1].padStart(2, '0');
-    const mm = dmy[2].padStart(2, '0');
-    return `${dmy[3]}-${mm}-${dd}`;
-  }
-  return s;
-}
-
-function parseHoraParts(hora) {
-  const m = String(hora || '').trim().match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?/);
-  if (!m) return null;
-  return { h: Number(m[1]), m: Number(m[2]), s: Number(m[3] || 0) };
-}
-
-/** horaInicio + fechaInicio → "2h 30m" o "45m" */
-function calcularTiempo(horaInicio, fechaInicio) {
-  const parts = parseHoraParts(horaInicio);
-  if (!parts) return '—';
-  const fecha = normalizeFecha(fechaInicio || todayYmd());
-  const [y, mo, d] = fecha.split('-').map(Number);
-  if (!y || !mo || !d) return '—';
-  const start = new Date(y, mo - 1, d, parts.h, parts.m, parts.s);
-  if (Number.isNaN(start.getTime())) return '—';
-  const diffMs = Date.now() - start.getTime();
-  if (diffMs < 0) return '0m';
-  const totalMin = Math.floor(diffMs / 60000);
-  const hours = Math.floor(totalMin / 60);
-  const mins = totalMin % 60;
-  if (hours > 0) return `${hours}h ${mins}m`;
-  return `${mins}m`;
+  return normalizeFechaYmd(val);
 }
 
 function mapActiveTurno(obj, headers, tipo) {
@@ -179,7 +139,7 @@ function mapActiveTurno(obj, headers, tipo) {
 
   const fecha = normalizeFecha(obj[fechaKey] || '');
   const estado = normalizeEstado(obj[estadoKey] || '');
-  if (!isFechaTurnoActivoHoy(fecha) || estado !== 'INICIADO') return null;
+  if (!isFechaTurnoHoyLaPaz(fecha) || estado !== 'INICIADO') return null;
 
   const nombre = String(obj[nombreKey] || '').trim();
   const horaInicio = String(obj[horaKey] || '').trim();
@@ -191,7 +151,7 @@ function mapActiveTurno(obj, headers, tipo) {
     userId,
     nombre: nombre || userId,
     horaInicio,
-    tiempoTranscurrido: calcularTiempo(horaInicio, fecha),
+    tiempoTranscurrido: calcularTiempoTranscurrido(fecha, horaInicio),
   };
   if (tipo === 'beezero') {
     item.placa = String(obj[placaKey] || '').trim();
@@ -209,6 +169,22 @@ function buildPermisoLookup(permisos) {
     }
   }
   return lookup;
+}
+
+/** Un solo turno INICIADO por nombre (el de ID más alto — evita duplicados en Sheets). */
+function dedupeActivosPorNombre(activos) {
+  const byNombre = new Map();
+  for (const t of activos) {
+    const key = String(t.nombre || '').trim().toLowerCase();
+    if (!key) continue;
+    const prev = byNombre.get(key);
+    const idNum = Number(t.turnoId);
+    const prevNum = prev ? Number(prev.turnoId) : NaN;
+    if (!prev || (Number.isFinite(idNum) && idNum >= prevNum) || !Number.isFinite(prevNum)) {
+      byNombre.set(key, t);
+    }
+  }
+  return Array.from(byNombre.values());
 }
 
 function attachTienePermiso(activos, permisoLookup) {
@@ -301,17 +277,19 @@ async function buildLiveDashboardPayload() {
     countCarrerasHoy(),
   ]);
 
-  let beezeroActivos = beezeroSheet.rows
-    .map((row) => rowToObject(beezeroSheet.headers, row))
-    .map((obj) => mapActiveTurno(obj, beezeroSheet.headers, 'beezero'))
-    .filter(Boolean)
-    .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+  let beezeroActivos = dedupeActivosPorNombre(
+    beezeroSheet.rows
+      .map((row) => rowToObject(beezeroSheet.headers, row))
+      .map((obj) => mapActiveTurno(obj, beezeroSheet.headers, 'beezero'))
+      .filter(Boolean)
+  ).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
 
-  let ecodeliveryActivos = ecodeliverySheet.rows
-    .map((row) => rowToObject(ecodeliverySheet.headers, row))
-    .map((obj) => mapActiveTurno(obj, ecodeliverySheet.headers, 'ecodelivery'))
-    .filter(Boolean)
-    .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+  let ecodeliveryActivos = dedupeActivosPorNombre(
+    ecodeliverySheet.rows
+      .map((row) => rowToObject(ecodeliverySheet.headers, row))
+      .map((obj) => mapActiveTurno(obj, ecodeliverySheet.headers, 'ecodelivery'))
+      .filter(Boolean)
+  ).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
 
   const fechaHoy = todayYmd();
   let permisosHoy = 0;
