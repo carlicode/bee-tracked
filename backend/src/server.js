@@ -45,6 +45,7 @@ const andiRouter = require('./routes/andi');
 const announcementsRouter = require('./routes/announcements');
 const pushRouter = require('./routes/push');
 const permisosRouter = require('./routes/permisos');
+const uploadRouter = require('./routes/upload');
 
 app.use('/api/turnos', turnosRouter);
 app.use('/api/carreras', carrerasRouter);
@@ -57,6 +58,7 @@ app.use('/api/andi', andiRouter);
 app.use('/api/announcements', announcementsRouter);
 app.use('/api/push', pushRouter);
 app.use('/api/permisos', permisosRouter);
+app.use('/api/upload', uploadRouter);
 
 app.use((err, req, res, next) => {
   logger.error('Unhandled error', {

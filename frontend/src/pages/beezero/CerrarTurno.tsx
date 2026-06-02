@@ -6,6 +6,7 @@ import { useAuth } from '../../services/auth';
 import { turnosApi } from '../../services/turnosApi';
 import { formatters } from '../../utils/formatters';
 import { fileToCompressedBase64 } from '../../utils/image';
+import { uploadApi } from '../../services/uploadApi';
 import type { Turno } from '../../types/turno';
 
 type GastoCierreInput = {
@@ -15,6 +16,7 @@ type GastoCierreInput = {
   montoStr: string;
   descripcion: string;
   foto: string;
+  fotoPreview?: string;
 };
 
 const TIPOS_GASTO = [
@@ -69,6 +71,12 @@ export const CerrarTurno = () => {
     observaciones: '',
   });
   const [gastosCierre, setGastosCierre] = useState<GastoCierreInput[]>([]);
+  const [photoPreviews, setPhotoPreviews] = useState<{ fotoPantalla?: string; fotoExterior?: string }>({});
+  const [photoUploading, setPhotoUploading] = useState<{ fotoPantalla?: boolean; fotoExterior?: boolean }>({});
+  const [gastoUploadingIds, setGastoUploadingIds] = useState<Set<string>>(new Set());
+
+  const anyPhotoUploading =
+    Boolean(photoUploading.fotoPantalla || photoUploading.fotoExterior) || gastoUploadingIds.size > 0;
 
   useEffect(() => {
     const cargarTurno = async () => {
@@ -153,14 +161,63 @@ export const CerrarTurno = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const tipo = field === 'fotoPantalla' ? 'beezero-tablero' : 'beezero-exterior';
+    uploadApi.revokePreview(photoPreviews[field]);
+    setPhotoUploading((prev) => ({ ...prev, [field]: true }));
+
     try {
-      const dataUrl = await fileToCompressedBase64(file);
-      setFormData((prev) => ({
-        ...prev,
-        [field]: dataUrl,
-      }));
+      if (uploadApi.isUploadApiEnabled()) {
+        const { fileUrl, previewUrl } = await uploadApi.uploadPhoto(file, tipo, {
+          abejita: formData.abejita || turnoInicio?.abejita || user?.driverName,
+          turnoId: turnoIdForUpload,
+          momento: 'cierre',
+        });
+        setFormData((prev) => ({ ...prev, [field]: fileUrl }));
+        setPhotoPreviews((prev) => ({ ...prev, [field]: previewUrl }));
+      } else {
+        const dataUrl = await fileToCompressedBase64(file);
+        setFormData((prev) => ({ ...prev, [field]: dataUrl }));
+        setPhotoPreviews((prev) => ({ ...prev, [field]: dataUrl }));
+      }
     } catch (err) {
-      toast.show(err instanceof Error ? err.message : 'Error al procesar la imagen', 'error');
+      setFormData((prev) => ({ ...prev, [field]: '' }));
+      setPhotoPreviews((prev) => ({ ...prev, [field]: undefined }));
+      toast.show(uploadApi.parseError(err), 'error');
+    } finally {
+      setPhotoUploading((prev) => ({ ...prev, [field]: false }));
+    }
+  };
+
+  const handleGastoPhotoUpload = (gastoId: string, gastoIndex: number) => async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const gasto = gastosCierre.find((g) => g.id === gastoId);
+    if (gasto?.fotoPreview) uploadApi.revokePreview(gasto.fotoPreview);
+
+    setGastoUploadingIds((prev) => new Set(prev).add(gastoId));
+
+    try {
+      if (uploadApi.isUploadApiEnabled()) {
+        const { fileUrl, previewUrl } = await uploadApi.uploadPhoto(file, 'beezero-gasto', {
+          abejita: formData.abejita || turnoInicio?.abejita || user?.driverName,
+          turnoId: turnoIdForUpload,
+          num: gastoIndex + 1,
+        });
+        updateGasto(gastoId, { foto: fileUrl, fotoPreview: previewUrl });
+      } else {
+        const dataUrl = await fileToCompressedBase64(file);
+        updateGasto(gastoId, { foto: dataUrl, fotoPreview: dataUrl });
+      }
+    } catch (err) {
+      updateGasto(gastoId, { foto: '', fotoPreview: undefined });
+      toast.show(uploadApi.parseError(err), 'error');
+    } finally {
+      setGastoUploadingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(gastoId);
+        return next;
+      });
     }
   };
 
@@ -177,8 +234,17 @@ export const CerrarTurno = () => {
     setGastosCierre((prev) => [...prev, createEmptyGasto()]);
   };
 
+  const turnoIdForUpload = turnoInicio?.id != null ? String(turnoInicio.id) : 'new';
+
   const removeGasto = (id: string) => {
-    setGastosCierre((prev) => prev.filter((gasto) => gasto.id !== id));
+    const gasto = gastosCierre.find((g) => g.id === id);
+    if (gasto?.fotoPreview) uploadApi.revokePreview(gasto.fotoPreview);
+    setGastosCierre((prev) => prev.filter((g) => g.id !== id));
+    setGastoUploadingIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
   };
 
   const updateGasto = (id: string, patch: Partial<GastoCierreInput>) => {
@@ -415,7 +481,7 @@ export const CerrarTurno = () => {
             <p className="text-sm text-gray-500">No agregaste gastos aún.</p>
           ) : (
             <div className="space-y-3">
-              {gastosCierre.map((gasto) => (
+              {gastosCierre.map((gasto, index) => (
                 <div key={gasto.id} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-start bg-gray-50 p-3 rounded-lg">
                   <div className="md:col-span-4">
                     <label className="block text-xs font-medium text-gray-700 mb-1">Tipo *</label>
@@ -469,21 +535,16 @@ export const CerrarTurno = () => {
                     <input
                       type="file"
                       accept="image/*"
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        try {
-                          const dataUrl = await fileToCompressedBase64(file);
-                          updateGasto(gasto.id, { foto: dataUrl });
-                        } catch (err) {
-                          toast.show(err instanceof Error ? err.message : 'Error al procesar la imagen', 'error');
-                        }
-                      }}
+                      onChange={handleGastoPhotoUpload(gasto.id, index)}
+                      disabled={gastoUploadingIds.has(gasto.id)}
                       className="w-full border-2 border-gray-300 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow text-sm"
                     />
-                    {gasto.foto && (
+                    {gastoUploadingIds.has(gasto.id) && (
+                      <p className="text-xs text-gray-500 mt-1">Subiendo foto…</p>
+                    )}
+                    {(gasto.fotoPreview || gasto.foto) && (
                       <div className="mt-2 flex items-center gap-2">
-                        <img src={gasto.foto} alt="Foto gasto" className="w-16 h-16 object-cover rounded-lg shadow" />
+                        <img src={gasto.fotoPreview || gasto.foto} alt="Foto gasto" className="w-16 h-16 object-cover rounded-lg shadow" />
                         <button
                           type="button"
                           onClick={() => updateGasto(gasto.id, { foto: '' })}
@@ -636,9 +697,12 @@ export const CerrarTurno = () => {
             onChange={handlePhotoUpload('fotoPantalla')}
             className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
           />
-          {formData.fotoPantalla && (
+          {photoUploading.fotoPantalla && (
+            <p className="text-sm text-gray-500 mt-2">Subiendo foto…</p>
+          )}
+          {(photoPreviews.fotoPantalla || formData.fotoPantalla) && (
             <img
-              src={formData.fotoPantalla}
+              src={photoPreviews.fotoPantalla || formData.fotoPantalla}
               alt="Foto del tablero"
               className="mt-2 w-full max-w-xs rounded-lg shadow-md"
             />
@@ -705,9 +769,12 @@ export const CerrarTurno = () => {
                 onChange={handlePhotoUpload('fotoExterior')}
                 className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
               />
-              {formData.fotoExterior && (
+              {photoUploading.fotoExterior && (
+                <p className="text-sm text-gray-500 mt-2">Subiendo foto…</p>
+              )}
+              {(photoPreviews.fotoExterior || formData.fotoExterior) && (
                 <img
-                  src={formData.fotoExterior}
+                  src={photoPreviews.fotoExterior || formData.fotoExterior}
                   alt="Foto exterior"
                   className="mt-2 w-full max-w-xs rounded-lg shadow-md"
                 />
@@ -741,7 +808,7 @@ export const CerrarTurno = () => {
           </button>
           <button
             type="submit"
-            disabled={loading || !location}
+            disabled={loading || !location || anyPhotoUploading}
             className="flex-1 bg-beezero-yellow text-black px-4 py-2 rounded-lg hover:bg-beezero-yellow-dark transition disabled:opacity-50 font-semibold shadow-md"
           >
             {loading ? 'Cerrando...' : 'Cerrar Turno'}

@@ -8,7 +8,8 @@ const {
   getAllRowsFromSpreadsheet,
   getSheetsInSpreadsheet,
 } = require('../services/googleSheets');
-const { uploadBeezeroCarreraPhoto, isS3Configured } = require('../services/s3Upload');
+const { uploadBeezeroCarreraPhoto } = require('../services/s3Upload');
+const { resolvePhotoField } = require('../services/photoUrl');
 const { saveCarreraToDynamo } = require('../services/dualWrite');
 
 /** Sheet ID: Carreras_drivers (mismo que Carreras_bikers o configurable) */
@@ -80,17 +81,9 @@ router.post('/carreras/registrar', async (req, res) => {
     // lugarRecojo/lugarDestino opcionales: el conductor puede dejar en blanco (incluso sin "Carrera por hora")
     console.log('[beezero] Validación OK, esPorHora:', esPorHora);
 
-    // Subir foto a S3 si viene como base64
-    let fotoUrl = foto || '';
-    if (foto && foto.startsWith('data:image/') && isS3Configured()) {
-      try {
-        fotoUrl = await uploadBeezeroCarreraPhoto({ dataUrl: foto, abejita, fecha });
-        console.log('[beezero] Foto subida a S3:', fotoUrl);
-      } catch (err) {
-        console.error('[beezero] Error subiendo foto a S3 (se continúa sin foto):', err.message);
-        fotoUrl = '';
-      }
-    }
+    const fotoUrl = await resolvePhotoField(foto, (dataUrl) =>
+      uploadBeezeroCarreraPhoto({ dataUrl, abejita, fecha })
+    );
 
     const ahora = new Date();
     const fechaCreacion = ahora.toLocaleDateString('en-CA', { timeZone: 'America/La_Paz' });

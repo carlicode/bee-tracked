@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { appendRow, updateRowById, getRowById, getAllRows } = require('../services/googleSheets');
-const { uploadBeezeroPhoto, uploadBeezeroGastoPhoto, isS3Configured } = require('../services/s3Upload');
+const { uploadBeezeroPhoto, uploadBeezeroGastoPhoto } = require('../services/s3Upload');
+const { resolvePhotoField } = require('../services/photoUrl');
 const { saveTurnoToDynamo } = require('../services/dualWrite');
 const { optionalAuth } = require('../middleware/auth');
 const { touchSession, isSessionValid } = require('../services/sessionManager');
@@ -27,21 +28,14 @@ async function saveGastosToSheet(turnoId, abejita, gastos, timestamp) {
     const gasto = gastos[i];
     const gastoId = `${turnoId}-${i + 1}`;
 
-    let fotoUrl = gasto.foto || '';
-    if (fotoUrl && fotoUrl.startsWith('data:image/') && isS3Configured()) {
-      try {
-        fotoUrl = await uploadBeezeroGastoPhoto({
-          dataUrl: fotoUrl,
-          turnoId,
-          abejita,
-          num: i + 1,
-        });
-        console.log(`[gastos] Foto gasto ${i + 1} subida a S3:`, fotoUrl);
-      } catch (err) {
-        console.error(`[gastos] Error subiendo foto gasto ${i + 1} a S3:`, err.message);
-        fotoUrl = '';
-      }
-    }
+    const fotoUrl = await resolvePhotoField(gasto.foto, (dataUrl) =>
+      uploadBeezeroGastoPhoto({
+        dataUrl,
+        turnoId,
+        abejita,
+        num: i + 1,
+      })
+    );
 
     await appendRow('BeeZero_Gastos', [
       gastoId,                  // A: ID Gasto
@@ -124,30 +118,12 @@ router.post('/iniciar', optionalAuth, validateSession, async (req, res) => {
     const now = new Date().toISOString();
     const fecha = now.split('T')[0];
 
-    let urlFotoTableroInicio = '';
-    let urlFotoExteriorInicio = '';
-    if (isS3Configured()) {
-      try {
-        if (fotoPantalla) {
-          urlFotoTableroInicio = await uploadBeezeroPhoto({
-            dataUrl: fotoPantalla,
-            turnoId: id,
-            tipo: 'tablero',
-            momento: 'inicio',
-          });
-        }
-        if (fotoExterior) {
-          urlFotoExteriorInicio = await uploadBeezeroPhoto({
-            dataUrl: fotoExterior,
-            turnoId: id,
-            tipo: 'danos',
-            momento: 'inicio',
-          });
-        }
-      } catch (err) {
-        console.error('Error subiendo fotos a S3 (inicio):', err.message);
-      }
-    }
+    const urlFotoTableroInicio = await resolvePhotoField(fotoPantalla, (dataUrl) =>
+      uploadBeezeroPhoto({ dataUrl, turnoId: id, tipo: 'tablero', momento: 'inicio' })
+    );
+    const urlFotoExteriorInicio = await resolvePhotoField(fotoExterior, (dataUrl) =>
+      uploadBeezeroPhoto({ dataUrl, turnoId: id, tipo: 'danos', momento: 'inicio' })
+    );
 
     const rowValues = [
       id,                         // A: ID
@@ -285,30 +261,12 @@ router.post('/:id/cerrar', optionalAuth, validateSession, async (req, res) => {
       await saveGastosToSheet(id, turnoExistente.Abejita || '', gastosNormalizados, now);
     }
 
-    let urlFotoTableroCierre = '';
-    let urlFotoExteriorCierre = '';
-    if (isS3Configured()) {
-      try {
-        if (fotoPantalla) {
-          urlFotoTableroCierre = await uploadBeezeroPhoto({
-            dataUrl: fotoPantalla,
-            turnoId: id,
-            tipo: 'tablero',
-            momento: 'cierre',
-          });
-        }
-        if (fotoExterior) {
-          urlFotoExteriorCierre = await uploadBeezeroPhoto({
-            dataUrl: fotoExterior,
-            turnoId: id,
-            tipo: 'danos',
-            momento: 'cierre',
-          });
-        }
-      } catch (err) {
-        console.error('Error subiendo fotos a S3 (cierre):', err.message);
-      }
-    }
+    const urlFotoTableroCierre = await resolvePhotoField(fotoPantalla, (dataUrl) =>
+      uploadBeezeroPhoto({ dataUrl, turnoId: id, tipo: 'tablero', momento: 'cierre' })
+    );
+    const urlFotoExteriorCierre = await resolvePhotoField(fotoExterior, (dataUrl) =>
+      uploadBeezeroPhoto({ dataUrl, turnoId: id, tipo: 'danos', momento: 'cierre' })
+    );
 
     const rowValues = [
       id,                                                                   // A: ID

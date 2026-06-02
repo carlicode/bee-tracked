@@ -7,6 +7,7 @@ import { PLACAS_AUTO_ABEJITA } from '../../config/constants';
 import { turnosApi } from '../../services/turnosApi';
 import { formatters } from '../../utils/formatters';
 import { fileToCompressedBase64 } from '../../utils/image';
+import { uploadApi } from '../../services/uploadApi';
 import type { Turno } from '../../types/turno';
 
 export const IniciarTurno = () => {
@@ -17,6 +18,10 @@ export const IniciarTurno = () => {
   const [loading, setLoading] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+  const [photoPreviews, setPhotoPreviews] = useState<{ fotoPantalla?: string; fotoExterior?: string }>({});
+  const [photoUploading, setPhotoUploading] = useState<{ fotoPantalla?: boolean; fotoExterior?: boolean }>({});
+  const anyPhotoUploading = Boolean(photoUploading.fotoPantalla || photoUploading.fotoExterior);
 
   const [deseaRegistrarDano, setDeseaRegistrarDano] = useState<boolean | null>(null);
   const [formData, setFormData] = useState<Partial<Turno> & { aperturaCajaStr?: string; kilometrajeStr?: string; bateriaStr?: string }>({
@@ -65,14 +70,30 @@ export const IniciarTurno = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const tipo = field === 'fotoPantalla' ? 'beezero-tablero' : 'beezero-exterior';
+    uploadApi.revokePreview(photoPreviews[field]);
+    setPhotoUploading((prev) => ({ ...prev, [field]: true }));
+
     try {
-      const dataUrl = await fileToCompressedBase64(file);
-      setFormData((prev) => ({
-        ...prev,
-        [field]: dataUrl,
-      }));
+      if (uploadApi.isUploadApiEnabled()) {
+        const { fileUrl, previewUrl } = await uploadApi.uploadPhoto(file, tipo, {
+          abejita: formData.abejita || user?.driverName,
+          turnoId: 'new',
+          momento: 'inicio',
+        });
+        setFormData((prev) => ({ ...prev, [field]: fileUrl }));
+        setPhotoPreviews((prev) => ({ ...prev, [field]: previewUrl }));
+      } else {
+        const dataUrl = await fileToCompressedBase64(file);
+        setFormData((prev) => ({ ...prev, [field]: dataUrl }));
+        setPhotoPreviews((prev) => ({ ...prev, [field]: dataUrl }));
+      }
     } catch (err) {
-      toast.show(err instanceof Error ? err.message : 'Error al procesar la imagen', 'error');
+      setFormData((prev) => ({ ...prev, [field]: '' }));
+      setPhotoPreviews((prev) => ({ ...prev, [field]: undefined }));
+      toast.show(uploadApi.parseError(err), 'error');
+    } finally {
+      setPhotoUploading((prev) => ({ ...prev, [field]: false }));
     }
   };
 
@@ -318,9 +339,12 @@ export const IniciarTurno = () => {
             onChange={handlePhotoUpload('fotoPantalla')}
             className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
           />
-          {formData.fotoPantalla && (
+          {photoUploading.fotoPantalla && (
+            <p className="text-sm text-gray-500 mt-2">Subiendo foto…</p>
+          )}
+          {(photoPreviews.fotoPantalla || formData.fotoPantalla) && (
             <img
-              src={formData.fotoPantalla}
+              src={photoPreviews.fotoPantalla || formData.fotoPantalla}
               alt="Foto del tablero"
               className="mt-2 w-full max-w-xs rounded-lg shadow-md"
             />
@@ -387,9 +411,12 @@ export const IniciarTurno = () => {
                 onChange={handlePhotoUpload('fotoExterior')}
                 className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
               />
-              {formData.fotoExterior && (
+              {photoUploading.fotoExterior && (
+                <p className="text-sm text-gray-500 mt-2">Subiendo foto…</p>
+              )}
+              {(photoPreviews.fotoExterior || formData.fotoExterior) && (
                 <img
-                  src={formData.fotoExterior}
+                  src={photoPreviews.fotoExterior || formData.fotoExterior}
                   alt="Foto exterior"
                   className="mt-2 w-full max-w-xs rounded-lg shadow-md"
                 />
@@ -408,7 +435,7 @@ export const IniciarTurno = () => {
           </button>
           <button
             type="submit"
-            disabled={loading || !location}
+            disabled={loading || !location || anyPhotoUploading}
             className="flex-1 bg-beezero-yellow text-black px-4 py-2 rounded-lg hover:bg-beezero-yellow-dark transition disabled:opacity-50 font-semibold shadow-md"
           >
             {loading ? 'Iniciando...' : 'Iniciar Turno'}

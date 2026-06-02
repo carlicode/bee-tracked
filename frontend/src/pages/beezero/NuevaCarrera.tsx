@@ -8,6 +8,7 @@ import { storage } from '../../services/storage';
 import { DEFAULT_CLIENTES } from '../../config/constants';
 import { formatters } from '../../utils/formatters';
 import { fileToCompressedBase64 } from '../../utils/image';
+import { uploadApi } from '../../services/uploadApi';
 import { TimeSelect } from '../../components/TimeSelect';
 import { PorHoraCheckbox } from '../../components/PorHoraCheckbox';
 import { ClienteSelect } from '../../components/ClienteSelect';
@@ -21,6 +22,7 @@ export const NuevaCarrera = () => {
   const [clientesApi, setClientesApi] = useState<string[]>([]);
   const clientesOpciones = [...new Set([...DEFAULT_CLIENTES, ...clientesApi])];
   const [fotoPreview, setFotoPreview] = useState<string>('');
+  const [fotoUploading, setFotoUploading] = useState(false);
   
   const initialFormData = (): Partial<Carrera> => ({
     fecha: formatters.dateToInput(new Date()),
@@ -61,12 +63,30 @@ export const NuevaCarrera = () => {
   const handleFotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    uploadApi.revokePreview(fotoPreview);
+    setFotoUploading(true);
+
     try {
-      const dataUrl = await fileToCompressedBase64(file);
-      setFotoPreview(dataUrl);
-      setFormData((prev) => ({ ...prev, foto: dataUrl }));
+      const user = getCurrentUser();
+      if (uploadApi.isUploadApiEnabled()) {
+        const { fileUrl, previewUrl } = await uploadApi.uploadPhoto(file, 'beezero-carrera', {
+          abejita: user?.driverName,
+          fecha: formData.fecha,
+        });
+        setFotoPreview(previewUrl);
+        setFormData((prev) => ({ ...prev, foto: fileUrl }));
+      } else {
+        const dataUrl = await fileToCompressedBase64(file);
+        setFotoPreview(dataUrl);
+        setFormData((prev) => ({ ...prev, foto: dataUrl }));
+      }
     } catch (err) {
-      toast.show(err instanceof Error ? err.message : 'Error al procesar la imagen', 'error');
+      setFotoPreview('');
+      setFormData((prev) => ({ ...prev, foto: '' }));
+      toast.show(uploadApi.parseError(err), 'error');
+    } finally {
+      setFotoUploading(false);
     }
   };
 
@@ -370,6 +390,9 @@ export const NuevaCarrera = () => {
               onChange={handleFotoChange}
             />
           </label>
+          {fotoUploading && (
+            <p className="text-sm text-gray-500 mt-2">Subiendo foto…</p>
+          )}
           {fotoPreview && (
             <div className="mt-2 relative inline-block">
               <img
@@ -414,7 +437,7 @@ export const NuevaCarrera = () => {
           </button>
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || fotoUploading}
             className="flex-1 bg-beezero-yellow text-black px-4 py-2 rounded-lg hover:bg-beezero-yellow-dark transition disabled:opacity-50 font-semibold shadow-md"
           >
             {loading ? 'Guardando...' : 'Guardar Carrera'}
