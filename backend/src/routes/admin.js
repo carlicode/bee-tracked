@@ -5,9 +5,10 @@ const {
   batchGetRowsWithHeadersFromSpreadsheet,
 } = require('../services/googleSheets');
 const { sessionAuth, requireAdmin } = require('../middleware/sessionAuth');
-const { isDynamoReadEnabled } = require('../services/dynamoUtils');
+const { isDynamoReadEnabled, slugUserId } = require('../services/dynamoUtils');
 const turnosService = require('../services/turnosService');
 const carrerasService = require('../services/carrerasService');
+const permisosService = require('../services/permisosService');
 
 const router = express.Router();
 
@@ -187,6 +188,30 @@ function mapActiveTurno(obj, headers, tipo) {
   return item;
 }
 
+function buildPermisoLookup(permisos) {
+  const lookup = new Set();
+  for (const p of permisos) {
+    if (p.userId) lookup.add(String(p.userId).trim().toLowerCase());
+    if (p.userName) {
+      lookup.add(String(p.userName).trim().toLowerCase());
+      lookup.add(slugUserId(p.userName));
+    }
+  }
+  return lookup;
+}
+
+function attachTienePermiso(activos, permisoLookup) {
+  return activos.map((t) => {
+    const nombreNorm = String(t.nombre || '').trim().toLowerCase();
+    const userIdNorm = String(t.userId || '').trim().toLowerCase();
+    const tienePermiso =
+      permisoLookup.has(userIdNorm) ||
+      permisoLookup.has(nombreNorm) ||
+      permisoLookup.has(slugUserId(t.nombre));
+    return { ...t, tienePermiso };
+  });
+}
+
 async function readTurnosSheet(sid, sheetCandidates) {
   let lastErr = null;
   for (const sheetName of sheetCandidates) {
@@ -265,17 +290,31 @@ async function buildLiveDashboardPayload() {
     countCarrerasHoy(),
   ]);
 
-  const beezeroActivos = beezeroSheet.rows
+  let beezeroActivos = beezeroSheet.rows
     .map((row) => rowToObject(beezeroSheet.headers, row))
     .map((obj) => mapActiveTurno(obj, beezeroSheet.headers, 'beezero'))
     .filter(Boolean)
     .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
 
-  const ecodeliveryActivos = ecodeliverySheet.rows
+  let ecodeliveryActivos = ecodeliverySheet.rows
     .map((row) => rowToObject(ecodeliverySheet.headers, row))
     .map((obj) => mapActiveTurno(obj, ecodeliverySheet.headers, 'ecodelivery'))
     .filter(Boolean)
     .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+
+  const fechaHoy = todayYmd();
+  let permisosHoy = 0;
+  if (isDynamoReadEnabled()) {
+    try {
+      const aprobadosHoy = await permisosService.listAprobadosForFecha(fechaHoy);
+      permisosHoy = aprobadosHoy.length;
+      const permisoLookup = buildPermisoLookup(aprobadosHoy);
+      beezeroActivos = attachTienePermiso(beezeroActivos, permisoLookup);
+      ecodeliveryActivos = attachTienePermiso(ecodeliveryActivos, permisoLookup);
+    } catch (err) {
+      console.warn('[admin] dashboard/live permisos query failed', err.message);
+    }
+  }
 
   const totalActivos = beezeroActivos.length + ecodeliveryActivos.length;
 
@@ -292,8 +331,9 @@ async function buildLiveDashboardPayload() {
     resumen: {
       totalActivos,
       carrerasHoy,
+      permisosHoy,
       timestamp: new Date().toISOString(),
-      fecha: todayYmd(),
+      fecha: fechaHoy,
     },
   };
 }

@@ -1,6 +1,7 @@
 const express = require('express');
 const { sessionAuth, requireRrhh } = require('../middleware/sessionAuth');
 const permisosService = require('../services/permisosService');
+const pushService = require('../services/pushService');
 const { createRequestLogger } = require('../utils/logger');
 
 const router = express.Router();
@@ -117,6 +118,22 @@ router.post('/:permisoId/responder', sessionAuth, requireRrhh, async (req, res) 
       accion,
       admin: req.authUser.userId,
     });
+
+    const isAprobado = accion === 'aprobar';
+    const razonTexto = String(razon || '').trim();
+    const basePath =
+      permiso.userType === 'beezero' ? 'beezero' : 'ecodelivery';
+    pushService
+      .sendToUser(permiso.userId, {
+        title: isAprobado ? 'Permiso aprobado' : 'Permiso rechazado',
+        body: isAprobado
+          ? `Tu día libre del ${permiso.fecha} fue aprobado.`
+          : `Tu solicitud del ${permiso.fecha} fue rechazada.${razonTexto ? ` Motivo: ${razonTexto}` : ''}`,
+        url: `/${basePath}/solicitar-permiso`,
+      })
+      .catch((err) =>
+        log.warn('Push permiso falló (non-critical)', { error: err.message })
+      );
 
     res.json({ success: true, permiso });
   } catch (err) {

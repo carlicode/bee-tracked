@@ -9,6 +9,7 @@ const {
   getAnnouncementStats,
   createAnnouncement,
 } = require('../services/announcementsService');
+const pushService = require('../services/pushService');
 
 const router = express.Router();
 
@@ -24,6 +25,9 @@ router.post('/announcements', async (req, res) => {
     const { userId, name } = req.authUser;
     const announcement = await createAnnouncement(req.body, userId, name);
     log.info('Anuncio creado', { announcementId: announcement.announcementId, createdBy: userId });
+    pushService.notifyNewAnnouncement(announcement).catch((err) =>
+      log.warn('Push anuncio falló (non-critical)', { error: err.message })
+    );
     res.json({ success: true, announcement });
   } catch (err) {
     log.error('Error creando anuncio', { error: err.message });

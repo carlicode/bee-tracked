@@ -47,6 +47,7 @@ export interface LiveTurnoActivo {
   horaInicio: string;
   tiempoTranscurrido: string;
   placa?: string;
+  tienePermiso?: boolean;
 }
 
 export interface LiveDashboardResponse {
@@ -61,6 +62,7 @@ export interface LiveDashboardResponse {
   resumen: {
     totalActivos: number;
     carrerasHoy: number;
+    permisosHoy?: number;
     timestamp: string;
     fecha: string;
   };

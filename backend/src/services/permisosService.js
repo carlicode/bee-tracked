@@ -203,6 +203,26 @@ async function countPendientes() {
   return list.length;
 }
 
+/** Permisos aprobados para una fecha (YYYY-MM-DD), vía GSI estado-fecha-index */
+async function listAprobadosForFecha(fecha) {
+  const fechaNorm = String(fecha || '').trim();
+  if (!fechaNorm) return [];
+
+  const res = await dynamo.send(
+    new QueryCommand({
+      TableName: config.dynamo.permisosTable,
+      IndexName: 'estado-fecha-index',
+      KeyConditionExpression: 'estado = :estado AND fecha = :fecha',
+      ExpressionAttributeValues: marshall({
+        ':estado': 'aprobado',
+        ':fecha': fechaNorm,
+      }),
+    })
+  );
+
+  return (res.Items || []).map((item) => mapPermiso(unmarshall(item)));
+}
+
 async function respondPermiso(permisoId, adminUserId, accion, razon) {
   const existing = await getPermisoById(permisoId);
   if (!existing) {
@@ -275,5 +295,6 @@ module.exports = {
   listByUser,
   listForAdmin,
   countPendientes,
+  listAprobadosForFecha,
   respondPermiso,
 };

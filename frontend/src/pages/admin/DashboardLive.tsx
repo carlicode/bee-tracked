@@ -52,7 +52,14 @@ function ActiveTable({
             <tbody>
               {rows.map((row) => (
                 <tr key={row.turnoId || row.userId} className="border-b border-gray-50 last:border-0">
-                  <td className="px-5 py-3 font-medium text-gray-900">{row.nombre}</td>
+                  <td className="px-5 py-3 font-medium text-gray-900">
+                    {row.nombre}
+                    {row.tienePermiso && (
+                      <span className="ml-2 inline-flex items-center rounded-full bg-blue-100 text-blue-800 px-2 py-0.5 text-xs font-semibold">
+                        PERMISO
+                      </span>
+                    )}
+                  </td>
                   <td className="px-5 py-3 text-gray-700">{row.horaInicio || '—'}</td>
                   {showPlaca && <td className="px-5 py-3 text-gray-700">{row.placa || '—'}</td>}
                   <td className="px-5 py-3">
