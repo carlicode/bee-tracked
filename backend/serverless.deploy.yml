@@ -46,6 +46,9 @@ provider:
     COGNITO_REGION: us-east-1
     DYNAMO_WRITE_ENABLED: 'true'
     DYNAMO_READ_ENABLED: 'true'
+    GMAIL_USER: ${ssm:/bee-tracked/GMAIL_USER}
+    GMAIL_APP_PASSWORD: ${ssm:/bee-tracked/GMAIL_APP_PASSWORD~true}
+    PERMISO_NOTIFY_EMAILS: ${ssm:/bee-tracked/PERMISO_NOTIFY_EMAILS}
   iam:
     role:
       statements:

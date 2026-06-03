@@ -165,7 +165,10 @@ async function createPermiso({ userId, userName, userType, fecha, motivo, nota, 
       motivo,
     });
   } catch (e) {
-    logger.warn('Email permiso falló (non-critical)', { error: e.message });
+    logger.warn('Email permiso falló (non-critical)', {
+      error: e.message,
+      code: e.code,
+    });
   }
 
   return mapPermiso(item);
