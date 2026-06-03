@@ -112,4 +112,4 @@ jobs:
         working-directory: backend
         run: |
           npm ci
-          npx serverless deploy --stage prod --config serverless.deploy.yml
+          npx serverless deploy --stage prod --config serverless.deploy.yml --force
