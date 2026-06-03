@@ -13,7 +13,8 @@ const {
 } = require('@aws-sdk/client-dynamodb');
 const { marshall, unmarshall } = require('@aws-sdk/util-dynamodb');
 
-const INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutos
+const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutos
+const ADMIN_INACTIVITY_TIMEOUT_MS = 4 * 60 * 60 * 1000;
 
 class DynamoDBSessionStore {
   constructor(options = {}) {
@@ -26,7 +27,7 @@ class DynamoDBSessionStore {
   async set(userId, sessionData) {
     const sessionId = this._generateId();
     const now = Date.now();
-    const ttl = Math.floor(now / 1000) + this.inactivityTimeout / 1000;
+    const ttl = Math.floor(now / 1000) + this._getTimeout(sessionData) / 1000;
 
     await this.client.send(
       new PutItemCommand({
@@ -66,7 +67,7 @@ class DynamoDBSessionStore {
     if (!session) return false;
 
     const now = Date.now();
-    const ttl = Math.floor(now / 1000) + this.inactivityTimeout / 1000;
+    const ttl = Math.floor(now / 1000) + this._getTimeout(session) / 1000;
 
     await this.client.send(
       new UpdateItemCommand({
@@ -102,7 +103,7 @@ class DynamoDBSessionStore {
     }
 
     const inactiveMs = Date.now() - session.lastActivity;
-    if (inactiveMs > this.inactivityTimeout) {
+    if (inactiveMs > this._getTimeout(session)) {
       console.log(`❌ Sesión expirada por inactividad: ${userId} (${Math.round(inactiveMs / 1000)}s)`);
       await this.delete(userId);
       return false;
@@ -118,6 +119,12 @@ class DynamoDBSessionStore {
 
   getStats() {
     return { type: 'dynamodb', table: this.tableName };
+  }
+
+  _getTimeout(session) {
+    return session?.userType === 'admin'
+      ? ADMIN_INACTIVITY_TIMEOUT_MS
+      : this.inactivityTimeout;
   }
 
   _generateId() {

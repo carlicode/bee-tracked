@@ -9,6 +9,7 @@ export interface Turno {
     monto: number;
     descripcion?: string;
     foto?: string;
+    placa?: string;
   }[];
   qr?: number; // legacy - mantenido por compatibilidad con datos locales anteriores
   auto: string; // Placa del auto

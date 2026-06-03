@@ -9,6 +9,7 @@ export type FotoTipo =
   | 'beezero-exterior'
   | 'beezero-carrera'
   | 'beezero-gasto'
+  | 'permiso-comprobante'
   | 'eco-turno'
   | 'eco-delivery';
 

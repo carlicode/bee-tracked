@@ -25,6 +25,7 @@ export interface SolicitarPermisoInput {
   fecha: string;
   motivo: PermisoMotivo;
   nota?: string;
+  comprobante?: string;
 }
 
 function authHeaders(): Record<string, string> {

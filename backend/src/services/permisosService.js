@@ -9,6 +9,7 @@ const { marshall, unmarshall } = require('@aws-sdk/util-dynamodb');
 const config = require('../config');
 const logger = require('../utils/logger');
 const { appendRow } = require('./googleSheets');
+const emailService = require('./emailService');
 
 const dynamo = new DynamoDBClient({ region: config.dynamo.region });
 
@@ -46,6 +47,7 @@ function mapPermiso(item) {
     respondidoPor: item.respondidoPor || null,
     respondidoEn: item.respondidoEn || null,
     razonRechazo: item.razonRechazo || null,
+    comprobante: item.comprobante || null,
   };
 }
 
@@ -85,7 +87,7 @@ async function mirrorToSheets(row) {
   }
 }
 
-async function createPermiso({ userId, userName, userType, fecha, motivo, nota }) {
+async function createPermiso({ userId, userName, userType, fecha, motivo, nota, comprobante }) {
   const fechaNorm = normalizeFecha(fecha);
   const minFecha = tomorrowYmd();
 
@@ -129,6 +131,10 @@ async function createPermiso({ userId, userName, userType, fecha, motivo, nota }
     creadoEn,
   };
 
+  if (comprobante && String(comprobante).trim()) {
+    item.comprobante = String(comprobante).trim();
+  }
+
   await dynamo.send(
     new PutItemCommand({
       TableName: config.dynamo.permisosTable,
@@ -149,7 +155,18 @@ async function createPermiso({ userId, userName, userType, fecha, motivo, nota }
     '',
     '',
     '',
+    item.comprobante || '',
   ]);
+
+  try {
+    await emailService.sendPermisoNotification({
+      userName: item.userName,
+      fecha: fechaNorm,
+      motivo,
+    });
+  } catch (e) {
+    logger.warn('Email permiso falló (non-critical)', { error: e.message });
+  }
 
   return mapPermiso(item);
 }

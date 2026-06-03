@@ -596,4 +596,106 @@ router.get('/dashboard/live', async (req, res) => {
   }
 });
 
+function parsePrecioBs(val) {
+  const n = parseFloat(String(val || '').replace(',', '.'));
+  return Number.isFinite(n) ? n : 0;
+}
+
+function emptyDriverStats(nombre) {
+  return {
+    nombre,
+    totalCarreras: 0,
+    conPrecio: 0,
+    sinPrecio: 0,
+    porcentajeConPrecio: 0,
+    totalGanancia: 0,
+  };
+}
+
+function accumulateDriverStats(stats, precio) {
+  stats.totalCarreras += 1;
+  if (precio > 0) {
+    stats.conPrecio += 1;
+    stats.totalGanancia += precio;
+  } else {
+    stats.sinPrecio += 1;
+  }
+  stats.porcentajeConPrecio =
+    stats.totalCarreras > 0
+      ? Math.round((stats.conPrecio / stats.totalCarreras) * 1000) / 10
+      : 0;
+}
+
+/**
+ * GET /api/admin/rendimiento?desde=&hasta=&tipo=beezero|ecodelivery|all
+ */
+router.get('/rendimiento', async (req, res) => {
+  try {
+    const desde = String(req.query.desde || '').trim();
+    const hasta = String(req.query.hasta || '').trim();
+    const tipoFilter = String(req.query.tipo || 'all').toLowerCase();
+
+    if (!isDynamoReadEnabled()) {
+      return res.status(503).json({
+        success: false,
+        error: 'Lectura DynamoDB no habilitada',
+      });
+    }
+
+    const tipos = [];
+    if (tipoFilter === 'all' || tipoFilter === 'beezero') tipos.push('beezero');
+    if (tipoFilter === 'all' || tipoFilter === 'ecodelivery') tipos.push('biker');
+
+    const byDriver = new Map();
+
+    for (const tipo of tipos) {
+      const tabs = await carrerasService.listTabs(tipo);
+      for (const tab of tabs) {
+        const { rows } = await carrerasService.listCarrerasByTab(tab, tipo, desde, hasta);
+        if (!byDriver.has(tab)) byDriver.set(tab, emptyDriverStats(tab));
+        const stats = byDriver.get(tab);
+
+        for (const row of rows) {
+          const precio =
+            tipo === 'beezero'
+              ? parsePrecioBs(row['Precio (Bs)'])
+              : parsePrecioBs(row['Por Hora']);
+          accumulateDriverStats(stats, precio);
+        }
+      }
+    }
+
+    const drivers = Array.from(byDriver.values()).sort(
+      (a, b) => b.totalGanancia - a.totalGanancia
+    );
+
+    const totales = {
+      totalCarreras: 0,
+      conPrecio: 0,
+      sinPrecio: 0,
+      porcentaje: 0,
+      totalGanancia: 0,
+    };
+
+    for (const d of drivers) {
+      totales.totalCarreras += d.totalCarreras;
+      totales.conPrecio += d.conPrecio;
+      totales.sinPrecio += d.sinPrecio;
+      totales.totalGanancia += d.totalGanancia;
+    }
+    totales.porcentaje =
+      totales.totalCarreras > 0
+        ? Math.round((totales.conPrecio / totales.totalCarreras) * 1000) / 10
+        : 0;
+
+    res.json({ success: true, drivers, totales });
+  } catch (err) {
+    console.error('[admin] rendimiento', err);
+    res.status(500).json({
+      success: false,
+      error: err.message || 'Error al obtener rendimiento',
+    });
+  }
+});
+
 module.exports = router;

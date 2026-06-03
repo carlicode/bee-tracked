@@ -31,18 +31,28 @@ Aplicación web móvil (PWA) para ~110 usuarios con interfaces diferenciadas por
 - 🚗 **Carreras drivers** — por pestaña, filtros de fecha, export Excel (.xlsx)
 - 🚴 **Carreras bikers** — por biker, filtros de fecha, totales km y por-hora
 - ⏰ **Turnos** — historial BeeZero y EcoDelivery con filtros por nombre, fecha, keyword
-- 📢 **Anuncios** — crear, listar, ver quién leyó, eliminar
+- 📢 **Anuncios** — crear, listar, ver quién leyó, eliminar (siempre visibles al abrir dashboard)
+- 📈 **Rendimiento** — resumen por conductor: carreras, % con precio, ganancia total en Bs
+- 👥 **Gestión de usuarios** — alta de conductores/bikers/admins desde la plataforma
 - 📄 **Paginación** — 50 filas por página en todas las tablas grandes
 - 🔔 **Push notifications** — se disparan al publicar un anuncio (Web Push)
 - 🔐 Acceso restringido a usuarios `admin` (incluye ex-rol `rrhh`)
+- ⏱️ **Sesión extendida** — admins tienen 4 horas de inactividad (drivers/bikers 30 min)
 
 > **Nota roles:** El rol `rrhh` (ex-Andi) fue unificado con `admin`. Ambos ven el mismo panel en `/admin/dashboard`. Los usuarios `rrhh` en Cognito redirigen automáticamente a las rutas `/admin/*`.
 
 ### 📢 Anuncios (desde Admin)
 - Crear avisos para todos, BeeZero o EcoDelivery con prioridad normal / importante / urgente
-- Modal obligatorio al login mostrando anuncios no leídos
+- Anuncios activos siempre visibles al abrir el dashboard (sin filtro de "ya leído")
 - Vista de estadísticas: quién leyó y cuándo
 - **Push notification** a los dispositivos suscritos al publicar
+
+### 🔔 Permisos
+- Solicitud de día libre con fecha y motivo desde el dashboard del driver/biker
+- Comprobante fotográfico opcional (sube a S3, aumenta probabilidad de aprobación)
+- Modal de confirmación tras enviar: "Será respondida en hasta 8 horas"
+- Email automático al equipo al recibir una solicitud (Gmail SMTP via nodemailer)
+- Aprobación / rechazo desde el panel admin con notificación push al solicitante
 
 ---
 

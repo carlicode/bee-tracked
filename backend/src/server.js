@@ -46,6 +46,8 @@ const announcementsRouter = require('./routes/announcements');
 const pushRouter = require('./routes/push');
 const permisosRouter = require('./routes/permisos');
 const uploadRouter = require('./routes/upload');
+const adminUsersRouter = require('./routes/adminUsers');
+const { sessionAuth, requireAdmin } = require('./middleware/sessionAuth');
 
 app.use('/api/turnos', turnosRouter);
 app.use('/api/carreras', carrerasRouter);
@@ -53,6 +55,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/ecodelivery', ecodeliveryRouter);
 app.use('/api/beezero', beezeroRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/admin/usuarios', sessionAuth, requireAdmin, adminUsersRouter);
 app.use('/api/admin/anuncios', adminAnunciosRouter);
 app.use('/api/andi', andiRouter);
 app.use('/api/announcements', announcementsRouter);

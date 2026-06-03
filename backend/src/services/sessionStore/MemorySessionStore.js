@@ -4,7 +4,8 @@
  * No persiste entre reinicios ni entre instancias Lambda.
  */
 
-const INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutos
+const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutos
+const ADMIN_INACTIVITY_TIMEOUT_MS = 4 * 60 * 60 * 1000;
 
 class MemorySessionStore {
   constructor(options = {}) {
@@ -60,7 +61,7 @@ class MemorySessionStore {
     }
 
     const inactiveMs = Date.now() - session.lastActivity;
-    if (inactiveMs > this.inactivityTimeout) {
+    if (inactiveMs > this._getTimeout(session)) {
       console.log(`❌ Sesión expirada por inactividad: ${userId} (${Math.round(inactiveMs / 1000)}s)`);
       this.sessions.delete(userId);
       return false;
@@ -73,7 +74,7 @@ class MemorySessionStore {
     const now = Date.now();
     let cleaned = 0;
     for (const [userId, session] of this.sessions.entries()) {
-      if (now - session.lastActivity > this.inactivityTimeout) {
+      if (now - session.lastActivity > this._getTimeout(session)) {
         this.sessions.delete(userId);
         cleaned++;
       }
@@ -92,6 +93,12 @@ class MemorySessionStore {
         lastActivity: new Date(s.lastActivity).toISOString(),
       })),
     };
+  }
+
+  _getTimeout(session) {
+    return session?.userType === 'admin'
+      ? ADMIN_INACTIVITY_TIMEOUT_MS
+      : this.inactivityTimeout;
   }
 
   _generateId() {

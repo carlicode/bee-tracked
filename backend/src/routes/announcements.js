@@ -80,8 +80,6 @@ router.get('/pending', sessionAuth, async (req, res) => {
       if (!matchesAudience(item, userType)) continue;
 
       const announcementId = item.announcementId || item.PK?.replace('ANUNCIO#', '');
-      const read = await hasUserRead(announcementId, userId);
-      if (read) continue;
 
       pending.push({
         announcementId,

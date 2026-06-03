@@ -11,12 +11,14 @@ const PREFIX_ECODELIVERY_TURNOS = 'Registros_BeeTracked/Ecodelivery/Turnos/';
 const PREFIX_ECODELIVERY_DELIVERIES = 'Registros_BeeTracked/Ecodelivery/Deliveries/';
 const PREFIX_BEEZERO_CARRERAS = 'beezero/carreras/';
 const PREFIX_BEEZERO_GASTOS = 'beezero/gastos drivers/';
+const PREFIX_PERMISOS = 'beezero/permisos/';
 
 const VALID_TIPOS = [
   'beezero-tablero',
   'beezero-exterior',
   'beezero-carrera',
   'beezero-gasto',
+  'permiso-comprobante',
   'eco-turno',
   'eco-delivery',
 ];
@@ -98,6 +100,10 @@ function buildObjectKey(tipo, contexto, ext) {
       const turnoId = ctx.turnoId != null ? String(ctx.turnoId) : 'new';
       const num = ctx.num != null ? Number(ctx.num) : 1;
       return `${PREFIX_BEEZERO_GASTOS}${abejita}_${turnoId}_gasto-${num}_${timestamp}.${safeExt}`;
+    }
+    case 'permiso-comprobante': {
+      const user = sanitizeUsername(ctx.userId || ctx.username);
+      return `${PREFIX_PERMISOS}${user}_${timestamp}.${safeExt}`;
     }
     case 'eco-turno': {
       const safeName = sanitizeUsername(ctx.username || ctx.userId);

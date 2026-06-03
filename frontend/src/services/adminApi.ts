@@ -70,6 +70,36 @@ export interface LiveDashboardResponse {
 
 export type { Announcement, AnnouncementStats };
 
+export interface AdminUser {
+  nombre: string;
+  usuario: string;
+  rol: string;
+}
+
+export interface CreateAdminUserInput {
+  nombre: string;
+  usuario: string;
+  password: string;
+  rol: string;
+}
+
+export interface RendimientoDriver {
+  nombre: string;
+  totalCarreras: number;
+  conPrecio: number;
+  sinPrecio: number;
+  porcentajeConPrecio: number;
+  totalGanancia: number;
+}
+
+export interface RendimientoTotales {
+  totalCarreras: number;
+  conPrecio: number;
+  sinPrecio: number;
+  porcentaje: number;
+  totalGanancia: number;
+}
+
 export const adminApi = {
   async getDriverTabs(): Promise<AdminDriverTabsResponse> {
     if (!API_BASE) throw new Error('Backend no configurado (VITE_API_URL)');
@@ -276,6 +306,50 @@ export const adminApi = {
     if (!data.success)
       throw new Error(data.error || 'Error al crear anuncio');
     return data.announcement;
+  },
+
+  async getUsers(): Promise<AdminUser[]> {
+    if (!API_BASE) throw new Error('Backend no configurado (VITE_API_URL)');
+    const { data } = await axios.get<{ success: boolean; users: AdminUser[]; error?: string }>(
+      `${API_BASE}/api/admin/usuarios`,
+      { headers: authHeaders(), timeout: 20000 }
+    );
+    if (!data.success) throw new Error(data.error || 'Error al listar usuarios');
+    return data.users || [];
+  },
+
+  async createUser(input: CreateAdminUserInput): Promise<AdminUser> {
+    if (!API_BASE) throw new Error('Backend no configurado (VITE_API_URL)');
+    const { data } = await axios.post<{ success: boolean; user: AdminUser; error?: string }>(
+      `${API_BASE}/api/admin/usuarios`,
+      input,
+      { headers: authHeaders(), timeout: 20000 }
+    );
+    if (!data.success) throw new Error(data.error || 'Error al crear usuario');
+    return data.user;
+  },
+
+  async getRendimiento(params: {
+    desde?: string;
+    hasta?: string;
+    tipo?: 'all' | 'beezero' | 'ecodelivery';
+  }): Promise<{ drivers: RendimientoDriver[]; totales: RendimientoTotales }> {
+    if (!API_BASE) throw new Error('Backend no configurado (VITE_API_URL)');
+    const q = new URLSearchParams();
+    if (params.desde) q.set('desde', params.desde);
+    if (params.hasta) q.set('hasta', params.hasta);
+    if (params.tipo) q.set('tipo', params.tipo);
+    const { data } = await axios.get<{
+      success: boolean;
+      drivers: RendimientoDriver[];
+      totales: RendimientoTotales;
+      error?: string;
+    }>(`${API_BASE}/api/admin/rendimiento?${q.toString()}`, {
+      headers: authHeaders(),
+      timeout: 60000,
+    });
+    if (!data.success) throw new Error(data.error || 'Error al obtener rendimiento');
+    return { drivers: data.drivers || [], totales: data.totales };
   },
 
   parseError(err: unknown): string {

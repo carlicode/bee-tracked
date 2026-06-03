@@ -86,6 +86,22 @@ export function DashboardAdmin() {
           </p>
           <span className="mt-4 inline-flex text-beeadmin-purple font-medium text-sm">Abrir →</span>
         </Link>
+
+        <Link to="/admin/usuarios" className={cardBase}>
+          <h2 className="text-xl font-semibold text-gray-900">Usuarios</h2>
+          <p className="mt-2 text-gray-600 text-sm">
+            Ver y dar de alta usuarios de la plataforma (drivers, bikers, admins).
+          </p>
+          <span className="mt-4 inline-flex text-beeadmin-purple font-medium text-sm">Abrir →</span>
+        </Link>
+
+        <Link to="/admin/rendimiento" className={cardBase}>
+          <h2 className="text-xl font-semibold text-gray-900">Rendimiento</h2>
+          <p className="mt-2 text-gray-600 text-sm">
+            Resumen de carreras por conductor: totales, % con precio y ganancia en Bs.
+          </p>
+          <span className="mt-4 inline-flex text-beeadmin-purple font-medium text-sm">Abrir →</span>
+        </Link>
       </div>
     </div>
   );

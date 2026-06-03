@@ -10,6 +10,9 @@ import {
 import { useToast } from '../../contexts/ToastContext';
 import { usePagination } from '../../hooks/usePagination';
 import { Pagination } from '../../components/Pagination';
+import { uploadApi } from '../../services/uploadApi';
+import { storage } from '../../services/storage';
+import { fileToCompressedBase64 } from '../../utils/image';
 
 const MOTIVOS: PermisoMotivo[] = ['Personal', 'Salud', 'Vacaciones', 'Otro'];
 
@@ -43,7 +46,11 @@ export function SolicitarPermiso({ variant }: SolicitarPermisoProps) {
   const [fecha, setFecha] = useState(tomorrowDate());
   const [motivo, setMotivo] = useState<PermisoMotivo>('Personal');
   const [nota, setNota] = useState('');
+  const [comprobanteUrl, setComprobanteUrl] = useState('');
+  const [comprobantePreview, setComprobantePreview] = useState<string | undefined>();
+  const [comprobanteUploading, setComprobanteUploading] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [misPermisos, setMisPermisos] = useState<Permiso[]>([]);
   const [loadingList, setLoadingList] = useState(true);
 
@@ -68,6 +75,36 @@ export function SolicitarPermiso({ variant }: SolicitarPermisoProps) {
     void loadMisPermisos();
   }, []);
 
+  const handleComprobanteUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (comprobantePreview) uploadApi.revokePreview(comprobantePreview);
+    setComprobanteUploading(true);
+
+    try {
+      if (uploadApi.isUploadApiEnabled()) {
+        const username = storage.getUsername() || 'user';
+        const { fileUrl, previewUrl } = await uploadApi.uploadPhoto(file, 'permiso-comprobante', {
+          userId: username,
+          username,
+        });
+        setComprobanteUrl(fileUrl);
+        setComprobantePreview(previewUrl);
+      } else {
+        const dataUrl = await fileToCompressedBase64(file);
+        setComprobanteUrl(dataUrl);
+        setComprobantePreview(dataUrl);
+      }
+    } catch (err) {
+      setComprobanteUrl('');
+      setComprobantePreview(undefined);
+      toast.show(uploadApi.parseError(err), 'error');
+    } finally {
+      setComprobanteUploading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isPermisosApiEnabled()) {
@@ -80,11 +117,14 @@ export function SolicitarPermiso({ variant }: SolicitarPermisoProps) {
         fecha,
         motivo,
         nota: nota.trim() || undefined,
+        comprobante: comprobanteUrl || undefined,
       });
-      toast.show('Permiso solicitado. Las admins serán notificadas.', 'success');
       setNota('');
+      setComprobanteUrl('');
+      if (comprobantePreview) uploadApi.revokePreview(comprobantePreview);
+      setComprobantePreview(undefined);
       await loadMisPermisos();
-      navigate(dashboardPath);
+      setShowConfirmModal(true);
     } catch (err) {
       toast.show(permisosApi.parseError(err), 'error');
     } finally {
@@ -92,8 +132,32 @@ export function SolicitarPermiso({ variant }: SolicitarPermisoProps) {
     }
   };
 
+  const handleConfirmModalClose = () => {
+    setShowConfirmModal(false);
+    navigate(dashboardPath);
+  };
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4">
+            <h2 className="text-lg font-semibold text-gray-900">Solicitud enviada</h2>
+            <p className="text-gray-600 text-sm">
+              Se envió la solicitud. Será respondida lo antes posible por el equipo. Puede tardar
+              hasta 8 horas.
+            </p>
+            <button
+              type="button"
+              onClick={handleConfirmModalClose}
+              className={`w-full px-4 py-3 rounded-lg font-semibold ${submitClass}`}
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
+
       <div>
         <Link to={dashboardPath} className={`text-sm font-medium ${linkClass}`}>
           ← Volver al panel
@@ -149,6 +213,42 @@ export function SolicitarPermiso({ variant }: SolicitarPermisoProps) {
           <p className="text-xs text-gray-500 mt-1">{nota.length}/200</p>
         </div>
 
+        <div>
+          <label className="block text-sm font-medium mb-1">Comprobante (opcional)</label>
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleComprobanteUpload}
+            disabled={comprobanteUploading}
+            className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 text-sm"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Adjuntar un comprobante aumenta las probabilidades de aprobación
+          </p>
+          {comprobanteUploading && <p className="text-xs text-gray-500 mt-1">Subiendo…</p>}
+          {comprobantePreview && (
+            <div className="mt-2 flex items-center gap-2">
+              <img
+                src={comprobantePreview}
+                alt="Comprobante"
+                className="w-16 h-16 object-cover rounded-lg shadow"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  uploadApi.revokePreview(comprobantePreview);
+                  setComprobanteUrl('');
+                  setComprobantePreview(undefined);
+                }}
+                className="text-xs text-red-500 hover:text-red-700"
+              >
+                Quitar
+              </button>
+            </div>
+          )}
+        </div>
+
         <div className="flex gap-3 pt-2">
           <button
             type="button"
@@ -159,7 +259,7 @@ export function SolicitarPermiso({ variant }: SolicitarPermisoProps) {
           </button>
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || comprobanteUploading}
             className={`flex-1 px-4 py-3 rounded-lg font-semibold disabled:opacity-50 ${submitClass}`}
           >
             {loading ? 'Enviando…' : 'Enviar solicitud'}

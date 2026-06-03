@@ -16,6 +16,7 @@ function normalizeGastos(gastos) {
       monto: Number(gasto?.monto) || 0,
       descripcion: typeof gasto?.descripcion === 'string' ? gasto.descripcion.trim() : '',
       foto: typeof gasto?.foto === 'string' ? gasto.foto : '',
+      placa: typeof gasto?.placa === 'string' ? gasto.placa.trim() : '',
     }))
     .filter((gasto) => gasto.tipo && gasto.monto > 0);
 }
@@ -46,6 +47,7 @@ async function saveGastosToSheet(turnoId, abejita, gastos, timestamp) {
       gasto.descripcion || '',  // E: Descripción
       fotoUrl,                  // F: Foto
       timestamp,                // G: Timestamp
+      gasto.placa || '',        // H: Placa
     ]);
   }
 }

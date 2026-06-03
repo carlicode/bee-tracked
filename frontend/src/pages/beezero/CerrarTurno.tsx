@@ -7,6 +7,7 @@ import { turnosApi } from '../../services/turnosApi';
 import { formatters } from '../../utils/formatters';
 import { fileToCompressedBase64 } from '../../utils/image';
 import { uploadApi } from '../../services/uploadApi';
+import { PLACAS_AUTO_ABEJITA } from '../../config/constants';
 import type { Turno } from '../../types/turno';
 
 type GastoCierreInput = {
@@ -17,6 +18,7 @@ type GastoCierreInput = {
   descripcion: string;
   foto: string;
   fotoPreview?: string;
+  placa?: string;
 };
 
 const TIPOS_GASTO = [
@@ -39,13 +41,14 @@ const TIPOS_GASTO = [
   'Otro',
 ] as const;
 
-const createEmptyGasto = (): GastoCierreInput => ({
+const createEmptyGasto = (defaultPlaca = ''): GastoCierreInput => ({
   id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   tipo: '',
   monto: undefined,
   montoStr: '',
   descripcion: '',
   foto: '',
+  placa: defaultPlaca,
 });
 
 export const CerrarTurno = () => {
@@ -90,6 +93,7 @@ export const CerrarTurno = () => {
             montoStr: gasto.monto != null && gasto.monto > 0 ? String(gasto.monto) : '',
             descripcion: gasto.descripcion || '',
             foto: gasto.foto || '',
+            placa: gasto.placa || turno.auto || '',
           }))
         );
         setFormData((prev) => ({
@@ -230,8 +234,10 @@ export const CerrarTurno = () => {
 
   const totalGastos = gastosCierre.reduce((acc, gasto) => acc + (gasto.monto || 0), 0);
 
+  const defaultPlaca = formData.auto || turnoInicio?.auto || '';
+
   const addGasto = () => {
-    setGastosCierre((prev) => [...prev, createEmptyGasto()]);
+    setGastosCierre((prev) => [...prev, createEmptyGasto(defaultPlaca)]);
   };
 
   const turnoIdForUpload = turnoInicio?.id != null ? String(turnoInicio.id) : 'new';
@@ -280,6 +286,7 @@ export const CerrarTurno = () => {
       monto: gasto.monto ?? parseFloat(gasto.montoStr || ''),
       descripcion: gasto.descripcion.trim(),
       foto: gasto.foto || undefined,
+      placa: gasto.placa || defaultPlaca || undefined,
     }));
     const gastosInvalidos = gastosPayload.some(
       (gasto) => !gasto.tipo || !Number.isFinite(gasto.monto) || Number(gasto.monto) <= 0
@@ -483,7 +490,22 @@ export const CerrarTurno = () => {
             <div className="space-y-3">
               {gastosCierre.map((gasto, index) => (
                 <div key={gasto.id} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-start bg-gray-50 p-3 rounded-lg">
-                  <div className="md:col-span-4">
+                  <div className="md:col-span-3">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Placa</label>
+                    <select
+                      value={gasto.placa || defaultPlaca}
+                      onChange={(e) => updateGasto(gasto.id, { placa: e.target.value })}
+                      className="w-full border-2 border-gray-300 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
+                    >
+                      <option value="">Selecciona placa</option>
+                      {PLACAS_AUTO_ABEJITA.map((placa) => (
+                        <option key={placa} value={placa}>
+                          {placa}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="md:col-span-3">
                     <label className="block text-xs font-medium text-gray-700 mb-1">Tipo *</label>
                     <select
                       value={gasto.tipo}
@@ -498,7 +520,7 @@ export const CerrarTurno = () => {
                       ))}
                     </select>
                   </div>
-                  <div className="md:col-span-3">
+                  <div className="md:col-span-2">
                     <label className="block text-xs font-medium text-gray-700 mb-1">Monto (Bs) *</label>
                     <input
                       type="text"
