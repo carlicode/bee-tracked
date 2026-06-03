@@ -57,7 +57,7 @@ export function GestionUsuarios() {
         </Link>
         <h1 className="text-2xl font-bold text-gray-900 mt-2">Gestión de usuarios</h1>
         <p className="text-gray-600 text-sm mt-1">
-          Alta de usuarios en el sistema (archivo de credenciales).
+          Usuarios con acceso a la app (AWS Cognito). Al agregar uno nuevo puede iniciar sesión de inmediato.
         </p>
       </div>
 

@@ -90,6 +90,17 @@ provider:
             - !GetAtt UsersTable.Arn
             - !GetAtt AuditTable.Arn
             - !GetAtt PushSubsTable.Arn
+        - Effect: Allow
+          Action:
+            - cognito-idp:ListUsers
+            - cognito-idp:AdminListGroupsForUser
+            - cognito-idp:AdminCreateUser
+            - cognito-idp:AdminSetUserPassword
+            - cognito-idp:AdminAddUserToGroup
+            - cognito-idp:AdminRemoveUserFromGroup
+            - cognito-idp:AdminUpdateUserAttributes
+          Resource:
+            - arn:aws:cognito-idp:us-east-1:*:userpool/us-east-1_REsVOVqcY
 
 functions:
   api:
