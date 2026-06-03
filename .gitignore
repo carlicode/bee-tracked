@@ -41,6 +41,7 @@ credentials.json
 beezero-*.json
 
 # Credenciales Ecodelivery (usuarios + contraseñas)
+data/usuarios-bee-tracked.csv
 data/ecodelivery-credentials.csv
 backend/data/ecodelivery-credentials.csv
 backend/data/usuarios-bee-tracked.csv

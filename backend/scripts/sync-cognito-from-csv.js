@@ -24,6 +24,8 @@ const ROL_TO_GROUP = {
   'Bee Zero': 'beezero',
   Operador: 'operador',
   Ecodelivery: 'ecodelivery',
+  Admin: 'admin',
+  RRHH: 'admin',
 };
 
 function parseCsv(content) {
@@ -190,7 +192,7 @@ async function main() {
   }
   if (created > 0) console.log(`\n✅ ${created} usuarios creados\n`);
 
-  const ALL_GROUPS = ['ecodelivery', 'beezero', 'operador'];
+  const ALL_GROUPS = ['ecodelivery', 'beezero', 'operador', 'admin', 'rrhh'];
   for (const u of csvUsers) {
     const actualUsername = lowerToActual.get(u.usuario.toLowerCase());
     if (actualUsername) {

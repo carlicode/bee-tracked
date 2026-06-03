@@ -52,6 +52,9 @@ Aplicación web móvil (PWA) para ~110 usuarios con interfaces diferenciadas por
 - Comprobante fotográfico opcional (sube a S3, aumenta probabilidad de aprobación)
 - Modal de confirmación tras enviar: "Será respondida en hasta 8 horas"
 - Email automático al equipo al recibir una solicitud (Gmail SMTP via nodemailer)
+- Destinatarios actuales: `alejis812@gmail.com`, `drea.79a@gmail.com`, `hola.beezero@gmail.com`
+- Credenciales en AWS SSM: `/bee-tracked/GMAIL_USER`, `/bee-tracked/GMAIL_APP_PASSWORD`, `/bee-tracked/PERMISO_NOTIFY_EMAILS` (también inyectadas en Lambda vía `serverless.deploy.yml`)
+- Prueba local: `cd backend && node scripts/test-permiso-email.js`
 - Aprobación / rechazo desde el panel admin con notificación push al solicitante
 
 ---
