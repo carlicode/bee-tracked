@@ -155,6 +155,26 @@ export const CerrarTurnoBiker = () => {
       <h2 className="text-2xl font-bold text-black mb-6">Cerrar Turno</h2>
 
       <div className="bg-white rounded-lg shadow-md p-8 space-y-6">
+
+        {/* ── Loading overlay ── */}
+        {(locationLoading || loading) && (
+          <div className="text-center py-6">
+            <div className="text-5xl mb-5">🐝</div>
+            <p className="text-xl font-bold text-gray-800 mb-1">
+              {locationLoading ? 'Obteniendo ubicación...' : 'Cerrando tu turno...'}
+            </p>
+            <div className="flex justify-center gap-3 my-5">
+              <span className="w-4 h-4 rounded-full bg-ecodelivery-green animate-bounce" style={{ animationDelay: '0ms' }} />
+              <span className="w-4 h-4 rounded-full bg-ecodelivery-green animate-bounce" style={{ animationDelay: '180ms' }} />
+              <span className="w-4 h-4 rounded-full bg-ecodelivery-green animate-bounce" style={{ animationDelay: '360ms' }} />
+            </div>
+            <p className="text-sm text-gray-500 leading-relaxed">
+              Esto puede tardar unos segundos,<br />no cierres la app 😊
+            </p>
+          </div>
+        )}
+
+        <div className={locationLoading || loading ? 'hidden' : ''}>
         <div className="bg-ecodelivery-green/10 rounded-lg p-4 mb-6 border border-ecodelivery-green/30">
           <h3 className="font-bold text-black mb-2">Turno Actual</h3>
           <p className="text-sm text-gray-700">
@@ -238,13 +258,13 @@ export const CerrarTurnoBiker = () => {
         <div className="flex gap-4 pt-4 border-t border-gray-200">
           <button
             type="button"
-            onClick={() => navigate('/ecodelivery/dashboard')}
-            disabled={loading || locationLoading}
-            className="flex-1 border-2 border-gray-300 text-black px-4 py-3 rounded-lg hover:bg-gray-50 transition font-medium disabled:opacity-50"
+            onClick={() => navigate(dashboardPath)}
+            className="flex-1 border-2 border-gray-300 text-black px-4 py-3 rounded-lg hover:bg-gray-50 transition font-medium"
           >
             Cancelar
           </button>
         </div>
+        </div>{/* fin hidden wrapper */}
       </div>
     </div>
   );
