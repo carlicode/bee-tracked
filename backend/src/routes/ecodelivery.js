@@ -17,7 +17,7 @@ const { saveTurnoToDynamo, saveCarreraToDynamo } = require('../services/dualWrit
 const { todayYmdLaPaz } = require('../utils/dateLaPaz');
 
 const SHEET_ECODELIVERY = 'Ecodelivery';
-const SHEET_OPERADORES = 'oeparadores'; // Tab de operadores en el mismo spreadsheet
+const SHEET_OPERADORES = 'operadores'; // Tab de operadores en el mismo spreadsheet
 const CARRERAS_BIKERS_HEADERS = [
   'DeliveryId', 'Biker', 'Fecha Registro', 'Hora Registro', 'Cliente', 'Lugar Origen',
   'Hora Inicio', 'Lugar Destino', 'Hora Fin', 'Distancia (km)', 'Por Hora', 'Notas', 'Foto',
