@@ -18,6 +18,24 @@ function authHeaders(): Record<string, string> {
 
 export const ecodeliveryApi = {
   /**
+   * Obtiene el turno activo del usuario desde DynamoDB.
+   * Devuelve null si no hay turno activo o si el backend no responde.
+   */
+  async getTurnoActivo(usuario: string): Promise<{ id?: string; horaInicio: string; turnoIniciado: true; turnoCerrado: false; bikerName: string } | null> {
+    if (!API_BASE || !usuario) return null;
+    try {
+      const { data } = await axios.get<{ success: boolean; data: unknown }>(
+        `${API_BASE}/api/ecodelivery/turnos/activo`,
+        { params: { usuario }, headers: authHeaders(), timeout: 8000 }
+      );
+      if (!data.success || !data.data) return null;
+      return data.data as { id?: string; horaInicio: string; turnoIniciado: true; turnoCerrado: false; bikerName: string };
+    } catch {
+      return null;
+    }
+  },
+
+  /**
    * Registra inicio de turno en Google Sheet Ecodelivery.
    */
   async iniciarTurno(params: {
@@ -52,6 +70,7 @@ export const ecodeliveryApi = {
     timestampCierre: string;
     fotoCierre?: string;
     tipo?: 'ecodelivery' | 'operador';
+    usuario?: string; // fallback para buscar por nombre si turnoId no existe en sheet
   }): Promise<void> {
     if (!API_BASE) throw new Error('Backend no configurado');
     const { data } = await axios.post<{ success: boolean; error?: string }>(

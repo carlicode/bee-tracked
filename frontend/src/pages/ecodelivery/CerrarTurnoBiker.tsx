@@ -89,10 +89,10 @@ export const CerrarTurnoBiker = () => {
       const horaCierre = formatters.timeToHHmm(ahora);
       const fechaCierre = ahora.toISOString().slice(0, 10);
 
-      if (isEcodeliveryApiEnabled() && turnoActual.id) {
+      if (isEcodeliveryApiEnabled()) {
         try {
           await ecodeliveryApi.cerrarTurno({
-            turnoId: turnoActual.id,
+            turnoId: turnoActual.id ?? '0',
             fechaCierre,
             horaCierre,
             latCierre: locationData.lat,
@@ -100,6 +100,7 @@ export const CerrarTurnoBiker = () => {
             timestampCierre: ahora.toISOString(),
             fotoCierre: photoUrl,
             tipo: isOperador ? 'operador' : 'ecodelivery',
+            usuario: turnoActual.bikerName || user?.driverName || user?.name,
           });
         } catch (err) {
           console.error('Error registrando cierre en sheet:', err);

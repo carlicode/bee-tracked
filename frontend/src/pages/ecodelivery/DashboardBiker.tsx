@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { DashboardCard } from '../../components/DashboardCard';
 import { storage } from '../../services/storage';
-import { isEcodeliveryApiEnabled } from '../../services/ecodeliveryApi';
+import { ecodeliveryApi, isEcodeliveryApiEnabled } from '../../services/ecodeliveryApi';
 import { usePushSubscription } from '../../hooks/usePushSubscription';
+import { useAuth } from '../../services/auth';
 import type { TurnoSimple } from '../../types/turno';
 
 const IconPlay = () => (
@@ -45,14 +46,36 @@ const IconCalendar = () => (
 
 export const DashboardBiker = () => {
   const [turnoActual, setTurnoActual] = useState<TurnoSimple | null>(null);
+  const { getCurrentUser } = useAuth();
+  const user = getCurrentUser();
 
   usePushSubscription(isEcodeliveryApiEnabled());
 
   useEffect(() => {
-    const turno = storage.getItem<TurnoSimple>('turno_actual_biker');
-    if (turno && turno.turnoIniciado && !turno.turnoCerrado) {
-      setTurnoActual(turno);
-    }
+    const cargarTurno = async () => {
+      // 1. Intentar sincronizar desde DynamoDB (fuente de verdad)
+      if (isEcodeliveryApiEnabled() && user?.driverName) {
+        try {
+          const turnoBackend = await ecodeliveryApi.getTurnoActivo(user.driverName);
+          if (turnoBackend) {
+            storage.setItem('turno_actual_biker', turnoBackend);
+            setTurnoActual(turnoBackend as TurnoSimple);
+            return;
+          }
+          // Backend respondió con null → limpiar localStorage para evitar stale data
+          storage.removeItem('turno_actual_biker');
+          return;
+        } catch {
+          // Si falla la red, caer al localStorage como fallback
+        }
+      }
+      // 2. Fallback: localStorage
+      const turno = storage.getItem<TurnoSimple>('turno_actual_biker');
+      if (turno && turno.turnoIniciado && !turno.turnoCerrado) {
+        setTurnoActual(turno);
+      }
+    };
+    void cargarTurno();
   }, []);
 
   return (

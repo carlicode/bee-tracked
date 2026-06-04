@@ -123,10 +123,63 @@ router.post('/upload-delivery-photo', async (req, res) => {
 });
 
 /**
+ * GET /api/ecodelivery/turnos/activo?usuario=NombreUsuario
+ * Devuelve el turno activo del usuario desde DynamoDB, o null si no existe.
+ */
+const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+const { DynamoDBDocumentClient, QueryCommand, ScanCommand } = require('@aws-sdk/lib-dynamodb');
+const { slugUserId } = require('../services/dynamoUtils');
+
+router.get('/turnos/activo', async (req, res) => {
+  try {
+    const usuario = String(req.query.usuario || '').trim();
+    if (!usuario) {
+      return res.status(400).json({ success: false, error: 'Parámetro usuario requerido' });
+    }
+
+    const dynamo = DynamoDBDocumentClient.from(
+      new DynamoDBClient({ region: process.env.AWS_REGION || 'us-east-1' })
+    );
+    const userId = slugUserId(usuario);
+
+    // Buscar turnos activos del usuario (tipo ecodelivery u operador)
+    const result = await dynamo.send(new QueryCommand({
+      TableName: process.env.TURNOS_TABLE || 'bee-tracked-turnos-prod',
+      KeyConditionExpression: 'PK = :pk',
+      FilterExpression: '#est = :activo',
+      ExpressionAttributeNames: { '#est': 'estado' },
+      ExpressionAttributeValues: { ':pk': `USER#${userId}`, ':activo': 'activo' },
+    }));
+
+    const turno = result.Items?.[0] || null;
+    if (!turno) {
+      return res.json({ success: true, data: null });
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        id: turno.turnoId,
+        turnoId: turno.turnoId,
+        bikerName: turno.nombre,
+        horaInicio: turno.horaInicio,
+        turnoIniciado: true,
+        turnoCerrado: false,
+        createdAt: turno.timestampInicio || '',
+      },
+    });
+  } catch (err) {
+    console.error('[ecodelivery] GET /turnos/activo error:', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
  * Obtiene el siguiente ID consecutivo para la hoja Ecodelivery (0, 1, 2, ...)
  */
-async function getNextTurnoId() {
-  const rows = await getAllRows(SHEET_ECODELIVERY);
+async function getNextTurnoId(tipo = 'ecodelivery') {
+  const sheet = tipo === 'operador' ? SHEET_OPERADORES : SHEET_ECODELIVERY;
+  const rows = await getAllRows(sheet);
   // Fila 0 = headers; número de filas de datos = siguiente ID
   const nextId = rows.length > 0 ? rows.length - 1 : 0;
   return nextId;
@@ -159,7 +212,7 @@ router.post('/turnos/iniciar', async (req, res) => {
       });
     }
 
-    const turnoIdNum = await getNextTurnoId();
+    const turnoIdNum = await getNextTurnoId(tipo);
     const now = new Date().toISOString();
     const fechaInicioBolivia = todayYmdLaPaz();
 
@@ -235,7 +288,27 @@ router.post('/turnos/cerrar', async (req, res) => {
       });
     }
 
-    const existing = await getRowById(sheetCierre, turnoId);
+    let existing = await getRowById(sheetCierre, turnoId);
+
+    // Fallback: si no se encuentra por ID, buscar el último turno INICIADO del usuario por nombre
+    if (!existing && req.body?.usuario) {
+      const allRows = await getAllRows(sheetCierre);
+      const headers = allRows[0] || {};
+      const dataRows = allRows.slice(1);
+      // Buscar la última fila con el mismo usuario y estado INICIADO
+      const match = dataRows
+        .filter(r => {
+          const u = r['Usuario'] || r['usuario'] || '';
+          const e = r['Estado'] || r['estado'] || '';
+          return u === req.body.usuario && e === 'INICIADO';
+        })
+        .pop(); // tomar la más reciente
+      if (match) {
+        existing = match;
+        console.info(`[cerrar turno] Fallback: encontrado por nombre "${req.body.usuario}"`);
+      }
+    }
+
     if (!existing) {
       return res.status(404).json({
         success: false,
