@@ -12,8 +12,10 @@ import type { TurnoSimple } from '../../types/turno';
 export const CerrarTurnoBiker = () => {
   const navigate = useNavigate();
   const toast = useToast();
-  const { getCurrentUser } = useAuth();
+  const { getCurrentUser, getUserType } = useAuth();
   const user = getCurrentUser();
+  const isOperador = getUserType() === 'operador';
+  const dashboardPath = isOperador ? '/operador/dashboard' : '/ecodelivery/dashboard';
   const [loading, setLoading] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
   const [turnoActual, setTurnoActual] = useState<TurnoSimple | null>(null);
@@ -97,6 +99,7 @@ export const CerrarTurnoBiker = () => {
             lngCierre: locationData.lng,
             timestampCierre: ahora.toISOString(),
             fotoCierre: photoUrl,
+            tipo: isOperador ? 'operador' : 'ecodelivery',
           });
         } catch (err) {
           console.error('Error registrando cierre en sheet:', err);
@@ -122,7 +125,7 @@ export const CerrarTurnoBiker = () => {
       storage.removeItem('turno_actual_biker');
 
       toast.show('¡Turno cerrado exitosamente!', 'success');
-      navigate('/ecodelivery/dashboard');
+      navigate(dashboardPath);
     } catch (error) {
       console.error('Error cerrando turno:', error);
       toast.show('Error al cerrar el turno. Intenta nuevamente.', 'error');

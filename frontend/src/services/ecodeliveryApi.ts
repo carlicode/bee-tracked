@@ -28,6 +28,7 @@ export const ecodeliveryApi = {
     lngInicio?: number;
     timestampInicio: string;
     fotoInicio?: string;
+    tipo?: 'ecodelivery' | 'operador';
   }): Promise<{ turnoId: string }> {
     if (!API_BASE) throw new Error('Backend no configurado');
     const { data } = await axios.post<{ success: boolean; turnoId?: string; error?: string }>(
@@ -50,6 +51,7 @@ export const ecodeliveryApi = {
     lngCierre?: number;
     timestampCierre: string;
     fotoCierre?: string;
+    tipo?: 'ecodelivery' | 'operador';
   }): Promise<void> {
     if (!API_BASE) throw new Error('Backend no configurado');
     const { data } = await axios.post<{ success: boolean; error?: string }>(

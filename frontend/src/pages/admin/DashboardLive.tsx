@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../services/auth';
 import { adminApi, isAdminApiEnabled, type LiveDashboardResponse, type LiveTurnoActivo } from '../../services/adminApi';
 import { useToast } from '../../contexts/ToastContext';
 
 const POLL_MS = 30_000;
 
-function turnoKey(tipo: 'beezero' | 'ecodelivery', t: LiveTurnoActivo): string {
+function turnoKey(tipo: 'beezero' | 'ecodelivery' | 'operador', t: LiveTurnoActivo): string {
   return `${tipo}:${t.turnoId || t.userId || t.nombre}`;
 }
 
@@ -79,6 +80,10 @@ function ActiveTable({
 
 export function DashboardLive() {
   const { show: showToast } = useToast();
+  const { getUserType } = useAuth();
+  const isOperador = getUserType() === 'operador';
+  const backPath = isOperador ? '/operador/dashboard' : '/admin/dashboard';
+  const backLabel = isOperador ? '← Panel operador' : '← Panel administración';
   const [data, setData] = useState<LiveDashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -99,6 +104,11 @@ export function DashboardLive() {
       }
       for (const t of payload.ecodelivery.activos) {
         const k = turnoKey('ecodelivery', t);
+        currentKeys.add(k);
+        currentNames.set(k, t.nombre);
+      }
+      for (const t of (payload.operador?.activos ?? [])) {
+        const k = turnoKey('operador', t);
         currentKeys.add(k);
         currentNames.set(k, t.nombre);
       }
@@ -162,10 +172,10 @@ export function DashboardLive() {
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <Link
-            to="/admin/dashboard"
+            to={backPath}
             className="text-sm text-beeadmin-purple hover:underline mb-2 inline-block"
           >
-            ← Panel administración
+            {backLabel}
           </Link>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Dashboard en tiempo real</h1>
           <p className="mt-1 text-gray-600 text-sm">
@@ -208,6 +218,12 @@ export function DashboardLive() {
                 {data?.ecodelivery.totalActivos ?? 0}
               </p>
             </div>
+            <div className="rounded-2xl border-2 border-orange-200 bg-orange-50 p-5">
+              <p className="text-sm font-medium text-orange-800">Operadores activos</p>
+              <p className="mt-2 text-3xl font-bold text-orange-900">
+                {data?.operador?.totalActivos ?? 0}
+              </p>
+            </div>
             <div className="rounded-2xl border-2 border-violet-200 bg-violet-50 p-5">
               <p className="text-sm font-medium text-violet-800">Total activos</p>
               <p className="mt-2 text-3xl font-bold text-violet-900">
@@ -232,6 +248,12 @@ export function DashboardLive() {
             title="EcoDelivery trabajando"
             emptyMessage="Nadie de EcoDelivery está trabajando ahora"
             rows={data?.ecodelivery.activos ?? []}
+          />
+
+          <ActiveTable
+            title="Operadores trabajando"
+            emptyMessage="Ningún operador está trabajando ahora"
+            rows={data?.operador?.activos ?? []}
           />
         </>
       )}

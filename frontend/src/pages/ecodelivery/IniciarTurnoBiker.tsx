@@ -12,8 +12,10 @@ import type { TurnoSimple } from '../../types/turno';
 export const IniciarTurnoBiker = () => {
   const navigate = useNavigate();
   const toast = useToast();
-  const { getCurrentUser } = useAuth();
+  const { getCurrentUser, getUserType } = useAuth();
   const user = getCurrentUser();
+  const isOperador = getUserType() === 'operador';
+  const dashboardPath = isOperador ? '/operador/dashboard' : '/ecodelivery/dashboard';
   const [loading, setLoading] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
   const { image: photoDataUrl, handleFileChange: handlePhotoChange, clearImage: clearPhoto, error: photoError } = useImageUpload();
@@ -85,6 +87,7 @@ export const IniciarTurnoBiker = () => {
             lngInicio: locationData.lng,
             timestampInicio: ahora.toISOString(),
             fotoInicio: photoUrl,
+            tipo: isOperador ? 'operador' : 'ecodelivery',
           });
           turnoId = res.turnoId;
         } catch (err) {
@@ -109,7 +112,7 @@ export const IniciarTurnoBiker = () => {
 
       storage.setItem('turno_actual_biker', turnoData);
       toast.show('¡Turno iniciado exitosamente!', 'success');
-      navigate('/ecodelivery/dashboard');
+      navigate(dashboardPath);
     } catch (error) {
       console.error('Error iniciando turno:', error);
       toast.show('Error al iniciar el turno. Intenta nuevamente.', 'error');

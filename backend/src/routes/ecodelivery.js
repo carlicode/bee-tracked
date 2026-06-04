@@ -17,6 +17,7 @@ const { saveTurnoToDynamo, saveCarreraToDynamo } = require('../services/dualWrit
 const { todayYmdLaPaz } = require('../utils/dateLaPaz');
 
 const SHEET_ECODELIVERY = 'Ecodelivery';
+const SHEET_OPERADORES = 'oeparadores'; // Tab de operadores en el mismo spreadsheet
 const CARRERAS_BIKERS_HEADERS = [
   'DeliveryId', 'Biker', 'Fecha Registro', 'Hora Registro', 'Cliente', 'Lugar Origen',
   'Hora Inicio', 'Lugar Destino', 'Hora Fin', 'Distancia (km)', 'Por Hora', 'Notas', 'Foto',
@@ -147,7 +148,9 @@ router.post('/turnos/iniciar', async (req, res) => {
       lngInicio,
       timestampInicio,
       fotoInicio,
+      tipo: tipoParam,
     } = req.body || {};
+    const tipo = tipoParam === 'operador' ? 'operador' : 'ecodelivery';
 
     if (!usuario || !fechaInicio || !horaInicio || timestampInicio == null) {
       return res.status(400).json({
@@ -175,12 +178,13 @@ router.post('/turnos/iniciar', async (req, res) => {
       now,
     ];
 
-    await appendRow(SHEET_ECODELIVERY, row);
+    const sheetDestino = tipo === 'operador' ? SHEET_OPERADORES : SHEET_ECODELIVERY;
+    await appendRow(sheetDestino, row);
 
     await saveTurnoToDynamo({
       turnoId: String(turnoIdNum),
       nombre: String(usuario).trim(),
-      tipo: 'ecodelivery',
+      tipo,
       fecha: fechaInicioBolivia,
       horaInicio: String(horaInicio),
       latInicio: latInicio != null ? Number(latInicio) : '',
@@ -219,7 +223,10 @@ router.post('/turnos/cerrar', async (req, res) => {
       lngCierre,
       timestampCierre,
       fotoCierre,
+      tipo: tipoParam,
     } = req.body || {};
+    const tipoCierre = tipoParam === 'operador' ? 'operador' : 'ecodelivery';
+    const sheetCierre = tipoCierre === 'operador' ? SHEET_OPERADORES : SHEET_ECODELIVERY;
 
     if (!turnoId || !fechaCierre || !horaCierre || timestampCierre == null) {
       return res.status(400).json({
@@ -228,7 +235,7 @@ router.post('/turnos/cerrar', async (req, res) => {
       });
     }
 
-    const existing = await getRowById(SHEET_ECODELIVERY, turnoId);
+    const existing = await getRowById(sheetCierre, turnoId);
     if (!existing) {
       return res.status(404).json({
         success: false,
@@ -262,12 +269,12 @@ router.post('/turnos/cerrar', async (req, res) => {
       updatedAt,
     ];
 
-    await updateRowById(SHEET_ECODELIVERY, turnoId, row);
+    await updateRowById(sheetCierre, turnoId, row);
 
     await saveTurnoToDynamo({
       turnoId: String(turnoIdValue),
       nombre: existing['Usuario'],
-      tipo: 'ecodelivery',
+      tipo: tipoCierre,
       fecha: existing['Fecha Inicio'],
       fechaCierre: fechaCierreBolivia,
       horaInicio: existing['Hora Inicio'],

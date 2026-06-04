@@ -59,6 +59,10 @@ export interface LiveDashboardResponse {
     activos: LiveTurnoActivo[];
     totalActivos: number;
   };
+  operador: {
+    activos: LiveTurnoActivo[];
+    totalActivos: number;
+  };
   resumen: {
     totalActivos: number;
     carrerasHoy: number;
@@ -200,6 +204,7 @@ export const adminApi = {
       success: boolean;
       beezero?: LiveDashboardResponse['beezero'];
       ecodelivery?: LiveDashboardResponse['ecodelivery'];
+      operador?: LiveDashboardResponse['operador'];
       resumen?: LiveDashboardResponse['resumen'];
       error?: string;
     }>(`${API_BASE}/api/admin/dashboard/live`, {
@@ -211,6 +216,7 @@ export const adminApi = {
     return {
       beezero: data.beezero || { activos: [], totalActivos: 0 },
       ecodelivery: data.ecodelivery || { activos: [], totalActivos: 0 },
+      operador: data.operador || { activos: [], totalActivos: 0 },
       resumen: data.resumen || {
         totalActivos: 0,
         carrerasHoy: 0,

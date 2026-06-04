@@ -13,7 +13,8 @@ import type { User } from '../types';
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
 function dashboardPath(userType: User['userType']): string {
-  if (userType === 'ecodelivery' || userType === 'operador') return '/ecodelivery/dashboard';
+  if (userType === 'ecodelivery') return '/ecodelivery/dashboard';
+  if (userType === 'operador') return '/operador/dashboard';
   if (userType === 'admin' || userType === 'rrhh') return '/admin/dashboard';
   return '/beezero/dashboard';
 }

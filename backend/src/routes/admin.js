@@ -279,6 +279,32 @@ async function buildLiveDashboardPayload() {
     countCarrerasHoy(),
   ]);
 
+  // Operadores: leemos directamente de DynamoDB (tipo = 'operador')
+  let operadorActivos = [];
+  if (isDynamoReadEnabled()) {
+    try {
+      const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+      const { DynamoDBDocumentClient, ScanCommand } = require('@aws-sdk/lib-dynamodb');
+      const dynamo = DynamoDBDocumentClient.from(new DynamoDBClient({ region: process.env.AWS_REGION || 'us-east-1' }));
+      const fechaHoyStr = todayYmd();
+      const result = await dynamo.send(new ScanCommand({
+        TableName: 'bee-tracked-turnos-prod',
+        FilterExpression: '#tipo = :tipo AND #estado = :estado AND #fecha = :fecha',
+        ExpressionAttributeNames: { '#tipo': 'tipo', '#estado': 'estado', '#fecha': 'fecha' },
+        ExpressionAttributeValues: { ':tipo': 'operador', ':estado': 'activo', ':fecha': fechaHoyStr },
+      }));
+      operadorActivos = (result.Items || []).map((item) => ({
+        turnoId: item.turnoId || item.SK || '',
+        userId: item.userId || '',
+        nombre: item.nombre || '',
+        horaInicio: item.horaInicio || '',
+        tiempoTranscurrido: item.horaInicio ? calcularTiempoTranscurrido(item.horaInicio) : '—',
+      })).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+    } catch (err) {
+      console.warn('[admin] dashboard/live operadores dynamo failed', err.message);
+    }
+  }
+
   let beezeroActivos = dedupeActivosPorNombre(
     beezeroSheet.rows
       .map((row) => rowToObject(beezeroSheet.headers, row))
@@ -307,7 +333,7 @@ async function buildLiveDashboardPayload() {
     }
   }
 
-  const totalActivos = beezeroActivos.length + ecodeliveryActivos.length;
+  const totalActivos = beezeroActivos.length + ecodeliveryActivos.length + operadorActivos.length;
 
   return {
     success: true,
@@ -318,6 +344,10 @@ async function buildLiveDashboardPayload() {
     ecodelivery: {
       activos: ecodeliveryActivos,
       totalActivos: ecodeliveryActivos.length,
+    },
+    operador: {
+      activos: operadorActivos,
+      totalActivos: operadorActivos.length,
     },
     resumen: {
       totalActivos,

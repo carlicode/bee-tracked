@@ -19,6 +19,9 @@ import { MisCarreras } from './pages/beezero/MisCarreras';
 import { MisTurnos as MisTurnosBeezero } from './pages/beezero/MisTurnos';
 import { DetalleTurno as DetalleTurnoBeezero } from './pages/beezero/DetalleTurno';
 
+// Operador pages
+import { DashboardOperador } from './pages/operador/DashboardOperador';
+
 // EcoDelivery pages
 import { DashboardBiker } from './pages/ecodelivery/DashboardBiker';
 import { IniciarTurnoBiker } from './pages/ecodelivery/IniciarTurnoBiker';
@@ -58,8 +61,11 @@ const DashboardRouter = () => {
   if (userType === 'admin' || userType === 'rrhh') {
     return <Navigate to="/admin/dashboard" replace />;
   }
-  if (userType === 'ecodelivery' || userType === 'operador') {
+  if (userType === 'ecodelivery') {
     return <Navigate to="/ecodelivery/dashboard" replace />;
+  }
+  if (userType === 'operador') {
+    return <Navigate to="/operador/dashboard" replace />;
   }
   return <Navigate to="/beezero/dashboard" replace />;
 };
@@ -69,7 +75,7 @@ const BeeZeroAccessGuard = ({ children }: { children: React.ReactNode }) => {
   const { getUserType } = useAuth();
   const t = getUserType();
   if (t === 'operador') {
-    return <Navigate to="/ecodelivery/dashboard" replace />;
+    return <Navigate to="/operador/dashboard" replace />;
   }
   if (t === 'admin' || t === 'rrhh') {
     return <Navigate to="/admin/dashboard" replace />;
@@ -79,8 +85,12 @@ const BeeZeroAccessGuard = ({ children }: { children: React.ReactNode }) => {
 
 const EcoDeliveryAccessGuard = ({ children }: { children: React.ReactNode }) => {
   const { getUserType } = useAuth();
-  if (getUserType() === 'admin' || getUserType() === 'rrhh') {
+  const t = getUserType();
+  if (t === 'admin' || t === 'rrhh') {
     return <Navigate to="/admin/dashboard" replace />;
+  }
+  if (t === 'operador') {
+    return <Navigate to="/operador/dashboard" replace />;
   }
   return <>{children}</>;
 };
@@ -88,6 +98,14 @@ const EcoDeliveryAccessGuard = ({ children }: { children: React.ReactNode }) => 
 const AdminGuard = ({ children }: { children: React.ReactNode }) => {
   const t = useAuth().getUserType();
   if (t !== 'admin' && t !== 'rrhh') {
+    return <Navigate to="/" replace />;
+  }
+  return <>{children}</>;
+};
+
+const OperadorGuard = ({ children }: { children: React.ReactNode }) => {
+  const t = useAuth().getUserType();
+  if (t !== 'operador' && t !== 'admin' && t !== 'rrhh') {
     return <Navigate to="/" replace />;
   }
   return <>{children}</>;
@@ -357,6 +375,72 @@ function AppContent() {
                   </ThemeProvider>
                 )}
               </EcoDeliveryAccessGuard>
+            </PrivateRoute>
+          }
+        />
+
+        {/* Operador */}
+        <Route
+          path="/operador/dashboard"
+          element={
+            <PrivateRoute>
+              <OperadorGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType="ecodelivery">
+                    <Layout>
+                      <DashboardOperador />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </OperadorGuard>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/operador/iniciar-turno"
+          element={
+            <PrivateRoute>
+              <OperadorGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType="ecodelivery">
+                    <Layout>
+                      <IniciarTurnoBiker />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </OperadorGuard>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/operador/cerrar-turno"
+          element={
+            <PrivateRoute>
+              <OperadorGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType="ecodelivery">
+                    <Layout>
+                      <CerrarTurnoBiker />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </OperadorGuard>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/operador/dashboard/live"
+          element={
+            <PrivateRoute>
+              <OperadorGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType="admin">
+                    <Layout>
+                      <DashboardLive />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </OperadorGuard>
             </PrivateRoute>
           }
         />
