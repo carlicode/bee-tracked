@@ -193,7 +193,22 @@ export const IniciarTurno = () => {
       </div>
       <h2 className="text-2xl font-bold text-black mb-6">Iniciar Turno</h2>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-6 space-y-6">
+      {loading && (
+        <div className="bg-white rounded-lg shadow-md p-8 text-center">
+          <div className="text-5xl mb-5">🐝</div>
+          <p className="text-xl font-bold text-gray-800 mb-1">Iniciando tu turno...</p>
+          <div className="flex justify-center gap-3 my-5">
+            <span className="w-4 h-4 rounded-full bg-beezero-yellow animate-bounce" style={{ animationDelay: '0ms' }} />
+            <span className="w-4 h-4 rounded-full bg-beezero-yellow animate-bounce" style={{ animationDelay: '180ms' }} />
+            <span className="w-4 h-4 rounded-full bg-beezero-yellow animate-bounce" style={{ animationDelay: '360ms' }} />
+          </div>
+          <p className="text-sm text-gray-500 leading-relaxed">
+            Esto puede tardar unos segundos,<br />no cierres la app 😊
+          </p>
+        </div>
+      )}
+
+      {!loading && <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-6 space-y-6">
         {/* Abejita (solo lectura: nombre del usuario logueado) */}
         <div>
           <label htmlFor="abejita" className="block text-sm font-medium text-black mb-1">
@@ -441,7 +456,7 @@ export const IniciarTurno = () => {
             {loading ? 'Iniciando...' : 'Iniciar Turno'}
           </button>
         </div>
-      </form>
+      </form>}
     </div>
   );
 };
