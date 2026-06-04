@@ -101,11 +101,11 @@ export const storage = {
 
   /** Incrementar TUTORIAL_VERSION tras demo/cambio de flujo para que todos vean el tutorial de nuevo */
   getTutorialCompleted: (userId: string): boolean => {
-    return localStorage.getItem(`tutorial_done_v3_${userId}`) === '1';
+    return localStorage.getItem(`tutorial_done_v4_${userId}`) === '1';
   },
 
   setTutorialCompleted: (userId: string): void => {
-    localStorage.setItem(`tutorial_done_v3_${userId}`, '1');
+    localStorage.setItem(`tutorial_done_v4_${userId}`, '1');
   },
 };
 
