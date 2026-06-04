@@ -115,20 +115,29 @@ export const CerrarTurno = () => {
           aplicarTurno(turno);
           return;
         }
+        // Backend confirma que no hay turno activo → limpiar stale y redirigir
+        localStorage.removeItem('turno_actual');
+        toast.show('No hay un turno activo para cerrar', 'info');
+        navigate('/beezero/dashboard');
+        return;
       }
 
-      // Fallback: localStorage (modo demo o backend no disponible)
+      // Fallback: localStorage (solo cuando backend no disponible / modo demo)
       const turnoGuardado = localStorage.getItem('turno_actual');
       if (turnoGuardado) {
         try {
           const turno = JSON.parse(turnoGuardado) as Partial<Turno>;
           if (turno?.turnoIniciado && !turno?.turnoCerrado) {
             aplicarTurno(turno);
+            return;
           }
         } catch {
           // JSON inválido
         }
       }
+      // Ni backend ni localStorage tienen turno activo
+      toast.show('No hay un turno activo para cerrar', 'info');
+      navigate('/beezero/dashboard');
     };
     cargarTurno();
   }, [user?.driverName]);

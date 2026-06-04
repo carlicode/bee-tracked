@@ -23,15 +23,36 @@ export const CerrarTurnoBiker = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const turno = storage.getItem<TurnoSimple>('turno_actual_biker');
-    if (!turno || !turno.turnoIniciado || turno.turnoCerrado) {
-      toast.show('No hay un turno activo para cerrar', 'info', {
-        onClose: () => navigate('/ecodelivery/dashboard'),
-      });
-      return;
-    }
-    setTurnoActual(turno);
-  }, [navigate, toast]);
+    const cargarTurno = async () => {
+      // 1. Consultar DynamoDB (fuente de verdad)
+      if (isEcodeliveryApiEnabled() && user?.driverName) {
+        try {
+          const turnoBackend = await ecodeliveryApi.getTurnoActivo(user.driverName);
+          if (turnoBackend) {
+            storage.setItem('turno_actual_biker', turnoBackend);
+            setTurnoActual(turnoBackend as TurnoSimple);
+            return;
+          }
+          // Backend confirma que no hay turno activo → limpiar y redirigir
+          storage.removeItem('turno_actual_biker');
+          toast.show('No hay un turno activo para cerrar', 'info');
+          navigate(dashboardPath);
+          return;
+        } catch {
+          // Red caída → fallback localStorage
+        }
+      }
+      // 2. Fallback: localStorage
+      const turno = storage.getItem<TurnoSimple>('turno_actual_biker');
+      if (!turno || !turno.turnoIniciado || turno.turnoCerrado) {
+        toast.show('No hay un turno activo para cerrar', 'info');
+        navigate(dashboardPath);
+        return;
+      }
+      setTurnoActual(turno);
+    };
+    void cargarTurno();
+  }, [navigate, toast, dashboardPath, user?.driverName]);
 
   const handleGetLocationAndClose = () => {
     if (!navigator.geolocation) {
