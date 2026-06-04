@@ -97,9 +97,15 @@ export const DashboardBeezero = () => {
             setLoading(false);
             return;
           }
+          // Backend respondió null → no hay turno activo. Limpiar localStorage
+          // para evitar mostrar datos stale de sesiones anteriores.
+          localStorage.removeItem('turno_actual');
+          setTurnoActual(null);
+          setLoading(false);
+          return;
         }
 
-        // Fallback: localStorage (modo demo o backend no disponible)
+        // Fallback: localStorage solo cuando el backend no está disponible (modo demo)
         const turnoLocal = localStorage.getItem('turno_actual');
         if (turnoLocal) {
           const turno = JSON.parse(turnoLocal) as Turno;
