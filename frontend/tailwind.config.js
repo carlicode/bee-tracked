@@ -27,6 +27,11 @@ export default {
           'purple-dark': '#6D28D9',
           'purple-light': '#A78BFA',
         },
+        'operador': {
+          slate: '#64748B',
+          'slate-dark': '#475569',
+          'slate-light': '#94A3B8',
+        },
       },
     },
   },

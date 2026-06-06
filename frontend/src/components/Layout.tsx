@@ -28,14 +28,14 @@ export const Layout = ({ children }: LayoutProps) => {
         ? 'bg-beeadmin-purple'
         : userType === 'rrhh'
           ? 'bg-orange-500'
-          : 'bg-ecodelivery-green';
+          : userType === 'operador'
+            ? 'bg-operador-slate'
+            : 'bg-ecodelivery-green';
 
   const textClass =
     userType === 'beezero'
       ? 'text-black'
-      : userType === 'admin' || userType === 'rrhh'
-        ? 'text-white'
-        : 'text-white';
+      : 'text-white';
 
   const subText =
     userType === 'beezero'
@@ -44,7 +44,9 @@ export const Layout = ({ children }: LayoutProps) => {
         ? 'Admin'
         : userType === 'rrhh'
           ? 'RRHH'
-          : 'Bikers';
+          : userType === 'operador'
+            ? 'Operadores'
+            : 'Bikers';
 
   return (
     <div className="min-h-screen bg-white">
@@ -76,7 +78,7 @@ export const Layout = ({ children }: LayoutProps) => {
                     className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors ${largeTextEnabled ? (userType === 'beezero' ? 'bg-black' : 'bg-white') : 'bg-gray-300'}`}
                   >
                     <span
-                      className={`inline-block h-5 w-5 transform rounded-full transition-transform shadow ${largeTextEnabled ? (userType === 'beezero' ? 'bg-beezero-yellow translate-x-6' : userType === 'admin' ? 'bg-beeadmin-purple translate-x-6' : 'bg-ecodelivery-green translate-x-6') : 'bg-white translate-x-0.5'}`}
+                      className={`inline-block h-5 w-5 transform rounded-full transition-transform shadow ${largeTextEnabled ? (userType === 'beezero' ? 'bg-beezero-yellow translate-x-6' : userType === 'admin' ? 'bg-beeadmin-purple translate-x-6' : userType === 'operador' ? 'bg-operador-slate translate-x-6' : 'bg-ecodelivery-green translate-x-6') : 'bg-white translate-x-0.5'}`}
                     />
                   </button>
                 </label>

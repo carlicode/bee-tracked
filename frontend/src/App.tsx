@@ -386,7 +386,7 @@ function AppContent() {
             <PrivateRoute>
               <OperadorGuard>
                 {isAuthenticated() && (
-                  <ThemeProvider userType="ecodelivery">
+                  <ThemeProvider userType="operador">
                     <Layout>
                       <DashboardOperador />
                     </Layout>
@@ -402,7 +402,7 @@ function AppContent() {
             <PrivateRoute>
               <OperadorGuard>
                 {isAuthenticated() && (
-                  <ThemeProvider userType="ecodelivery">
+                  <ThemeProvider userType="operador">
                     <Layout>
                       <IniciarTurnoBiker />
                     </Layout>
@@ -418,7 +418,7 @@ function AppContent() {
             <PrivateRoute>
               <OperadorGuard>
                 {isAuthenticated() && (
-                  <ThemeProvider userType="ecodelivery">
+                  <ThemeProvider userType="operador">
                     <Layout>
                       <CerrarTurnoBiker />
                     </Layout>

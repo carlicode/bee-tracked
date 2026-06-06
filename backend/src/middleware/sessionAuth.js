@@ -67,4 +67,16 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-module.exports = { sessionAuth, requireRrhh, requireAdmin };
+function requireAdminOrOperador(req, res, next) {
+  const t = req.authUser?.userType;
+  if (t !== 'admin' && t !== 'rrhh' && t !== 'operador') {
+    return res.status(403).json({
+      success: false,
+      error: 'Acceso no autorizado',
+      code: 'FORBIDDEN',
+    });
+  }
+  next();
+}
+
+module.exports = { sessionAuth, requireRrhh, requireAdmin, requireAdminOrOperador };

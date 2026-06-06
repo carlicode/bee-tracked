@@ -6,7 +6,7 @@ const {
   classifyCarreraTabHeaders,
   listCarreraTabsByKind,
 } = require('../services/googleSheets');
-const { sessionAuth, requireAdmin } = require('../middleware/sessionAuth');
+const { sessionAuth, requireAdmin, requireAdminOrOperador } = require('../middleware/sessionAuth');
 const { isDynamoReadEnabled, slugUserId } = require('../services/dynamoUtils');
 const {
   todayYmdLaPaz,
@@ -602,9 +602,10 @@ router.get('/turnos/ecodelivery', async (req, res) => {
 
 /**
  * GET /api/admin/dashboard/live
- * Turnos activos hoy (BeeZero + Ecodelivery) con cache ~25s
+ * Turnos activos hoy (BeeZero + Ecodelivery + Operadores) con cache ~25s
+ * Accesible para admin, rrhh y operador.
  */
-router.get('/dashboard/live', async (req, res) => {
+router.get('/dashboard/live', requireAdminOrOperador, async (req, res) => {
   try {
     const now = Date.now();
     if (liveDashboardCache.data && liveDashboardCache.expiresAt > now) {
