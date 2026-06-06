@@ -85,4 +85,5 @@ export const PLACAS_AUTO_ABEJITA = [
   '7275 GUR',
   '7275 YYP',
   '7276 DTS',
+  '7276 DUX',
 ] as const;
