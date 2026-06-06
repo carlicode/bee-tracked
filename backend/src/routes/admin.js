@@ -20,7 +20,15 @@ const permisosService = require('../services/permisosService');
 
 const router = express.Router();
 
-router.use(sessionAuth, requireAdmin);
+// sessionAuth en todas las rutas; requireAdmin en todo EXCEPTO dashboard/live
+// (dashboard/live permite también operadores via requireAdminOrOperador)
+router.use(sessionAuth);
+router.use((req, res, next) => {
+  if (req.path === '/dashboard/live') {
+    return requireAdminOrOperador(req, res, next);
+  }
+  return requireAdmin(req, res, next);
+});
 
 function carrerasDriversSpreadsheetId() {
   return process.env.CARRERAS_DRIVERS_SHEET_ID || '';
@@ -605,7 +613,7 @@ router.get('/turnos/ecodelivery', async (req, res) => {
  * Turnos activos hoy (BeeZero + Ecodelivery + Operadores) con cache ~25s
  * Accesible para admin, rrhh y operador.
  */
-router.get('/dashboard/live', requireAdminOrOperador, async (req, res) => {
+router.get('/dashboard/live', async (req, res) => {
   try {
     const now = Date.now();
     if (liveDashboardCache.data && liveDashboardCache.expiresAt > now) {
