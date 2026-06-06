@@ -306,7 +306,7 @@ async function buildLiveDashboardPayload() {
         userId: item.userId || '',
         nombre: item.nombre || '',
         horaInicio: item.horaInicio || '',
-        tiempoTranscurrido: item.horaInicio ? calcularTiempoTranscurrido(item.horaInicio) : '—',
+        tiempoTranscurrido: item.horaInicio ? calcularTiempoTranscurrido(item.fecha, item.horaInicio) : '—',
       })).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
     } catch (err) {
       console.warn('[admin] dashboard/live operadores dynamo failed', err.message);
