@@ -5,6 +5,8 @@ import { useToast } from '../../contexts/ToastContext';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { storage } from '../../services/storage';
 import { useImageUpload } from '../../hooks/useImageUpload';
+import { useSessionGate } from '../../hooks/useSessionGate';
+import { SessionExpiredPrompt } from '../../components/SessionExpiredPrompt';
 import { ecodeliveryApi, isEcodeliveryApiEnabled } from '../../services/ecodeliveryApi';
 import { formatters } from '../../utils/formatters';
 import type { TurnoSimple } from '../../types/turno';
@@ -21,6 +23,7 @@ export const CerrarTurnoBiker = () => {
   const [turnoActual, setTurnoActual] = useState<TurnoSimple | null>(null);
   const { image: photoDataUrl, handleFileChange: handlePhotoChange, clearImage: clearPhoto, error: photoError } = useImageUpload();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { sessionExpired, sessionMessage, checkingSession, guardAction, relogin } = useSessionGate();
 
   useEffect(() => {
     const cargarTurno = async () => {
@@ -54,7 +57,7 @@ export const CerrarTurnoBiker = () => {
     void cargarTurno();
   }, [navigate, toast, dashboardPath, user?.driverName]);
 
-  const handleGetLocationAndClose = () => {
+  const captureLocationAndClose = () => {
     if (!navigator.geolocation) {
       toast.show('La geolocalización no está disponible en tu dispositivo', 'error');
       return;
@@ -83,6 +86,10 @@ export const CerrarTurnoBiker = () => {
         maximumAge: 0,
       }
     );
+  };
+
+  const handleGetLocationAndClose = () => {
+    void guardAction(captureLocationAndClose);
   };
 
   const handleCloseShift = async (locationData: { lat: number; lng: number }) => {
@@ -124,8 +131,13 @@ export const CerrarTurnoBiker = () => {
             usuario: turnoActual.bikerName || user?.driverName || user?.name,
           });
         } catch (err) {
-          console.error('Error registrando cierre en sheet:', err);
-          toast.show('Turno cerrado localmente. No se pudo actualizar el Sheet.', 'info');
+          console.error('Error registrando cierre en servidor:', err);
+          const msg =
+            err instanceof Error
+              ? err.message
+              : 'No se pudo cerrar el turno en el servidor. Revisa tu conexión e intenta de nuevo.';
+          toast.show(msg, 'error');
+          return;
         }
       }
 
@@ -179,11 +191,11 @@ export const CerrarTurnoBiker = () => {
       <div className="bg-white rounded-lg shadow-md p-8 space-y-6">
 
         {/* ── Loading overlay ── */}
-        {(locationLoading || loading) && (
+        {(locationLoading || loading || checkingSession) && (
           <div className="text-center py-6">
             <div className="text-5xl mb-5">🐝</div>
             <p className="text-xl font-bold text-gray-800 mb-1">
-              {locationLoading ? 'Obteniendo ubicación...' : 'Cerrando tu turno...'}
+              {checkingSession ? 'Verificando sesión...' : locationLoading ? 'Obteniendo ubicación...' : 'Cerrando tu turno...'}
             </p>
             <div className="flex justify-center gap-3 my-5">
               <span className="w-4 h-4 rounded-full bg-ecodelivery-green animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -196,7 +208,11 @@ export const CerrarTurnoBiker = () => {
           </div>
         )}
 
-        <div className={locationLoading || loading ? 'hidden' : ''}>
+        <div className={locationLoading || loading || checkingSession ? 'hidden' : ''}>
+        {sessionExpired ? (
+          <SessionExpiredPrompt message={sessionMessage} onRelogin={relogin} theme="ecodelivery" />
+        ) : (
+        <>
         <div className="bg-ecodelivery-green/10 rounded-lg p-4 mb-6 border border-ecodelivery-green/30">
           <h3 className="font-bold text-black mb-2">Turno Actual</h3>
           <p className="text-sm text-gray-700">
@@ -286,6 +302,8 @@ export const CerrarTurnoBiker = () => {
             Cancelar
           </button>
         </div>
+        </>
+        )}
         </div>{/* fin hidden wrapper */}
       </div>
     </div>

@@ -4,6 +4,7 @@ import {
   AuthenticationDetails,
   type CognitoUserSession,
 } from 'amazon-cognito-identity-js';
+import { normalizeCredential } from '../utils/validation';
 
 const USER_POOL_ID = import.meta.env.VITE_COGNITO_USER_POOL_ID || '';
 const CLIENT_ID = import.meta.env.VITE_COGNITO_CLIENT_ID || '';
@@ -72,8 +73,9 @@ export function signIn(username: string, password: string): Promise<CognitoSignI
     return Promise.reject(new Error('Cognito no configurado'));
   }
 
-  const normalized = username.trim();
+  const normalized = normalizeCredential(username);
   const cognitoUsername = normalized.toLowerCase();
+  const cleanPassword = normalizeCredential(password);
 
   const cognitoUser = new CognitoUser({
     Username: cognitoUsername,
@@ -82,7 +84,7 @@ export function signIn(username: string, password: string): Promise<CognitoSignI
 
   const authDetails = new AuthenticationDetails({
     Username: cognitoUsername,
-    Password: password,
+    Password: cleanPassword,
   });
 
   cognitoUser.setAuthenticationFlowType('USER_PASSWORD_AUTH');

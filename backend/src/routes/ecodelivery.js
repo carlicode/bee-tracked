@@ -140,18 +140,25 @@ router.get('/turnos/activo', async (req, res) => {
     const dynamo = DynamoDBDocumentClient.from(
       new DynamoDBClient({ region: process.env.AWS_REGION || 'us-east-1' })
     );
-    const userId = slugUserId(usuario);
+    const slugCandidates = [
+      slugUserId(usuario),
+      slugUserId(usuario.split(/\s+/).slice(0, 2).join(' ')),
+    ].filter((slug, index, arr) => slug && arr.indexOf(slug) === index);
 
-    // Buscar turnos activos del usuario (tipo ecodelivery u operador)
-    const result = await dynamo.send(new QueryCommand({
-      TableName: process.env.TURNOS_TABLE || 'bee-tracked-turnos-prod',
-      KeyConditionExpression: 'PK = :pk',
-      FilterExpression: '#est = :activo',
-      ExpressionAttributeNames: { '#est': 'estado' },
-      ExpressionAttributeValues: { ':pk': `USER#${userId}`, ':activo': 'activo' },
-    }));
-
-    const turno = result.Items?.[0] || null;
+    let turno = null;
+    for (const userId of slugCandidates) {
+      const result = await dynamo.send(new QueryCommand({
+        TableName: process.env.TURNOS_TABLE || 'bee-tracked-turnos-prod',
+        KeyConditionExpression: 'PK = :pk',
+        FilterExpression: '#est = :activo',
+        ExpressionAttributeNames: { '#est': 'estado' },
+        ExpressionAttributeValues: { ':pk': `USER#${userId}`, ':activo': 'activo' },
+      }));
+      if (result.Items?.[0]) {
+        turno = result.Items[0];
+        break;
+      }
+    }
     if (!turno) {
       return res.json({ success: true, data: null });
     }

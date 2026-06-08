@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
-const { registerSession, invalidateSession } = require('../services/sessionManager');
+const { registerSession, invalidateSession, isSessionValid } = require('../services/sessionManager');
 
 const DATA_DIR = path.join(__dirname, '../..', 'data');
 const CREDENTIALS_PATH =
@@ -170,6 +170,48 @@ router.post('/logout', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Error al cerrar sesión',
+    });
+  }
+});
+
+/**
+ * GET /api/auth/session/check
+ * Verifica si la sesión del usuario sigue activa (X-User-Id + X-Session-Id).
+ */
+router.get('/session/check', async (req, res) => {
+  try {
+    const userId =
+      req.headers['x-user-id'] ||
+      req.query.userId ||
+      req.user?.username;
+    const sessionId = req.headers['x-session-id'] || req.query.sessionId;
+
+    if (!userId || !sessionId) {
+      return res.json({
+        success: true,
+        valid: false,
+        code: 'AUTH_REQUIRED',
+        error: 'Sesión inválida o expirada. Por favor inicia sesión nuevamente.',
+      });
+    }
+
+    const valid = await isSessionValid(String(userId), String(sessionId));
+    if (!valid) {
+      return res.json({
+        success: true,
+        valid: false,
+        code: 'SESSION_EXPIRED',
+        error: 'Sesión inválida o expirada. Por favor inicia sesión nuevamente.',
+      });
+    }
+
+    res.json({ success: true, valid: true });
+  } catch (err) {
+    console.error('Error en session/check:', err);
+    res.status(500).json({
+      success: false,
+      valid: false,
+      error: 'Error al verificar sesión',
     });
   }
 });

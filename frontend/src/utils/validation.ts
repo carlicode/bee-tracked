@@ -2,6 +2,13 @@
  * Validation utilities
  */
 
+/** Quita espacios normales e invisibles (WhatsApp/copiar-pegar en móvil). */
+export function normalizeCredential(value: string): string {
+  return value
+    .replace(/[\u200B-\u200D\uFEFF\u00A0\u202F\u2060]/g, '')
+    .trim();
+}
+
 export const validators = {
   required: (value: string | number | undefined): boolean => {
     if (typeof value === 'number') {

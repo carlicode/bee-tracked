@@ -5,6 +5,8 @@ import { useToast } from '../../contexts/ToastContext';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { storage } from '../../services/storage';
 import { useImageUpload } from '../../hooks/useImageUpload';
+import { useSessionGate } from '../../hooks/useSessionGate';
+import { SessionExpiredPrompt } from '../../components/SessionExpiredPrompt';
 import { ecodeliveryApi, isEcodeliveryApiEnabled } from '../../services/ecodeliveryApi';
 import { formatters } from '../../utils/formatters';
 import type { TurnoSimple } from '../../types/turno';
@@ -20,8 +22,9 @@ export const IniciarTurnoBiker = () => {
   const [locationLoading, setLocationLoading] = useState(false);
   const { image: photoDataUrl, handleFileChange: handlePhotoChange, clearImage: clearPhoto, error: photoError } = useImageUpload();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { sessionExpired, sessionMessage, checkingSession, guardAction, relogin } = useSessionGate();
 
-  const handleGetLocationAndStart = () => {
+  const captureLocationAndStart = () => {
     if (!navigator.geolocation) {
       toast.show('La geolocalización no está disponible en tu dispositivo', 'error');
       return;
@@ -53,6 +56,10 @@ export const IniciarTurnoBiker = () => {
         maximumAge: 0,
       }
     );
+  };
+
+  const handleGetLocationAndStart = () => {
+    void guardAction(captureLocationAndStart);
   };
 
   const handleStartShift = async (locationData: { lat: number; lng: number }) => {
@@ -143,11 +150,11 @@ export const IniciarTurnoBiker = () => {
       <div className="bg-white rounded-lg shadow-md p-8 space-y-6">
 
         {/* ── Loading overlay ── */}
-        {(locationLoading || loading) && (
+        {(locationLoading || loading || checkingSession) && (
           <div className="text-center py-6">
             <div className="text-5xl mb-5">🐝</div>
             <p className="text-xl font-bold text-gray-800 mb-1">
-              {locationLoading ? 'Obteniendo ubicación...' : 'Registrando tu turno...'}
+              {checkingSession ? 'Verificando sesión...' : locationLoading ? 'Obteniendo ubicación...' : 'Registrando tu turno...'}
             </p>
             <div className="flex justify-center gap-3 my-5">
               <span className="w-4 h-4 rounded-full bg-ecodelivery-green animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -160,7 +167,11 @@ export const IniciarTurnoBiker = () => {
           </div>
         )}
 
-        <div className={`text-center ${locationLoading || loading ? 'hidden' : ''}`}>
+        <div className={`text-center ${locationLoading || loading || checkingSession ? 'hidden' : ''}`}>
+          {sessionExpired ? (
+            <SessionExpiredPrompt message={sessionMessage} onRelogin={relogin} theme="ecodelivery" />
+          ) : (
+          <>
           <div className="bg-ecodelivery-green/10 rounded-full w-24 h-24 mx-auto mb-6 flex items-center justify-center">
             <svg className="w-12 h-12 text-ecodelivery-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -231,9 +242,11 @@ export const IniciarTurnoBiker = () => {
               </span>
             )}
           </button>
+          </>
+          )}
         </div>
 
-        {!(locationLoading || loading) && (
+        {!(locationLoading || loading || checkingSession || sessionExpired) && (
         <div className="flex gap-4 pt-4 border-t border-gray-200">
           <button
             type="button"

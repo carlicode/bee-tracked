@@ -9,6 +9,7 @@ import { announcementsApi, type Announcement } from '../services/andiApi';
 import { AnnouncementModal } from '../components/AnnouncementModal';
 import { TutorialModal } from '../components/TutorialModal';
 import type { User } from '../types';
+import { normalizeCredential } from '../utils/validation';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -87,8 +88,8 @@ export const Login = () => {
     setLoading(true);
     setError('');
 
-    const userTrim = username.trim();
-    const passTrim = password;
+    const userTrim = normalizeCredential(username);
+    const passTrim = normalizeCredential(password);
 
     if (isCognitoConfigured()) {
       try {
@@ -133,12 +134,14 @@ export const Login = () => {
         await finishLogin(user, dashboardPath(userType), idToken, sessionId, cognitoUsername);
         return;
       } catch (cognitoErr) {
-        if (!API_BASE) {
-          const msg = cognitoErr instanceof Error ? cognitoErr.message : 'Usuario o contraseña incorrectos';
-          setError(msg);
-          setLoading(false);
-          return;
-        }
+        const msg = cognitoErr instanceof Error ? cognitoErr.message : 'Usuario o contraseña incorrectos';
+        setError(
+          msg === 'Usuario o contraseña incorrectos'
+            ? 'Usuario o contraseña incorrectos. Si copiaste desde WhatsApp, escribe la contraseña a mano.'
+            : msg
+        );
+        setLoading(false);
+        return;
       }
     }
 

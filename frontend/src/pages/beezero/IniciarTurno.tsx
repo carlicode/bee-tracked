@@ -8,6 +8,8 @@ import { turnosApi } from '../../services/turnosApi';
 import { formatters } from '../../utils/formatters';
 import { fileToCompressedBase64 } from '../../utils/image';
 import { uploadApi } from '../../services/uploadApi';
+import { useSessionGate } from '../../hooks/useSessionGate';
+import { SessionExpiredPrompt } from '../../components/SessionExpiredPrompt';
 import type { Turno } from '../../types/turno';
 
 export const IniciarTurno = () => {
@@ -23,6 +25,7 @@ export const IniciarTurno = () => {
   const [photoUploading, setPhotoUploading] = useState<{ fotoPantalla?: boolean; fotoExterior?: boolean }>({});
   const anyPhotoUploading = Boolean(photoUploading.fotoPantalla || photoUploading.fotoExterior);
 
+  const { sessionExpired, sessionMessage, checkingSession, guardAction, relogin } = useSessionGate();
   const [deseaRegistrarDano, setDeseaRegistrarDano] = useState<boolean | null>(null);
   const [formData, setFormData] = useState<Partial<Turno> & { aperturaCajaStr?: string; kilometrajeStr?: string; bateriaStr?: string }>({
     abejita: user?.driverName || '',
@@ -38,7 +41,7 @@ export const IniciarTurno = () => {
     fotoExterior: '',
   });
 
-  const handleGetLocation = () => {
+  const captureLocation = () => {
     if (!navigator.geolocation) {
       toast.show('La geolocalización no está disponible en tu dispositivo', 'error');
       return;
@@ -67,6 +70,10 @@ export const IniciarTurno = () => {
         maximumAge: 0,
       }
     );
+  };
+
+  const handleGetLocation = () => {
+    void guardAction(captureLocation);
   };
 
   const handlePhotoUpload = (field: 'fotoPantalla' | 'fotoExterior') => async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -279,16 +286,19 @@ export const IniciarTurno = () => {
           <label className="block text-sm font-medium text-black mb-2">
             Ubicación *
           </label>
+          {sessionExpired ? (
+            <SessionExpiredPrompt message={sessionMessage} onRelogin={relogin} theme="beezero" />
+          ) : (
           <button
             type="button"
             onClick={handleGetLocation}
-            disabled={locationLoading}
+            disabled={locationLoading || checkingSession}
             className="w-full bg-beezero-yellow text-black px-4 py-3 rounded-lg hover:bg-beezero-yellow-dark transition font-semibold disabled:opacity-50 shadow-md"
           >
-            {locationLoading ? (
+            {checkingSession || locationLoading ? (
               <span className="flex items-center justify-center gap-2">
                 <LoadingSpinner />
-                Cargando
+                {checkingSession ? 'Verificando sesión...' : 'Cargando'}
               </span>
             ) : location ? (
               '✓ Información obtenida'
@@ -296,6 +306,7 @@ export const IniciarTurno = () => {
               'Obtener información'
             )}
           </button>
+          )}
         </div>
 
         {/* Kilometraje - texto libre */}
