@@ -41,7 +41,10 @@ export const IniciarTurnoBiker = () => {
       },
       (error) => {
         console.error('Error obteniendo ubicación:', error);
-        toast.show('Error al obtener la ubicación. Asegúrate de permitir el acceso a la ubicación.', 'error');
+        const msg = error.code === 1
+          ? 'Permiso de ubicación bloqueado. Para habilitarlo: abrí el navegador → tocá el ícono 🔒 o ⚙️ en la barra de direcciones → Permisos → Ubicación → Permitir. Luego recargá la página.'
+          : 'No se pudo obtener la ubicación. Verificá que el GPS esté activado e intentá nuevamente.';
+        toast.show(msg, 'error');
         setLocationLoading(false);
       },
       {
