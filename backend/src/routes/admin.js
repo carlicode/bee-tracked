@@ -146,6 +146,7 @@ function mapActiveTurno(obj, headers, tipo) {
       ? findHeaderKey(headers, 'Abejita')
       : findHeaderKey(headers, 'Usuario', 'Biker', '- Turnos');
   const placaKey = findHeaderKey(headers, 'Auto (Placa)', 'Auto', 'Placa');
+  const aperturaKey = findHeaderKey(headers, 'Apertura Caja (Bs)', 'Apertura Caja', 'Apertura');
 
   const fecha = normalizeFecha(obj[fechaKey] || '');
   const estado = normalizeEstado(obj[estadoKey] || '');
@@ -165,6 +166,8 @@ function mapActiveTurno(obj, headers, tipo) {
   };
   if (tipo === 'beezero') {
     item.placa = String(obj[placaKey] || '').trim();
+    const aperturaRaw = parseFloat(String(obj[aperturaKey] || '').replace(',', '.'));
+    item.aperturaCaja = isNaN(aperturaRaw) ? null : aperturaRaw;
   }
   return item;
 }

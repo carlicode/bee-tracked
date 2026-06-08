@@ -26,11 +26,13 @@ function ActiveTable({
   emptyMessage,
   rows,
   showPlaca,
+  showApertura,
 }: {
   title: string;
   emptyMessage: string;
   rows: LiveTurnoActivo[];
   showPlaca?: boolean;
+  showApertura?: boolean;
 }) {
   return (
     <section className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
@@ -47,6 +49,7 @@ function ActiveTable({
                 <th className="px-5 py-3 font-medium">Nombre</th>
                 <th className="px-5 py-3 font-medium">Hora inicio</th>
                 {showPlaca && <th className="px-5 py-3 font-medium">Placa</th>}
+                {showApertura && <th className="px-5 py-3 font-medium">Apertura Bs</th>}
                 <th className="px-5 py-3 font-medium">Tiempo</th>
               </tr>
             </thead>
@@ -63,6 +66,11 @@ function ActiveTable({
                   </td>
                   <td className="px-5 py-3 text-gray-700">{row.horaInicio || '—'}</td>
                   {showPlaca && <td className="px-5 py-3 text-gray-700">{row.placa || '—'}</td>}
+                  {showApertura && (
+                    <td className="px-5 py-3 text-gray-700">
+                      {row.aperturaCaja != null ? `Bs ${row.aperturaCaja}` : '—'}
+                    </td>
+                  )}
                   <td className="px-5 py-3">
                     <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-900 px-2.5 py-0.5 text-xs font-semibold">
                       {row.tiempoTranscurrido}
@@ -242,6 +250,7 @@ export function DashboardLive() {
             emptyMessage="Nadie de BeeZero está trabajando ahora"
             rows={data?.beezero.activos ?? []}
             showPlaca
+            showApertura
           />
 
           <ActiveTable

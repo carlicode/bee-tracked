@@ -47,6 +47,7 @@ export interface LiveTurnoActivo {
   horaInicio: string;
   tiempoTranscurrido: string;
   placa?: string;
+  aperturaCaja?: number | null;
   tienePermiso?: boolean;
 }
 
