@@ -130,8 +130,14 @@ export const CerrarTurnoBiker = () => {
             tipo: isOperador ? 'operador' : 'ecodelivery',
             usuario: turnoActual.bikerName || user?.driverName || user?.name,
           });
-        } catch (err) {
+        } catch (err: unknown) {
           console.error('Error registrando cierre en servidor:', err);
+          const axiosErr = err as { response?: { status?: number } };
+          if (axiosErr?.response?.status === 401) {
+            toast.show('Tu sesión expiró. Iniciá sesión de nuevo para cerrar el turno.', 'error');
+            setTimeout(() => relogin(), 2500);
+            return;
+          }
           const msg =
             err instanceof Error
               ? err.message

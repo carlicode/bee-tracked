@@ -100,9 +100,15 @@ export const IniciarTurnoBiker = () => {
             tipo: isOperador ? 'operador' : 'ecodelivery',
           });
           turnoId = res.turnoId;
-        } catch (err) {
+        } catch (err: unknown) {
           console.error('Error registrando turno en sheet:', err);
-          toast.show('Turno guardado localmente. No se pudo registrar en el Sheet (¿backend y GOOGLE_SHEET_ID configurados?).', 'info');
+          const axiosErr = err as { response?: { status?: number } };
+          if (axiosErr?.response?.status === 401) {
+            toast.show('Tu sesión expiró. Iniciá sesión de nuevo.', 'error');
+            setTimeout(() => relogin(), 2500);
+            return;
+          }
+          toast.show('Turno guardado localmente. No se pudo registrar en el servidor.', 'info');
         }
       }
 

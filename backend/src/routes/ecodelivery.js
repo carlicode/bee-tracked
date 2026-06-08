@@ -153,9 +153,12 @@ router.get('/turnos/activo', async (req, res) => {
         FilterExpression: '#est = :activo',
         ExpressionAttributeNames: { '#est': 'estado' },
         ExpressionAttributeValues: { ':pk': `USER#${userId}`, ':activo': 'activo' },
+        ScanIndexForward: false, // más reciente primero (SK descendente)
       }));
-      if (result.Items?.[0]) {
-        turno = result.Items[0];
+      // Tomar el turno más reciente (mayor SK = TURNO#128 > TURNO#121)
+      const activos = result.Items || [];
+      if (activos.length > 0) {
+        turno = activos[0]; // ya viene el más reciente por ScanIndexForward: false
         break;
       }
     }
