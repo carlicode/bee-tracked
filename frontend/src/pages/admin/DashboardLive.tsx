@@ -49,7 +49,7 @@ function ActiveTable({
                 <th className="px-5 py-3 font-medium">Nombre</th>
                 <th className="px-5 py-3 font-medium">Hora inicio</th>
                 {showPlaca && <th className="px-5 py-3 font-medium">Placa</th>}
-                {showApertura && <th className="px-5 py-3 font-medium">Apertura Bs</th>}
+                {showApertura && <th className="px-5 py-3 font-medium">Apertura Caja (Bs)</th>}
                 <th className="px-5 py-3 font-medium">Tiempo</th>
               </tr>
             </thead>
