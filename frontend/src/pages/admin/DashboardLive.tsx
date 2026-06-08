@@ -238,11 +238,6 @@ export function DashboardLive() {
                 {resumen?.totalActivos ?? 0}
               </p>
             </div>
-            <div className="rounded-2xl border-2 border-gray-200 bg-gray-50 p-5">
-              <p className="text-sm font-medium text-gray-700">Carreras hoy</p>
-              <p className="mt-2 text-3xl font-bold text-gray-900">{resumen?.carrerasHoy ?? 0}</p>
-              <p className="mt-1 text-xs text-gray-500">Próximamente conteo automático</p>
-            </div>
           </div>
 
           <ActiveTable
