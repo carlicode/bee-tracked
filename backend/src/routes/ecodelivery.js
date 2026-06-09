@@ -291,7 +291,10 @@ router.post('/turnos/cerrar', async (req, res) => {
     const tipoCierre = tipoParam === 'operador' ? 'operador' : 'ecodelivery';
     const sheetCierre = tipoCierre === 'operador' ? SHEET_OPERADORES : SHEET_ECODELIVERY;
 
+    console.info('[cerrar turno] ▶ INICIO', { turnoId, tipoCierre, sheetCierre, usuario: req.body?.usuario, horaCierre });
+
     if (!turnoId || !fechaCierre || !horaCierre || timestampCierre == null) {
+      console.warn('[cerrar turno] 400 Faltan campos', { turnoId, fechaCierre, horaCierre, timestampCierre });
       return res.status(400).json({
         success: false,
         error: 'Faltan turnoId, fechaCierre, horaCierre o timestampCierre',
@@ -299,27 +302,29 @@ router.post('/turnos/cerrar', async (req, res) => {
     }
 
     let existing = await getRowById(sheetCierre, turnoId);
+    console.info('[cerrar turno] getRowById result:', existing ? `encontrado (Usuario="${existing['Usuario']}")` : 'NO encontrado');
 
     // Fallback: si no se encuentra por ID, buscar el último turno INICIADO del usuario por nombre
     if (!existing && req.body?.usuario) {
       const allRows = await getAllRows(sheetCierre);
-      const headers = allRows[0] || {};
       const dataRows = allRows.slice(1);
-      // Buscar la última fila con el mismo usuario y estado INICIADO
       const match = dataRows
         .filter(r => {
           const u = r['Usuario'] || r['usuario'] || '';
           const e = r['Estado'] || r['estado'] || '';
           return u === req.body.usuario && e === 'INICIADO';
         })
-        .pop(); // tomar la más reciente
+        .pop();
       if (match) {
         existing = match;
         console.info(`[cerrar turno] Fallback: encontrado por nombre "${req.body.usuario}"`);
+      } else {
+        console.warn('[cerrar turno] Fallback también falló. No hay fila INICIADO para:', req.body.usuario);
       }
     }
 
     if (!existing) {
+      console.error('[cerrar turno] 404 Turno no encontrado en Sheet', { turnoId, sheetCierre });
       return res.status(404).json({
         success: false,
         error: 'Turno no encontrado',
@@ -328,9 +333,9 @@ router.post('/turnos/cerrar', async (req, res) => {
 
     const updatedAt = new Date().toISOString();
     const fechaCierreBolivia = todayYmdLaPaz();
-    // TurnoId se guarda como número en la hoja; mantener igual al actualizar
-    // Soportar tanto 'TurnoId' como 'turnoId' (case-insensitive)
     const turnoIdValue = existing['TurnoId'] || existing['turnoId'] || turnoId;
+
+    console.info('[cerrar turno] turnoIdValue:', turnoIdValue, '| existing Usuario:', existing['Usuario']);
 
     const row = [
       turnoIdValue,
@@ -352,10 +357,11 @@ router.post('/turnos/cerrar', async (req, res) => {
       updatedAt,
     ];
 
+    console.info('[cerrar turno] Actualizando Google Sheet...');
     await updateRowById(sheetCierre, turnoId, row);
+    console.info('[cerrar turno] ✅ Google Sheet actualizado');
 
-    // Actualizar DynamoDB directamente con UpdateCommand (más confiable que saveTurnoToDynamo,
-    // que usa PutItem completo y falla silencioso si no puede reconstruir el item).
+    // Actualizar DynamoDB directamente con UpdateCommand
     try {
       const dynamoCierre = DynamoDBDocumentClient.from(
         new DynamoDBClient({ region: process.env.AWS_REGION || 'us-east-1' })
@@ -363,10 +369,15 @@ router.post('/turnos/cerrar', async (req, res) => {
       const nombreUsuario = existing['Usuario'] || req.body?.usuario || '';
       const { slugUserId } = require('../services/dynamoUtils');
       const userId = slugUserId(nombreUsuario);
+      const tableName = process.env.TURNOS_TABLE || 'bee-tracked-turnos-prod';
+      const pkKey = `USER#${userId}`;
+      const skKey = `TURNO#${String(turnoIdValue)}`;
+
+      console.info('[cerrar turno] DynamoDB UpdateCommand →', { table: tableName, PK: pkKey, SK: skKey });
 
       await dynamoCierre.send(new UpdateCommand({
-        TableName: process.env.TURNOS_TABLE || 'bee-tracked-turnos-prod',
-        Key: { PK: `USER#${userId}`, SK: `TURNO#${String(turnoIdValue)}` },
+        TableName: tableName,
+        Key: { PK: pkKey, SK: skKey },
         UpdateExpression: 'SET estado = :e, horaCierre = :hc, fechaCierre = :fc, latCierre = :latC, lngCierre = :lngC, timestampCierre = :tsC, fotoCierre = :fotoC, updatedAt = :ua',
         ExpressionAttributeValues: {
           ':e': 'cerrado',
@@ -379,10 +390,9 @@ router.post('/turnos/cerrar', async (req, res) => {
           ':ua': Date.now(),
         },
       }));
-      console.info(`[cerrar turno] DynamoDB actualizado: USER#${userId} TURNO#${turnoIdValue}`);
+      console.info(`[cerrar turno] ✅ DynamoDB actualizado: ${pkKey} ${skKey}`);
     } catch (dynamoErr) {
-      // No fallar el request si DynamoDB falla, pero sí loguear
-      console.error('[cerrar turno] DynamoDB update error:', dynamoErr.message);
+      console.error('[cerrar turno] ❌ DynamoDB update FAILED:', dynamoErr.message, dynamoErr.stack);
     }
 
     res.json({
