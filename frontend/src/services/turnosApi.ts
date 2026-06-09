@@ -134,9 +134,16 @@ export const turnosApi = {
       if (!data.success) throw new Error('Error al cerrar turno');
     } catch (err: unknown) {
       const ax = err && typeof err === 'object' && 'response' in err ? err as { response?: { status?: number; data?: { error?: string } }; message?: string } : null;
+      const status = ax?.response?.status;
       const msg = ax?.response?.data?.error || (err instanceof Error ? err.message : 'Error de conexión');
-      console.error('[turnosApi.cerrar]', ax?.response?.status, msg, ax?.response?.data);
-      throw new Error(ax?.response?.status === 404 || (err instanceof Error && err.message.includes('Network Error')) ? 'Servidor no encontrado. ¿Está el backend en marcha?' : msg);
+      console.error('[turnosApi.cerrar]', status, msg, ax?.response?.data);
+      // Preservar status 401 para que el caller pueda hacer relogin
+      if (status === 401) {
+        const e = new Error(msg) as Error & { statusCode: number };
+        e.statusCode = 401;
+        throw e;
+      }
+      throw new Error(status === 404 || (err instanceof Error && err.message.includes('Network Error')) ? 'Servidor no encontrado. ¿Está el backend en marcha?' : msg);
     }
   },
 };

@@ -13,8 +13,8 @@ const {
 } = require('@aws-sdk/client-dynamodb');
 const { marshall, unmarshall } = require('@aws-sdk/util-dynamodb');
 
-const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutos
-const ADMIN_INACTIVITY_TIMEOUT_MS = 4 * 60 * 60 * 1000;
+const INACTIVITY_TIMEOUT_MS = 8 * 60 * 60 * 1000; // 8 horas (turnos completos de trabajo)
+const ADMIN_INACTIVITY_TIMEOUT_MS = 12 * 60 * 60 * 1000; // 12 horas para admins/operadores
 
 class DynamoDBSessionStore {
   constructor(options = {}) {

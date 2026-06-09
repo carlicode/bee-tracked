@@ -55,10 +55,8 @@ export async function checkSessionValid(): Promise<SessionCheckResult> {
       error: data.error || 'Sesión inválida o expirada. Por favor inicia sesión nuevamente.',
     };
   } catch {
-    return {
-      valid: false,
-      code: 'SESSION_CHECK_FAILED',
-      error: 'No se pudo verificar tu sesión. Revisa tu conexión e intenta de nuevo.',
-    };
+    // Error de red o Lambda cold start: no bloquear al usuario.
+    // La API real manejará cualquier error de auth real cuando intente cerrar/abrir el turno.
+    return { valid: true };
   }
 }

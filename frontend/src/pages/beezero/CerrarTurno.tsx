@@ -354,6 +354,12 @@ export const CerrarTurno = () => {
           });
         } catch (backendError) {
           console.error('Error al cerrar turno en el servidor:', backendError);
+          // Sesión expirada: informar y redirigir a login
+          if ((backendError as { statusCode?: number }).statusCode === 401) {
+            toast.show('Tu sesión expiró. Iniciá sesión de nuevo para cerrar el turno.', 'error');
+            setTimeout(() => relogin(), 2500);
+            return;
+          }
           const msg =
             backendError instanceof Error
               ? backendError.message
