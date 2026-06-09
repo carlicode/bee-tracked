@@ -127,7 +127,7 @@ router.post('/upload-delivery-photo', async (req, res) => {
  * Devuelve el turno activo del usuario desde DynamoDB, o null si no existe.
  */
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
-const { DynamoDBDocumentClient, QueryCommand, ScanCommand } = require('@aws-sdk/lib-dynamodb');
+const { DynamoDBDocumentClient, QueryCommand, ScanCommand, UpdateCommand } = require('@aws-sdk/lib-dynamodb');
 const { slugUserId } = require('../services/dynamoUtils');
 
 router.get('/turnos/activo', async (req, res) => {
@@ -354,26 +354,36 @@ router.post('/turnos/cerrar', async (req, res) => {
 
     await updateRowById(sheetCierre, turnoId, row);
 
-    await saveTurnoToDynamo({
-      turnoId: String(turnoIdValue),
-      nombre: existing['Usuario'],
-      tipo: tipoCierre,
-      fecha: existing['Fecha Inicio'],
-      fechaCierre: fechaCierreBolivia,
-      horaInicio: existing['Hora Inicio'],
-      horaCierre: String(horaCierre),
-      latInicio: existing['Lat Inicio'],
-      lngInicio: existing['Lng Inicio'],
-      latCierre: latCierre != null ? Number(latCierre) : '',
-      lngCierre: lngCierre != null ? Number(lngCierre) : '',
-      timestampInicio: existing['Timestamp Inicio'],
-      timestampCierre: String(timestampCierre),
-      fotoInicio: existing['Foto Inicio'],
-      fotoCierre: fotoCierre || '',
-      estado: 'CERRADO',
-      createdAt: Date.parse(existing['Timestamp Creación']) || Date.now(),
-      updatedAt: Date.now(),
-    });
+    // Actualizar DynamoDB directamente con UpdateCommand (más confiable que saveTurnoToDynamo,
+    // que usa PutItem completo y falla silencioso si no puede reconstruir el item).
+    try {
+      const dynamoCierre = DynamoDBDocumentClient.from(
+        new DynamoDBClient({ region: process.env.AWS_REGION || 'us-east-1' })
+      );
+      const nombreUsuario = existing['Usuario'] || req.body?.usuario || '';
+      const { slugUserId } = require('../services/dynamoUtils');
+      const userId = slugUserId(nombreUsuario);
+
+      await dynamoCierre.send(new UpdateCommand({
+        TableName: process.env.TURNOS_TABLE || 'bee-tracked-turnos-prod',
+        Key: { PK: `USER#${userId}`, SK: `TURNO#${String(turnoIdValue)}` },
+        UpdateExpression: 'SET estado = :e, horaCierre = :hc, fechaCierre = :fc, latCierre = :latC, lngCierre = :lngC, timestampCierre = :tsC, fotoCierre = :fotoC, updatedAt = :ua',
+        ExpressionAttributeValues: {
+          ':e': 'cerrado',
+          ':hc': String(horaCierre),
+          ':fc': fechaCierreBolivia,
+          ':latC': latCierre != null ? String(latCierre) : '',
+          ':lngC': lngCierre != null ? String(lngCierre) : '',
+          ':tsC': String(timestampCierre),
+          ':fotoC': fotoCierre || '',
+          ':ua': Date.now(),
+        },
+      }));
+      console.info(`[cerrar turno] DynamoDB actualizado: USER#${userId} TURNO#${turnoIdValue}`);
+    } catch (dynamoErr) {
+      // No fallar el request si DynamoDB falla, pero sí loguear
+      console.error('[cerrar turno] DynamoDB update error:', dynamoErr.message);
+    }
 
     res.json({
       success: true,
