@@ -63,13 +63,6 @@ export const turnosApi = {
         { timeout: 10000, headers: authHeaders() }
       );
       if (!data.success || !Array.isArray(data.data)) return null;
-      // #region agent log
-      const candidatos = data.data.filter((t: Record<string, unknown>) => String(t.Abejita || '').toLowerCase().includes('carli'));
-      console.log('[DEBUG getTurnoActivo] driverName:', JSON.stringify(driverName));
-      console.log('[DEBUG getTurnoActivo] total rows:', data.data.length);
-      console.log('[DEBUG getTurnoActivo] candidatos (contienen "carli"):', candidatos.map((r: Record<string,unknown>) => ({ ID: r.ID, Abejita: r.Abejita, Estado: r.Estado, AbejitaJSON: JSON.stringify(r.Abejita) })));
-      console.log('[DEBUG getTurnoActivo] first row keys:', Object.keys(data.data[0] || {}));
-      // #endregion
       const row = data.data.find(
         (t: Record<string, unknown>) =>
           t.Abejita === driverName && t.Estado === 'INICIADO'
