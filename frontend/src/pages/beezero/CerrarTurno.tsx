@@ -594,6 +594,7 @@ export const CerrarTurno = () => {
                     <input
                       type="file"
                       accept="image/*"
+                      capture="environment"
                       onChange={handleGastoPhotoUpload(gasto.id, index)}
                       disabled={gastoUploadingIds.has(gasto.id)}
                       className="w-full border-2 border-gray-300 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow text-sm"
