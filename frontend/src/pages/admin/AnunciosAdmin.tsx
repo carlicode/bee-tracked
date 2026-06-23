@@ -126,6 +126,12 @@ export function AnunciosAdmin() {
                 >
                   Ver quién leyó
                 </button>
+                <Link
+                  to={`/admin/anuncios/editar?id=${a.announcementId}`}
+                  className="rounded-lg border border-violet-200 px-3 py-1.5 text-sm text-beeadmin-purple hover:bg-violet-50"
+                >
+                  Editar
+                </Link>
                 <button
                   type="button"
                   onClick={() => handleDelete(a.announcementId)}

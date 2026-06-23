@@ -47,6 +47,7 @@ const pushRouter = require('./routes/push');
 const permisosRouter = require('./routes/permisos');
 const uploadRouter = require('./routes/upload');
 const adminUsersRouter = require('./routes/adminUsers');
+const { userRouter: onboardingRouter, adminRouter: adminOnboardingRouter } = require('./routes/onboarding');
 const { sessionAuth, requireAdmin } = require('./middleware/sessionAuth');
 
 app.use('/api/turnos', turnosRouter);
@@ -57,6 +58,8 @@ app.use('/api/beezero', beezeroRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/admin/usuarios', sessionAuth, requireAdmin, adminUsersRouter);
 app.use('/api/admin/anuncios', adminAnunciosRouter);
+app.use('/api/onboarding', onboardingRouter);
+app.use('/api/admin/onboarding', adminOnboardingRouter);
 app.use('/api/andi', andiRouter);
 app.use('/api/announcements', announcementsRouter);
 app.use('/api/push', pushRouter);

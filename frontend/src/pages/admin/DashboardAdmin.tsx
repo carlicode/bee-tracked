@@ -87,6 +87,14 @@ export function DashboardAdmin() {
           <span className="mt-4 inline-flex text-beeadmin-purple font-medium text-sm">Abrir →</span>
         </Link>
 
+        <Link to="/admin/onboarding" className={cardBase}>
+          <h2 className="text-xl font-semibold text-gray-900">Primer inicio de app</h2>
+          <p className="mt-2 text-gray-600 text-sm">
+            Ver quién completó el tutorial de bienvenida y resetear a primer inicio si hace falta.
+          </p>
+          <span className="mt-4 inline-flex text-beeadmin-purple font-medium text-sm">Abrir →</span>
+        </Link>
+
         <Link to="/admin/usuarios" className={cardBase}>
           <h2 className="text-xl font-semibold text-gray-900">Usuarios</h2>
           <p className="mt-2 text-gray-600 text-sm">

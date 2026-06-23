@@ -315,6 +315,29 @@ export const adminApi = {
     return data.announcement;
   },
 
+  async getAnnouncement(id: string): Promise<Announcement> {
+    if (!API_BASE) throw new Error('Backend no configurado (VITE_API_URL)');
+    const { data } = await axios.get<{ success: boolean; announcement: Announcement; error?: string }>(
+      `${API_BASE}/api/admin/anuncios/${id}`,
+      { headers: authHeaders(), timeout: 20000 }
+    );
+    if (!data.success)
+      throw new Error(data.error || 'Error al obtener anuncio');
+    return data.announcement;
+  },
+
+  async updateAnnouncement(id: string, input: CreateAnnouncementInput): Promise<Announcement> {
+    if (!API_BASE) throw new Error('Backend no configurado (VITE_API_URL)');
+    const { data } = await axios.put<{ success: boolean; announcement: Announcement; error?: string }>(
+      `${API_BASE}/api/admin/anuncios/${id}`,
+      input,
+      { headers: authHeaders(), timeout: 20000 }
+    );
+    if (!data.success)
+      throw new Error(data.error || 'Error al actualizar anuncio');
+    return data.announcement;
+  },
+
   async getUsers(): Promise<AdminUser[]> {
     if (!API_BASE) throw new Error('Backend no configurado (VITE_API_URL)');
     const { data } = await axios.get<{ success: boolean; users: AdminUser[]; error?: string }>(

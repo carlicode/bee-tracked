@@ -41,6 +41,7 @@ import { CrearAnuncio } from './pages/andi/CrearAnuncio';
 import { SolicitarPermiso } from './pages/permisos/SolicitarPermiso';
 import { GestionPermisos } from './pages/admin/GestionPermisos';
 import { GestionUsuarios } from './pages/admin/GestionUsuarios';
+import { OnboardingAdmin } from './pages/admin/OnboardingAdmin';
 import { Rendimiento } from './pages/admin/Rendimiento';
 import { NotFound } from './pages/NotFound';
 
@@ -567,6 +568,38 @@ function AppContent() {
                   <ThemeProvider userType="admin">
                     <Layout>
                       <CrearAnuncio variant="admin" />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </AdminGuard>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin/anuncios/editar"
+          element={
+            <PrivateRoute>
+              <AdminGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType="admin">
+                    <Layout>
+                      <CrearAnuncio variant="admin" />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </AdminGuard>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin/onboarding"
+          element={
+            <PrivateRoute>
+              <AdminGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType="admin">
+                    <Layout>
+                      <OnboardingAdmin />
                     </Layout>
                   </ThemeProvider>
                 )}

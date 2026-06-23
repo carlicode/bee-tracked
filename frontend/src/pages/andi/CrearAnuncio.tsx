@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { andiApi, type AnnouncementAudience, type AnnouncementPriority } from '../../services/andiApi';
 import { adminApi } from '../../services/adminApi';
 import { useToast } from '../../contexts/ToastContext';
 import { AnnouncementModal } from '../../components/AnnouncementModal';
+import { LoadingSpinner } from '../../components/LoadingSpinner';
 
 function todayDate(): string {
   return new Date().toISOString().split('T')[0];
@@ -16,6 +17,9 @@ type CrearAnuncioProps = {
 export function CrearAnuncio({ variant = 'rrhh' }: CrearAnuncioProps) {
   const isAdmin = variant === 'admin';
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editId = isAdmin ? searchParams.get('id') : null;
+  const isEditing = Boolean(editId);
   const toast = useToast();
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
@@ -24,14 +28,44 @@ export function CrearAnuncio({ variant = 'rrhh' }: CrearAnuncioProps) {
   const [audience, setAudience] = useState<AnnouncementAudience>('all');
   const [priority, setPriority] = useState<AnnouncementPriority>('normal');
   const [loading, setLoading] = useState(false);
+  const [loadingData, setLoadingData] = useState(isEditing);
   const [showPreview, setShowPreview] = useState(false);
 
   const listPath = isAdmin ? '/admin/anuncios' : '/andi/anuncios';
-  const cancelPath = isAdmin ? '/admin/dashboard' : '/andi/dashboard';
+  const cancelPath = isAdmin ? '/admin/anuncios' : '/andi/dashboard';
   const borderClass = isAdmin ? 'border-violet-100' : 'border-orange-100';
   const submitClass = isAdmin
     ? 'bg-beeadmin-purple hover:bg-beeadmin-purple-dark'
     : 'bg-orange-600 hover:bg-orange-700';
+
+  useEffect(() => {
+    if (!editId) return;
+    let cancelled = false;
+    (async () => {
+      setLoadingData(true);
+      try {
+        const a = await adminApi.getAnnouncement(editId);
+        if (cancelled) return;
+        setTitle(a.title);
+        setMessage(a.message);
+        setStartDate(a.startDate);
+        setEndDate(a.endDate || '');
+        setAudience(a.audience);
+        setPriority(a.priority);
+      } catch (err: unknown) {
+        if (!cancelled) {
+          const msg = err && typeof err === 'object' && 'message' in err
+            ? String((err as Error).message)
+            : 'Error al cargar anuncio';
+          toast.show(msg, 'error');
+          navigate(listPath);
+        }
+      } finally {
+        if (!cancelled) setLoadingData(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [editId, listPath, navigate, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,27 +79,41 @@ export function CrearAnuncio({ variant = 'rrhh' }: CrearAnuncioProps) {
         audience,
         priority,
       };
-      if (isAdmin) {
+      if (isAdmin && isEditing && editId) {
+        await adminApi.updateAnnouncement(editId, input);
+        toast.show('Anuncio actualizado correctamente', 'success');
+      } else if (isAdmin) {
         await adminApi.createAnnouncement(input);
+        toast.show('Anuncio publicado correctamente', 'success');
       } else {
         await andiApi.createAnnouncement(input);
+        toast.show('Anuncio publicado correctamente', 'success');
       }
-      toast.show('Anuncio publicado correctamente', 'success');
       navigate(listPath);
     } catch (err: unknown) {
       const msg = err && typeof err === 'object' && 'response' in err
         ? (err as { response?: { data?: { error?: string } } }).response?.data?.error
         : null;
-      toast.show(msg || 'Error al publicar anuncio', 'error');
+      toast.show(msg || (isEditing ? 'Error al actualizar anuncio' : 'Error al publicar anuncio'), 'error');
     } finally {
       setLoading(false);
     }
   };
 
+  if (loadingData) {
+    return (
+      <div className="max-w-2xl mx-auto flex justify-center py-16">
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Crear anuncio</h1>
+        <h1 className="text-2xl font-bold text-gray-900">
+          {isEditing ? 'Editar anuncio' : 'Crear anuncio'}
+        </h1>
         <p className="text-gray-600 text-sm mt-1">Los usuarios lo verán al iniciar sesión.</p>
       </div>
 
@@ -101,7 +149,7 @@ export function CrearAnuncio({ variant = 'rrhh' }: CrearAnuncioProps) {
             <label className="block text-sm font-medium mb-1">Fecha inicio</label>
             <input
               type="date"
-              min={todayDate()}
+              min={isEditing ? undefined : todayDate()}
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
               className="w-full border-2 border-gray-200 rounded-lg px-3 py-2"
@@ -172,7 +220,9 @@ export function CrearAnuncio({ variant = 'rrhh' }: CrearAnuncioProps) {
             disabled={loading}
             className={`px-6 py-2 rounded-lg text-white font-semibold disabled:opacity-50 ${submitClass}`}
           >
-            {loading ? 'Publicando...' : 'Publicar anuncio'}
+            {loading
+              ? (isEditing ? 'Guardando...' : 'Publicando...')
+              : (isEditing ? 'Guardar cambios' : 'Publicar anuncio')}
           </button>
         </div>
       </form>

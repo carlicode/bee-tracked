@@ -168,7 +168,8 @@ async function getAnnouncementStats(announcementId) {
   };
 }
 
-function validateAnnouncementInput(body) {
+function validateAnnouncementInput(body, options = {}) {
+  const { isUpdate = false } = options;
   const { title, message, startDate, endDate, audience, priority } = body || {};
 
   if (!title || !message || !startDate || !audience || !priority) {
@@ -187,9 +188,11 @@ function validateAnnouncementInput(body) {
     return { error: 'Prioridad inválida', code: 'VALIDATION_ERROR' };
   }
 
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-  if (startDate <= yesterday) {
-    return { error: 'La fecha de inicio no puede ser anterior a hoy', code: 'INVALID_DATE' };
+  if (!isUpdate) {
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    if (startDate <= yesterday) {
+      return { error: 'La fecha de inicio no puede ser anterior a hoy', code: 'INVALID_DATE' };
+    }
   }
   if (endDate && endDate < startDate) {
     return { error: 'La fecha fin debe ser posterior al inicio', code: 'INVALID_DATE' };
@@ -204,6 +207,55 @@ function validateAnnouncementInput(body) {
       audience,
       priority,
     },
+  };
+}
+
+async function getAnnouncementById(announcementId) {
+  const listed = await listAnnouncements('all');
+  const existing = listed.find((a) => a.announcementId === announcementId);
+  if (!existing) {
+    const err = new Error('Anuncio no encontrado');
+    err.statusCode = 404;
+    err.code = 'NOT_FOUND';
+    throw err;
+  }
+  return existing;
+}
+
+async function updateAnnouncement(announcementId, body) {
+  const validation = validateAnnouncementInput(body, { isUpdate: true });
+  if (validation.error) {
+    const err = new Error(validation.error);
+    err.statusCode = 400;
+    err.code = validation.code;
+    throw err;
+  }
+
+  const existing = await getAnnouncementById(announcementId);
+  const { title, message, startDate, endDate, audience, priority } = validation.data;
+
+  await dynamo.send(
+    new UpdateItemCommand({
+      TableName: config.dynamo.anunciosTable,
+      Key: marshall({ PK: existing.PK, SK: existing.SK }),
+      UpdateExpression:
+        'SET title = :title, message = :message, startDate = :startDate, endDate = :endDate, audience = :audience, priority = :priority, updatedAt = :updatedAt',
+      ExpressionAttributeValues: marshall({
+        ':title': title,
+        ':message': message,
+        ':startDate': startDate,
+        ':endDate': endDate,
+        ':audience': audience,
+        ':priority': priority,
+        ':updatedAt': Date.now(),
+      }, { removeUndefinedValues: true }),
+    })
+  );
+
+  return {
+    ...mapAnnouncementSummary(existing),
+    ...validation.data,
+    updatedAt: Date.now(),
   };
 }
 
@@ -268,4 +320,6 @@ module.exports = {
   getAnnouncementStats,
   validateAnnouncementInput,
   createAnnouncement,
+  getAnnouncementById,
+  updateAnnouncement,
 };

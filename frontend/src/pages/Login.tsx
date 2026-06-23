@@ -6,6 +6,7 @@ import { useAccessibility } from '../contexts/AccessibilityContext';
 import { isCognitoConfigured, signIn as cognitoSignIn, getUserTypeFromToken } from '../services/cognito';
 import { storage } from '../services/storage';
 import { announcementsApi, type Announcement } from '../services/andiApi';
+import { onboardingApi } from '../services/onboardingApi';
 import { AnnouncementModal } from '../components/AnnouncementModal';
 import { TutorialModal } from '../components/TutorialModal';
 import type { User } from '../types';
@@ -42,8 +43,25 @@ export const Login = () => {
     setLoading(false);
   };
 
-  const maybeShowTutorial = (path: string, userId: string) => {
-    if (!storage.getTutorialCompleted(userId)) {
+  const maybeShowTutorial = async (path: string, userId: string) => {
+    let shouldShow = !storage.getTutorialCompleted(userId);
+    const user = storage.getUser();
+
+    if (
+      onboardingApi.isEnabled() &&
+      user &&
+      user.userType !== 'rrhh' &&
+      user.userType !== 'admin'
+    ) {
+      try {
+        const status = await onboardingApi.getStatus();
+        shouldShow = !status.completed;
+      } catch {
+        // fallback: localStorage
+      }
+    }
+
+    if (shouldShow) {
       setPendingPath(path);
       setTutorialUserId(userId);
       setShowTutorial(true);
@@ -80,7 +98,7 @@ export const Login = () => {
       }
     }
 
-    maybeShowTutorial(path, userId);
+    void maybeShowTutorial(path, userId);
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -208,7 +226,7 @@ export const Login = () => {
 
     login({ email, name: userName, driverName: userName, userType });
     setLoading(false);
-    maybeShowTutorial(dashboardPath(userType), usernameLower || userName);
+    void maybeShowTutorial(dashboardPath(userType), usernameLower || userName);
   };
 
   return (
@@ -220,7 +238,7 @@ export const Login = () => {
             setPendingAnnouncements([]);
             const path = pendingPath;
             const uid = tutorialUserId || storage.getUsername() || '';
-            if (path && uid) maybeShowTutorial(path, uid);
+            if (path && uid) void maybeShowTutorial(path, uid);
             else if (path) proceedToDashboard(path);
           }}
         />
@@ -232,9 +250,24 @@ export const Login = () => {
             (storage.getUser()?.userType as User['userType']) || 'beezero'
           }
           onComplete={() => {
-            const uid = tutorialUserId || storage.getUsername() || '';
-            if (uid) storage.setTutorialCompleted(uid);
-            proceedToDashboard(pendingPath);
+            void (async () => {
+              const uid = tutorialUserId || storage.getUsername() || '';
+              const user = storage.getUser();
+              if (uid) storage.setTutorialCompleted(uid);
+              if (
+                onboardingApi.isEnabled() &&
+                user?.userType &&
+                user.userType !== 'admin' &&
+                user.userType !== 'rrhh'
+              ) {
+                try {
+                  await onboardingApi.complete(user.userType);
+                } catch (err) {
+                  console.warn('No se pudo registrar onboarding:', err);
+                }
+              }
+              proceedToDashboard(pendingPath);
+            })();
           }}
         />
       )}
