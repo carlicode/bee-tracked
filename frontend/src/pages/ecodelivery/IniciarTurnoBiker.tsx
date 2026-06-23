@@ -188,9 +188,6 @@ export const IniciarTurnoBiker = () => {
           <h3 className="text-xl font-bold text-black mb-3">
             Presiona el botón para obtener tu ubicación e iniciar turno
           </h3>
-          <p className="text-gray-600 mb-6">
-            Se registrará automáticamente tu ubicación, hora de inicio y nombre
-          </p>
 
           {/* Foto Hillu */}
           <div className="mb-6 text-center">
