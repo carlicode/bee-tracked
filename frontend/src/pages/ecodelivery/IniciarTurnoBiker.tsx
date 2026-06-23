@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth';
 import { useToast } from '../../contexts/ToastContext';
@@ -21,9 +21,21 @@ export const IniciarTurnoBiker = () => {
   const [loading, setLoading] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
   const [turnoIniciado, setTurnoIniciado] = useState(false);
-  const { image: photoDataUrl, handleFileChange: handlePhotoChange, clearImage: clearPhoto, error: photoError } = useImageUpload();
+  const { image: photoDataUrl, loading: photoLoading, handleFileChange: handlePhotoChange, clearImage: clearPhoto, error: photoError } = useImageUpload();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { sessionExpired, sessionMessage, checkingSession, guardAction, relogin } = useSessionGate();
+
+  useEffect(() => {
+    if (!isEcodeliveryApiEnabled() || !user?.driverName) return;
+    void (async () => {
+      const activo = await ecodeliveryApi.getTurnoActivo(user.driverName);
+      if (activo) {
+        storage.setItem('turno_actual_biker', activo);
+        toast.show('Ya tenés un turno activo. Cerralo desde el panel.', 'info');
+        navigate(dashboardPath);
+      }
+    })();
+  }, [dashboardPath, navigate, toast, user?.driverName]);
 
   const captureLocationAndStart = () => {
     if (!navigator.geolocation) {
@@ -107,6 +119,11 @@ export const IniciarTurnoBiker = () => {
           if (axiosErr?.response?.status === 401) {
             toast.show('Tu sesión expiró. Iniciá sesión de nuevo.', 'error');
             setTimeout(() => relogin(), 2500);
+            return;
+          }
+          if (axiosErr?.response?.status === 409) {
+            toast.show('Ya tenés un turno activo. Cerralo desde el panel.', 'info');
+            navigate(dashboardPath);
             return;
           }
           toast.show('Turno guardado localmente. No se pudo registrar en el servidor.', 'info');
@@ -245,6 +262,7 @@ export const IniciarTurnoBiker = () => {
                 </button>
               </div>
             )}
+            {photoLoading && <p className="text-sm text-gray-500 mt-1">Procesando foto…</p>}
             {photoError && <p className="text-sm text-red-600 mt-1">{photoError}</p>}
           </div>
 

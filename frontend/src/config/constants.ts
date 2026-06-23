@@ -2,7 +2,12 @@
  * Application constants
  */
 export const APP_CONFIG = {
-  MAX_IMAGE_SIZE: 5 * 1024 * 1024, // 5MB
+  /** Tamaño máximo del archivo original de cámara antes de comprimir */
+  MAX_INPUT_IMAGE_SIZE: 25 * 1024 * 1024, // 25MB
+  /** Tamaño máximo tras comprimir (subida a API/S3) */
+  MAX_COMPRESSED_IMAGE_SIZE: 2 * 1024 * 1024, // 2MB
+  /** @deprecated Usar MAX_INPUT_IMAGE_SIZE / MAX_COMPRESSED_IMAGE_SIZE */
+  MAX_IMAGE_SIZE: 25 * 1024 * 1024,
   GEOLOCATION_TIMEOUT: 10000, // 10 seconds
   GEOLOCATION_OPTIONS: {
     enableHighAccuracy: true,
@@ -25,7 +30,9 @@ export const ERROR_MESSAGES = {
   SESSION_EXPIRED: 'Sesión expirada. Por favor inicia sesión nuevamente.',
   GEOLOCATION_NOT_AVAILABLE: 'La geolocalización no está disponible en tu dispositivo',
   GEOLOCATION_ERROR: 'Error al obtener la ubicación. Asegúrate de permitir el acceso a la ubicación.',
-  IMAGE_TOO_LARGE: 'La imagen es muy grande. Máximo 5MB',
+  IMAGE_TOO_LARGE: 'La imagen es demasiado pesada. Intenta con otra foto.',
+  IMAGE_INPUT_TOO_LARGE: 'La imagen es demasiado pesada (máx. 25MB). Intenta con otra foto.',
+  IMAGE_PROCESSING: 'Procesando foto…',
   GENERIC_ERROR: 'Ocurrió un error. Por favor intenta nuevamente.',
 } as const;
 

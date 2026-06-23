@@ -6,17 +6,16 @@ import { APP_CONFIG, ERROR_MESSAGES } from '../config/constants';
 const MAX_WIDTH = 1920;
 const JPEG_QUALITY = 0.85;
 
+function estimateBase64Bytes(dataUrl: string): number {
+  const base64Part = dataUrl.split(',')[1] || '';
+  return (base64Part.length * 3) / 4;
+}
+
 /**
- * Convert file to base64 string
+ * Convert file to base64 string (sin límite de tamaño — la compresión va después).
  */
 export const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
-    // Validate file size
-    if (file.size > APP_CONFIG.MAX_IMAGE_SIZE) {
-      reject(new Error(ERROR_MESSAGES.IMAGE_TOO_LARGE));
-      return;
-    }
-
     const reader = new FileReader();
     reader.onloadend = () => {
       resolve(reader.result as string);
@@ -30,17 +29,10 @@ export const fileToBase64 = (file: File): Promise<string> => {
 
 /**
  * Compress a base64 data URL (max width 1920px, JPEG quality 0.85).
- * Returns original if already small enough.
  */
 export async function compressImage(dataUrl: string, maxSizeMB = 0.8): Promise<string> {
   const maxBytes = maxSizeMB * 1024 * 1024;
-
-  // Estimate size from base64 length; skip if already under target
-  const base64Part = dataUrl.split(',')[1] || '';
-  const estimatedBytes = (base64Part.length * 3) / 4;
-  if (estimatedBytes <= maxBytes && !dataUrl.includes('data:image/jpeg')) {
-    // Still resize if dimensions exceed max width
-  }
+  const estimatedBytes = estimateBase64Bytes(dataUrl);
 
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -72,10 +64,8 @@ export async function compressImage(dataUrl: string, maxSizeMB = 0.8): Promise<s
       let quality = JPEG_QUALITY;
       let result = canvas.toDataURL('image/jpeg', quality);
 
-      // Reduce quality iteratively if still too large
-      while (quality > 0.4) {
-        const part = result.split(',')[1] || '';
-        const bytes = (part.length * 3) / 4;
+      while (quality > 0.35) {
+        const bytes = estimateBase64Bytes(result);
         if (bytes <= maxBytes) break;
         quality -= 0.1;
         result = canvas.toDataURL('image/jpeg', quality);
@@ -89,21 +79,14 @@ export async function compressImage(dataUrl: string, maxSizeMB = 0.8): Promise<s
 }
 
 /**
- * Read and compress a file in one step (for forms and hooks).
+ * Validate image file type and optional input size (before compression).
  */
-export async function fileToCompressedBase64(file: File): Promise<string> {
-  const validation = validateImageFile(file);
-  if (!validation.valid) {
-    throw new Error(validation.error || 'Imagen inválida');
-  }
-  const raw = await fileToBase64(file);
-  return compressImage(raw);
-}
+export const validateImageFile = (
+  file: File | undefined,
+  options: { checkInputSize?: boolean } = {}
+): { valid: boolean; error?: string } => {
+  const { checkInputSize = true } = options;
 
-/**
- * Validate image file
- */
-export const validateImageFile = (file: File | undefined): { valid: boolean; error?: string } => {
   if (!file) {
     return { valid: false, error: 'No se seleccionó ningún archivo' };
   }
@@ -112,9 +95,34 @@ export const validateImageFile = (file: File | undefined): { valid: boolean; err
     return { valid: false, error: 'El archivo debe ser una imagen' };
   }
 
-  if (file.size > APP_CONFIG.MAX_IMAGE_SIZE) {
-    return { valid: false, error: ERROR_MESSAGES.IMAGE_TOO_LARGE };
+  if (checkInputSize && file.size > APP_CONFIG.MAX_INPUT_IMAGE_SIZE) {
+    return { valid: false, error: ERROR_MESSAGES.IMAGE_INPUT_TOO_LARGE };
   }
 
   return { valid: true };
 };
+
+/**
+ * Read and compress a file in one step (for forms and hooks).
+ * Acepta fotos grandes de cámara y las comprime antes de subir.
+ */
+export async function fileToCompressedBase64(file: File): Promise<string> {
+  const validation = validateImageFile(file);
+  if (!validation.valid) {
+    throw new Error(validation.error || 'Imagen inválida');
+  }
+
+  const raw = await fileToBase64(file);
+  const targetMB = APP_CONFIG.MAX_COMPRESSED_IMAGE_SIZE / (1024 * 1024);
+  let compressed = await compressImage(raw, targetMB);
+
+  if (estimateBase64Bytes(compressed) > APP_CONFIG.MAX_COMPRESSED_IMAGE_SIZE) {
+    compressed = await compressImage(raw, targetMB / 2);
+  }
+
+  if (estimateBase64Bytes(compressed) > APP_CONFIG.MAX_COMPRESSED_IMAGE_SIZE) {
+    throw new Error(ERROR_MESSAGES.IMAGE_TOO_LARGE);
+  }
+
+  return compressed;
+}

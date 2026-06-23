@@ -85,14 +85,14 @@ async function validateSession(req, res, next) {
  * POST /api/turnos/iniciar
  * Registrar inicio de turno
  *
- * Columnas BeeZero:
+ * Columnas BeeZero (31 cols tras agregar Pagos QR):
  * A: ID | B: Timestamp Creación | C: Hora Inicio | D: Hora Cierre | E: Fecha Inicio | F: Fecha Cierre
  * G: Abejita | H: Auto (Placa) | I: Km Inicio | J: Km Cierre | K: Bateria Inicio | L: Bateria Cierre
- * M: Apertura Caja | N: Cierre Caja | O: ID Gastos | P: Total Gastos | Q: Diferencia
- * R: Daños Auto Inicio | S: Foto Tablero Inicio | T: Foto Ext Inicio
- * U: Daños Auto Cierre | V: Foto Tablero Cierre | W: Foto Ext Cierre
- * X: Ubic Inicio Lat | Y: Ubic Inicio Lng | Z: Ubic Cierre Lat | AA: Ubic Cierre Lng
- * AB: Observaciones | AC: Timestamp Actualización | AD: Estado
+ * M: Apertura Caja | N: Pagos QR | O: Cierre Caja | P: ID Gastos | Q: Total Gastos | R: Diferencia
+ * S: Daños Auto Inicio | T: Foto Tablero Inicio | U: Foto Ext Inicio
+ * V: Daños Auto Cierre | W: Foto Tablero Cierre | X: Foto Ext Cierre
+ * Y: Ubic Inicio Lat | Z: Ubic Inicio Lng | AA: Ubic Cierre Lat | AB: Ubic Cierre Lng
+ * AC: Observaciones | AD: Timestamp Actualización | AE: Estado
  */
 function findTurnoIniciadoAbierto(rows, abejita) {
   if (!rows?.length) return null;

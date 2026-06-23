@@ -76,7 +76,7 @@ export const DashboardBiker = () => {
       }
     };
     void cargarTurno();
-  }, []);
+  }, [user?.driverName]);
 
   return (
     <div>

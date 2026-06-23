@@ -21,7 +21,8 @@ export const CerrarTurnoBiker = () => {
   const [loading, setLoading] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
   const [turnoActual, setTurnoActual] = useState<TurnoSimple | null>(null);
-  const { image: photoDataUrl, handleFileChange: handlePhotoChange, clearImage: clearPhoto, error: photoError } = useImageUpload();
+  const [turnoCerrado, setTurnoCerrado] = useState(false);
+  const { image: photoDataUrl, loading: photoLoading, handleFileChange: handlePhotoChange, clearImage: clearPhoto, error: photoError } = useImageUpload();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { sessionExpired, sessionMessage, checkingSession, guardAction, relogin } = useSessionGate();
 
@@ -164,6 +165,9 @@ export const CerrarTurnoBiker = () => {
       storage.setItem('historial_turnos_biker', historial);
       storage.removeItem('turno_actual_biker');
 
+      // Ocultar formulario antes de navegar para evitar que el botón
+      // reaparezca brevemente mientras React procesa la navegación.
+      setTurnoCerrado(true);
       toast.show('¡Turno cerrado exitosamente!', 'success');
       navigate(dashboardPath);
     } catch (error) {
@@ -174,7 +178,7 @@ export const CerrarTurnoBiker = () => {
     }
   };
 
-  if (!turnoActual) {
+  if (!turnoActual || turnoCerrado) {
     return null;
   }
 
@@ -272,6 +276,7 @@ export const CerrarTurnoBiker = () => {
                 </button>
               </div>
             )}
+            {photoLoading && <p className="text-sm text-gray-500 mt-1">Procesando foto…</p>}
             {photoError && <p className="text-sm text-red-600 mt-1">{photoError}</p>}
           </div>
 

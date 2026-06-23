@@ -222,6 +222,33 @@ router.post('/turnos/iniciar', async (req, res) => {
       });
     }
 
+    const dynamoIniciar = DynamoDBDocumentClient.from(
+      new DynamoDBClient({ region: process.env.AWS_REGION || 'us-east-1' })
+    );
+    const slugCandidates = [
+      slugUserId(usuario),
+      slugUserId(String(usuario).trim().split(/\s+/).slice(0, 2).join(' ')),
+    ].filter((slug, index, arr) => slug && arr.indexOf(slug) === index);
+
+    for (const userId of slugCandidates) {
+      const existingActivo = await dynamoIniciar.send(new QueryCommand({
+        TableName: process.env.TURNOS_TABLE || 'bee-tracked-turnos-prod',
+        KeyConditionExpression: 'PK = :pk',
+        FilterExpression: '#est = :activo',
+        ExpressionAttributeNames: { '#est': 'estado' },
+        ExpressionAttributeValues: { ':pk': `USER#${userId}`, ':activo': 'activo' },
+        ScanIndexForward: false,
+      }));
+      if (existingActivo.Items?.length > 0) {
+        return res.status(409).json({
+          success: false,
+          error: 'Ya tenés un turno activo. Cerralo antes de iniciar otro.',
+          code: 'TURNO_ACTIVO_EXISTS',
+          turnoId: existingActivo.Items[0].turnoId,
+        });
+      }
+    }
+
     const turnoIdNum = await getNextTurnoId(tipo);
     const now = new Date().toISOString();
     const fechaInicioBolivia = todayYmdLaPaz();

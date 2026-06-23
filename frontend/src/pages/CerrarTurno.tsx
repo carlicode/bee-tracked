@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { useToast } from '../contexts/ToastContext';
 import { formatters } from '../utils/formatters';
+import { fileToCompressedBase64 } from '../utils/image';
 import type { Turno } from '../types/turno';
 
 export const CerrarTurno = () => {
@@ -11,7 +12,7 @@ export const CerrarTurno = () => {
   const [loading, setLoading] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [turnoInicio, setTurnoInicio] = useState<Partial<Turno> | null>(null);
+  const [photoUploading, setPhotoUploading] = useState<{ fotoPantalla?: boolean; fotoExterior?: boolean }>({});
 
   const [formData, setFormData] = useState<Partial<Turno>>({
     cierreCaja: 0,
@@ -65,23 +66,21 @@ export const CerrarTurno = () => {
     );
   };
 
-  const handlePhotoUpload = (field: 'fotoPantalla' | 'fotoExterior') => (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = (field: 'fotoPantalla' | 'fotoExterior') => async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast.show('La imagen es muy grande. Máximo 5MB', 'error');
-      return;
+    setPhotoUploading((prev) => ({ ...prev, [field]: true }));
+    try {
+      const dataUrl = await fileToCompressedBase64(file);
+      setFormData((prev) => ({ ...prev, [field]: dataUrl }));
+    } catch (err) {
+      setFormData((prev) => ({ ...prev, [field]: '' }));
+      toast.show(err instanceof Error ? err.message : 'Error al procesar la imagen', 'error');
+    } finally {
+      setPhotoUploading((prev) => ({ ...prev, [field]: false }));
+      e.target.value = '';
     }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setFormData((prev) => ({
-        ...prev,
-        [field]: reader.result as string,
-      }));
-    };
-    reader.readAsDataURL(file);
   };
 
   const calcularDiferencia = () => {
@@ -303,6 +302,9 @@ export const CerrarTurno = () => {
             onChange={handlePhotoUpload('fotoPantalla')}
             className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
           />
+          {photoUploading.fotoPantalla && (
+            <p className="text-sm text-gray-500 mt-2">Procesando foto…</p>
+          )}
           {formData.fotoPantalla && (
             <img
               src={formData.fotoPantalla}
@@ -324,6 +326,9 @@ export const CerrarTurno = () => {
             onChange={handlePhotoUpload('fotoExterior')}
             className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
           />
+          {photoUploading.fotoExterior && (
+            <p className="text-sm text-gray-500 mt-2">Procesando foto…</p>
+          )}
           {formData.fotoExterior && (
             <img
               src={formData.fotoExterior}
