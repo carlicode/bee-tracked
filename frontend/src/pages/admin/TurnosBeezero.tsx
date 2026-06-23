@@ -21,6 +21,7 @@ const DRIVER_COLS: { label: string; aliases: string[]; isDate?: boolean }[] = [
   { label: 'Hora Cierre', aliases: ['hora cierre'] },
   { label: 'Auto (Placa)', aliases: ['auto (placa)', 'auto(placa)', 'auto placa'] },
   { label: 'Apertura Caja (Bs)', aliases: ['apertura caja (bs)', 'apertura caja', 'apertura caja bs'] },
+  { label: 'Pagos QR (Bs)', aliases: ['pagos qr (bs)', 'pagos qr', 'pagos qr bs'] },
   { label: 'Cierre Caja (Bs)', aliases: ['cierre caja (bs)', 'cierre caja', 'cierre caja bs'] },
   { label: 'Total Gastos', aliases: ['total gastos'] },
   { label: 'Diferencia (Bs)', aliases: ['diferencia (bs)', 'diferencia bs'] },

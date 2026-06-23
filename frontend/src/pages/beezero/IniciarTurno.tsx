@@ -26,7 +26,7 @@ export const IniciarTurno = () => {
   const anyPhotoUploading = Boolean(photoUploading.fotoPantalla || photoUploading.fotoExterior);
 
   const { sessionExpired, sessionMessage, checkingSession, guardAction, relogin } = useSessionGate();
-  const [deseaRegistrarDano, setDeseaRegistrarDano] = useState<boolean | null>(null);
+  const [deseaRegistrarDano, setDeseaRegistrarDano] = useState<boolean>(false);
   const [formData, setFormData] = useState<Partial<Turno> & { aperturaCajaStr?: string; kilometrajeStr?: string; bateriaStr?: string }>({
     abejita: user?.driverName || '',
     aperturaCaja: undefined,
@@ -116,8 +116,18 @@ export const IniciarTurno = () => {
       return;
     }
 
-    if (deseaRegistrarDano === null) {
-      toast.show('Por favor indica si desea registrar algún daño al auto (Sí o No)', 'info');
+    if (formData.kilometraje == null || formData.kilometraje === undefined || isNaN(Number(formData.kilometraje))) {
+      toast.show('Por favor ingresa el kilometraje', 'info');
+      return;
+    }
+
+    if (formData.bateria == null || formData.bateria === undefined || isNaN(Number(formData.bateria))) {
+      toast.show('Por favor ingresa la batería de inicio', 'info');
+      return;
+    }
+
+    if (!formData.fotoPantalla) {
+      toast.show('Por favor sube la foto del tablero', 'info');
       return;
     }
 
@@ -168,16 +178,22 @@ export const IniciarTurno = () => {
             horaInicio,
             ubicacionInicio: { lat: location.lat, lng: location.lng },
           });
-          // Actualizar el id del turno en localStorage si el backend respondió (toSave ya no tiene fotos)
           localStorage.setItem('turno_actual', JSON.stringify({ ...toSave, id: res.id }));
         } catch (backendError) {
+          console.error('Error al iniciar turno en el servidor:', backendError);
+          if ((backendError as { statusCode?: number }).statusCode === 401) {
+            toast.show('Tu sesión expiró. Iniciá sesión de nuevo para iniciar el turno.', 'error');
+            setTimeout(() => relogin(), 2500);
+            return;
+          }
           console.error('Backend tardó o falló, turno guardado localmente:', backendError);
-          // El turno ya está guardado localmente, no bloqueamos al usuario
         }
       }
 
-      toast.show('Turno iniciado exitosamente', 'success');
-      navigate('/beezero/dashboard');
+      toast.show('Turno iniciado exitosamente', 'success', {
+        subtitle: 'No olvides cerrar la aplicación cuando termines de usarla.',
+        onClose: () => navigate('/beezero/dashboard'),
+      });
     } catch (error) {
       console.error('Error iniciando turno:', error);
       const msg = error instanceof Error ? error.message : 'Error al iniciar el turno. Intenta nuevamente.';
@@ -219,6 +235,36 @@ export const IniciarTurno = () => {
       )}
 
       {!loading && <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-6 space-y-6">
+        {/* Ubicación — primer campo */}
+        <div>
+          <label className="block text-sm font-medium text-black mb-2">
+            Ubicación *
+          </label>
+          {sessionExpired ? (
+            <SessionExpiredPrompt message={sessionMessage} onRelogin={relogin} theme="beezero" />
+          ) : (
+          <button
+            type="button"
+            onClick={handleGetLocation}
+            disabled={locationLoading || checkingSession}
+            className={`w-full bg-beezero-yellow text-black px-4 py-3 rounded-lg hover:bg-beezero-yellow-dark transition font-semibold disabled:opacity-50 shadow-md ${
+              !location && !locationLoading && !checkingSession ? 'animate-pulse ring-2 ring-beezero-yellow ring-offset-2' : ''
+            }`}
+          >
+            {checkingSession || locationLoading ? (
+              <span className="flex items-center justify-center gap-2">
+                <LoadingSpinner />
+                {checkingSession ? 'Verificando sesión...' : 'Cargando'}
+              </span>
+            ) : location ? (
+              '✓ Información obtenida'
+            ) : (
+              'Obtener información'
+            )}
+          </button>
+          )}
+        </div>
+
         {/* Abejita (solo lectura: nombre del usuario logueado) */}
         <div>
           <label htmlFor="abejita" className="block text-sm font-medium text-black mb-1">
@@ -281,38 +327,10 @@ export const IniciarTurno = () => {
           </select>
         </div>
 
-        {/* Ubicación (sin mostrar coordenadas) */}
-        <div>
-          <label className="block text-sm font-medium text-black mb-2">
-            Ubicación *
-          </label>
-          {sessionExpired ? (
-            <SessionExpiredPrompt message={sessionMessage} onRelogin={relogin} theme="beezero" />
-          ) : (
-          <button
-            type="button"
-            onClick={handleGetLocation}
-            disabled={locationLoading || checkingSession}
-            className="w-full bg-beezero-yellow text-black px-4 py-3 rounded-lg hover:bg-beezero-yellow-dark transition font-semibold disabled:opacity-50 shadow-md"
-          >
-            {checkingSession || locationLoading ? (
-              <span className="flex items-center justify-center gap-2">
-                <LoadingSpinner />
-                {checkingSession ? 'Verificando sesión...' : 'Cargando'}
-              </span>
-            ) : location ? (
-              '✓ Información obtenida'
-            ) : (
-              'Obtener información'
-            )}
-          </button>
-          )}
-        </div>
-
         {/* Kilometraje - texto libre */}
         <div>
           <label htmlFor="kilometraje" className="block text-sm font-medium text-black mb-1">
-            Kilometraje
+            Kilometraje *
           </label>
           <input
             type="text"
@@ -335,7 +353,7 @@ export const IniciarTurno = () => {
         {/* Batería Inicio - después de kilometraje */}
         <div>
           <label htmlFor="bateria" className="block text-sm font-medium text-black mb-1">
-            Batería Inicio
+            Batería Inicio *
           </label>
           <input
             type="text"
@@ -380,10 +398,10 @@ export const IniciarTurno = () => {
           )}
         </div>
 
-        {/* ¿Desea registrar algún daño al auto? */}
+        {/* ¿Desea registrar algún daño al auto? (opcional) */}
         <div>
           <p className="block text-sm font-medium text-black mb-2">
-            ¿Desea registrar algún daño al auto? *
+            ¿Desea registrar algún daño al auto?
           </p>
           <div className="flex gap-4">
             <button

@@ -181,23 +181,24 @@ router.post('/iniciar', optionalAuth, validateSession, async (req, res) => {
       bateria ?? '',              // K: Bateria Inicio
       '',                         // L: Bateria Cierre
       aperturaCaja,               // M: Apertura Caja (Bs)
-      '',                         // N: Cierre Caja (Bs)
-      '',                         // O: ID Gastos
-      '',                         // P: Total Gastos (Bs)
-      '',                         // Q: Diferencia (Bs)
-      danosAuto || 'ninguno',     // R: Daños Auto Inicio
-      urlFotoTableroInicio,       // S: Foto Tablero Inicio
-      urlFotoExteriorInicio,      // T: Foto Exterior Inicio
-      '',                         // U: Daños Auto Cierre
-      '',                         // V: Foto Tablero Cierre
-      '',                         // W: Foto Exterior Cierre
-      ubicacionInicio?.lat || '', // X: Ubicación Inicio (Lat)
-      ubicacionInicio?.lng || '', // Y: Ubicación Inicio (Lng)
-      '',                         // Z: Ubicación Cierre (Lat)
-      '',                         // AA: Ubicación Cierre (Lng)
-      '',                         // AB: Observaciones
-      now,                        // AC: Timestamp Actualización
-      'INICIADO',                 // AD: Estado
+      '',                         // N: Pagos QR (Bs)
+      '',                         // O: Cierre Caja (Bs)
+      '',                         // P: ID Gastos
+      '',                         // Q: Total Gastos (Bs)
+      '',                         // R: Diferencia (Bs)
+      danosAuto || 'ninguno',     // S: Daños Auto Inicio
+      urlFotoTableroInicio,       // T: Foto Tablero Inicio
+      urlFotoExteriorInicio,      // U: Foto Exterior Inicio
+      '',                         // V: Daños Auto Cierre
+      '',                         // W: Foto Tablero Cierre
+      '',                         // X: Foto Exterior Cierre
+      ubicacionInicio?.lat || '', // Y: Ubicación Inicio (Lat)
+      ubicacionInicio?.lng || '', // Z: Ubicación Inicio (Lng)
+      '',                         // AA: Ubicación Cierre (Lat)
+      '',                         // AB: Ubicación Cierre (Lng)
+      '',                         // AC: Observaciones
+      now,                        // AD: Timestamp Actualización
+      'INICIADO',                 // AE: Estado
     ];
 
     await appendRow('BeeZero', rowValues);
@@ -245,13 +246,14 @@ router.post('/iniciar', optionalAuth, validateSession, async (req, res) => {
 /**
  * POST /api/turnos/:id/cerrar
  * Cerrar un turno existente
- * Fórmula diferencia: Cierre - Apertura - Total Gastos
+ * Fórmula diferencia: Cierre + Pagos QR - Apertura - Total Gastos
  */
 router.post('/:id/cerrar', optionalAuth, validateSession, async (req, res) => {
   try {
     const { id } = req.params;
     const {
       cierreCaja,
+      pagosQR,
       kilometraje,
       bateria,
       danosAuto,
@@ -292,10 +294,11 @@ router.post('/:id/cerrar', optionalAuth, validateSession, async (req, res) => {
     const gastosNormalizados = normalizeGastos(gastos);
     const totalGastos = gastosNormalizados.reduce((acc, gasto) => acc + gasto.monto, 0);
 
-    // Diferencia = Cierre - Apertura - Total Gastos
+    // Diferencia = Cierre + Pagos QR - Apertura - Total Gastos
     const apertura = parseFloat(turnoExistente['Apertura Caja (Bs)']) || 0;
     const cierre = parseFloat(cierreCaja) || 0;
-    const diferencia = cierre - apertura - totalGastos;
+    const pagosQRNum = parseFloat(pagosQR) || 0;
+    const diferencia = cierre + pagosQRNum - apertura - totalGastos;
 
     // Guardar gastos en BeeZero_Gastos (1 fila por gasto)
     const gastoIds = gastosNormalizados.map((_, i) => `${id}-${i + 1}`);
@@ -324,23 +327,24 @@ router.post('/:id/cerrar', optionalAuth, validateSession, async (req, res) => {
       turnoExistente['Bateria Inicio'] || turnoExistente['Bateria'] || '', // K: Bateria Inicio
       bateria ?? '',                                                        // L: Bateria Cierre
       turnoExistente['Apertura Caja (Bs)'],                                 // M: Apertura Caja (Bs)
-      cierreCaja,                                                           // N: Cierre Caja (Bs)
-      gastoIds.length > 0 ? gastoIds.join(', ') : '',                      // O: ID Gastos
-      totalGastos.toFixed(2),                                               // P: Total Gastos (Bs)
-      diferencia.toFixed(2),                                                // Q: Diferencia (Bs)
-      turnoExistente['Daños Auto Inicio'],                                   // R: Daños Auto Inicio
-      turnoExistente['Foto Tablero Inicio'],                                 // S: Foto Tablero Inicio
-      turnoExistente['Foto Exterior Inicio'],                                // T: Foto Exterior Inicio
-      danosAuto || 'ninguno',                                               // U: Daños Auto Cierre
-      urlFotoTableroCierre,                                                 // V: Foto Tablero Cierre
-      urlFotoExteriorCierre,                                                // W: Foto Exterior Cierre
-      turnoExistente['Ubicación Inicio (Lat)'],                             // X: Ubicación Inicio (Lat)
-      turnoExistente['Ubicación Inicio (Lng)'],                             // Y: Ubicación Inicio (Lng)
-      ubicacionFin?.lat || '',                                              // Z: Ubicación Cierre (Lat)
-      ubicacionFin?.lng || '',                                              // AA: Ubicación Cierre (Lng)
-      observaciones || '',                                                  // AB: Observaciones
-      now,                                                                  // AC: Timestamp Actualización
-      'CERRADO',                                                            // AD: Estado
+      pagosQRNum > 0 ? pagosQRNum.toFixed(2) : '',                          // N: Pagos QR (Bs)
+      cierreCaja,                                                           // O: Cierre Caja (Bs)
+      gastoIds.length > 0 ? gastoIds.join(', ') : '',                      // P: ID Gastos
+      totalGastos.toFixed(2),                                               // Q: Total Gastos (Bs)
+      diferencia.toFixed(2),                                                // R: Diferencia (Bs)
+      turnoExistente['Daños Auto Inicio'],                                   // S: Daños Auto Inicio
+      turnoExistente['Foto Tablero Inicio'],                                 // T: Foto Tablero Inicio
+      turnoExistente['Foto Exterior Inicio'],                                // U: Foto Exterior Inicio
+      danosAuto || 'ninguno',                                               // V: Daños Auto Cierre
+      urlFotoTableroCierre,                                                 // W: Foto Tablero Cierre
+      urlFotoExteriorCierre,                                                // X: Foto Exterior Cierre
+      turnoExistente['Ubicación Inicio (Lat)'],                             // Y: Ubicación Inicio (Lat)
+      turnoExistente['Ubicación Inicio (Lng)'],                             // Z: Ubicación Inicio (Lng)
+      ubicacionFin?.lat || '',                                              // AA: Ubicación Cierre (Lat)
+      ubicacionFin?.lng || '',                                              // AB: Ubicación Cierre (Lng)
+      observaciones || '',                                                  // AC: Observaciones
+      now,                                                                  // AD: Timestamp Actualización
+      'CERRADO',                                                            // AE: Estado
     ];
 
     await updateRowById('BeeZero', id, rowValues);
@@ -359,6 +363,7 @@ router.post('/:id/cerrar', optionalAuth, validateSession, async (req, res) => {
       bateriaInicio: turnoExistente['Bateria Inicio'] || turnoExistente['Bateria'] || '',
       bateriaCierre: bateria ?? '',
       aperturaCaja: turnoExistente['Apertura Caja (Bs)'],
+      pagosQR: pagosQRNum > 0 ? pagosQRNum.toFixed(2) : '',
       cierreCaja,
       totalGastos: totalGastos.toFixed(2),
       diferencia: diferencia.toFixed(2),
@@ -385,6 +390,7 @@ router.post('/:id/cerrar', optionalAuth, validateSession, async (req, res) => {
       data: {
         id,
         cierreCaja,
+        pagosQR: pagosQRNum > 0 ? pagosQRNum.toFixed(2) : '0',
         totalGastos: totalGastos.toFixed(2),
         gastos: gastosNormalizados,
         diferencia: diferencia.toFixed(2),

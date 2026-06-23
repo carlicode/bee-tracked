@@ -25,6 +25,7 @@ const HEADERS = [
   'Bateria Inicio',
   'Bateria Cierre',
   'Apertura Caja (Bs)',
+  'Pagos QR (Bs)',
   'Cierre Caja (Bs)',
   'ID Gastos',
   'Total Gastos',

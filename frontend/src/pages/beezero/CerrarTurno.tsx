@@ -10,6 +10,7 @@ import { uploadApi } from '../../services/uploadApi';
 import { useSessionGate } from '../../hooks/useSessionGate';
 import { SessionExpiredPrompt } from '../../components/SessionExpiredPrompt';
 import { PLACAS_AUTO_ABEJITA } from '../../config/constants';
+import { ResumenTurnoCerrado, type ResumenTurnoData } from '../../components/beezero/ResumenTurnoCerrado';
 import type { Turno } from '../../types/turno';
 
 type GastoCierreInput = {
@@ -63,11 +64,13 @@ export const CerrarTurno = () => {
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [turnoInicio, setTurnoInicio] = useState<Partial<Turno> | null>(null);
 
-  const [deseaRegistrarDano, setDeseaRegistrarDano] = useState<boolean | null>(null);
-  const [formData, setFormData] = useState<Partial<Turno> & { cierreCajaStr?: string }>({
+  const [deseaRegistrarDano, setDeseaRegistrarDano] = useState<boolean>(false);
+  const [resumenFinal, setResumenFinal] = useState<ResumenTurnoData | null>(null);
+  const [formData, setFormData] = useState<Partial<Turno> & { cierreCajaStr?: string; pagosQRStr?: string }>({
     cierreCaja: undefined,
-    qr: 0,
+    pagosQR: 0,
     cierreCajaStr: '',
+    pagosQRStr: '',
     kilometraje: undefined,
     bateria: undefined,
     danosAuto: 'ninguno',
@@ -241,11 +244,13 @@ export const CerrarTurno = () => {
     }
   };
 
-  // Diferencia = Cierre - Apertura - Total Gastos
+  // Diferencia = Cierre + Pagos QR - Apertura - Total Gastos
+  const pagosQRNum = formData.pagosQR ?? (parseFloat((formData as { pagosQRStr?: string }).pagosQRStr ?? '') || 0);
+
   const calcularDiferencia = () => {
     const apertura = formData.aperturaCaja || 0;
     const cierre = formData.cierreCaja ?? (parseFloat((formData as { cierreCajaStr?: string }).cierreCajaStr ?? '') || 0);
-    return cierre - apertura - totalGastos;
+    return cierre + pagosQRNum - apertura - totalGastos;
   };
 
   const totalGastos = gastosCierre.reduce((acc, gasto) => acc + (gasto.monto || 0), 0);
@@ -287,11 +292,6 @@ export const CerrarTurno = () => {
       return;
     }
 
-    if (deseaRegistrarDano === null) {
-      toast.show('Por favor indica si desea registrar algún daño al auto (Sí o No)', 'info');
-      return;
-    }
-
     if (!location) {
       toast.show('Por favor obtén tu ubicación antes de cerrar el turno', 'info');
       return;
@@ -322,6 +322,8 @@ export const CerrarTurno = () => {
 
       const cierreCajaNum =
         formData.cierreCaja ?? (parseFloat((formData as { cierreCajaStr?: string }).cierreCajaStr ?? '') || 0);
+      const pagosQR = pagosQRNum;
+      const diferencia = calcularDiferencia();
 
       let turnoId = turnoInicio?.id;
 
@@ -342,6 +344,7 @@ export const CerrarTurno = () => {
         try {
           await turnosApi.cerrar(turnoId, {
             cierreCaja: cierreCajaNum,
+            pagosQR,
             gastos: gastosPayload,
             kilometraje: formData.kilometraje,
             bateria: formData.bateria,
@@ -373,11 +376,13 @@ export const CerrarTurno = () => {
         ...turnoInicio,
         ...formData,
         id: turnoId ?? turnoInicio?.id,
+        pagosQR,
         danosAuto: danos,
         fotoExterior: fotoExt,
         observaciones: formData.observaciones || '',
         gastosCierre: gastosPayload,
         totalGastos,
+        diferencia,
         horaCierre,
         ubicacionFin: {
           ...location,
@@ -395,8 +400,25 @@ export const CerrarTurno = () => {
       localStorage.setItem('turnos_historial', JSON.stringify(turnosHistorial));
       localStorage.removeItem('turno_actual');
 
-      toast.show('Turno cerrado exitosamente', 'success');
-      navigate('/beezero/dashboard');
+      setResumenFinal({
+        abejita: formData.abejita || turnoInicio?.abejita || '',
+        auto: formData.auto || turnoInicio?.auto || '',
+        fechaInicio: turnoInicio?.createdAt ? new Date(turnoInicio.createdAt).toLocaleDateString('es-BO') : undefined,
+        horaInicio: turnoInicio?.horaInicio,
+        horaCierre,
+        aperturaCaja: formData.aperturaCaja || 0,
+        cierreCaja: cierreCajaNum,
+        pagosQR,
+        totalGastos,
+        diferencia,
+        kilometrajeInicio: turnoInicio?.kilometraje,
+        kilometrajeCierre: formData.kilometraje,
+        bateriaInicio: turnoInicio?.bateria,
+        bateriaCierre: formData.bateria,
+        danosAuto: danos,
+        observaciones: formData.observaciones || '',
+        gastos: gastosPayload,
+      });
     } catch (error) {
       console.error('Error cerrando turno:', error);
       const msg = error instanceof Error ? error.message : 'Error al cerrar el turno. Intenta nuevamente.';
@@ -430,6 +452,29 @@ export const CerrarTurno = () => {
           Ir a Iniciar Turno
         </button>
         </div>
+      </div>
+    );
+  }
+
+  if (resumenFinal) {
+    return (
+      <div>
+        <div className="mb-4">
+          <button
+            type="button"
+            onClick={() => navigate('/beezero/dashboard')}
+            className="flex items-center gap-2 text-gray-600 hover:text-black font-medium"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Volver atrás
+          </button>
+        </div>
+        <ResumenTurnoCerrado
+          data={resumenFinal}
+          onAccept={() => navigate('/beezero/dashboard')}
+        />
       </div>
     );
   }
@@ -485,7 +530,38 @@ export const CerrarTurno = () => {
       )}
 
       {!loading && <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-6 space-y-6">
-        {/* Cierre de Caja - texto para evitar cero adelante */}
+        {/* Ubicación — primer campo */}
+        <div>
+          <label className="block text-sm font-medium text-black mb-2">
+            Ubicación *
+          </label>
+          {sessionExpired ? (
+            <SessionExpiredPrompt message={sessionMessage} onRelogin={relogin} theme="beezero" />
+          ) : (
+          <button
+            type="button"
+            onClick={handleGetLocation}
+            disabled={locationLoading || checkingSession}
+            className={`w-full bg-beezero-yellow text-black px-4 py-3 rounded-lg hover:bg-beezero-yellow-dark transition font-semibold disabled:opacity-50 shadow-md ${
+              !location && !locationLoading && !checkingSession ? 'animate-pulse ring-2 ring-beezero-yellow ring-offset-2' : ''
+            }`}
+          >
+            {checkingSession || locationLoading ? (
+              <span className="flex items-center justify-center gap-2">
+                <LoadingSpinner />
+                {checkingSession ? 'Verificando sesión...' : 'Cargando'}
+              </span>
+            ) : location ? (
+              '✓ Información obtenida'
+            ) : (
+              'Obtener información'
+            )}
+          </button>
+          )}
+        </div>
+
+        {/* Cierre de Caja y Pagos QR */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label htmlFor="cierreCaja" className="block text-sm font-medium text-black mb-1">
             Cierre de Caja (Bs) *
@@ -508,6 +584,34 @@ export const CerrarTurno = () => {
             placeholder="Ej: 164"
             className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
           />
+        </div>
+
+        <div>
+          <label htmlFor="pagosQR" className="block text-sm font-medium text-black mb-1">
+            Pagos en QR (Bs)
+          </label>
+          <input
+            type="text"
+            inputMode="decimal"
+            id="pagosQR"
+            value={(formData as { pagosQRStr?: string }).pagosQRStr ?? (formData.pagosQR != null && formData.pagosQR > 0 ? String(formData.pagosQR) : '')}
+            onChange={(e) => {
+              const raw = e.target.value.replace(',', '.');
+              const soloNumeros = raw.replace(/[^0-9.]/g, '');
+              const partes = soloNumeros.split('.');
+              const valida = partes.length <= 2 && (partes[1]?.length ?? 0) <= 2;
+              const str = valida ? soloNumeros : ((formData as { pagosQRStr?: string }).pagosQRStr ?? '');
+              const num = parseFloat(str);
+              setFormData((prev) => ({
+                ...prev,
+                pagosQRStr: str,
+                pagosQR: str === '' ? 0 : (isNaN(num) ? 0 : Math.max(0, num)),
+              }));
+            }}
+            placeholder="Ej: 120"
+            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
+          />
+        </div>
         </div>
 
         <div className="border-2 border-gray-200 rounded-lg p-4 space-y-4">
@@ -646,6 +750,12 @@ export const CerrarTurno = () => {
               <span className="text-gray-700">Apertura:</span>
               <span className="font-semibold text-red-600">- Bs {formData.aperturaCaja}</span>
             </div>
+            {pagosQRNum > 0 && (
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-700">Pagos QR:</span>
+                <span className="font-semibold text-green-600">+ Bs {pagosQRNum.toFixed(2)}</span>
+              </div>
+            )}
             {totalGastos > 0 && (
               <div className="flex justify-between mb-2">
                 <span className="text-gray-700">Total Gastos:</span>
@@ -674,34 +784,6 @@ export const CerrarTurno = () => {
             readOnly
             className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 bg-gray-100"
           />
-        </div>
-
-        {/* Ubicación (sin mostrar coordenadas) */}
-        <div>
-          <label className="block text-sm font-medium text-black mb-2">
-            Ubicación *
-          </label>
-          {sessionExpired ? (
-            <SessionExpiredPrompt message={sessionMessage} onRelogin={relogin} theme="beezero" />
-          ) : (
-          <button
-            type="button"
-            onClick={handleGetLocation}
-            disabled={locationLoading || checkingSession}
-            className="w-full bg-beezero-yellow text-black px-4 py-3 rounded-lg hover:bg-beezero-yellow-dark transition font-semibold disabled:opacity-50 shadow-md"
-          >
-            {checkingSession || locationLoading ? (
-              <span className="flex items-center justify-center gap-2">
-                <LoadingSpinner />
-                {checkingSession ? 'Verificando sesión...' : 'Cargando'}
-              </span>
-            ) : location ? (
-              '✓ Información obtenida'
-            ) : (
-              'Obtener información'
-            )}
-          </button>
-          )}
         </div>
 
         {/* Kilometraje - texto libre */}
@@ -773,10 +855,10 @@ export const CerrarTurno = () => {
           )}
         </div>
 
-        {/* ¿Desea registrar algún daño al auto? */}
+        {/* ¿Desea registrar algún daño al auto? (opcional) */}
         <div>
           <p className="block text-sm font-medium text-black mb-2">
-            ¿Desea registrar algún daño al auto? *
+            ¿Desea registrar algún daño al auto?
           </p>
           <div className="flex gap-4">
             <button

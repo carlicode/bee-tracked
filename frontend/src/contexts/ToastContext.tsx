@@ -13,23 +13,26 @@ export type ToastType = 'success' | 'error' | 'info';
 export interface ToastState {
   message: string;
   type: ToastType;
+  subtitle?: string;
   onClose?: () => void;
 }
 
 export interface ToastContextValue {
-  show: (message: string, type?: ToastType, options?: { onClose?: () => void }) => void;
+  show: (message: string, type?: ToastType, options?: { subtitle?: string; onClose?: () => void }) => void;
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 function ToastModal({
   message,
+  subtitle,
   type,
   onClose,
   onCloseCallback,
   userType,
 }: {
   message: string;
+  subtitle?: string;
   type: ToastType;
   onClose: () => void;
   onCloseCallback?: () => void;
@@ -110,6 +113,9 @@ function ToastModal({
             {type === 'info' && 'Aviso'}
           </h2>
           <p className="text-sm opacity-95 leading-relaxed">{message}</p>
+          {subtitle && (
+            <p className="text-xs opacity-80 leading-relaxed mt-3 px-2">{subtitle}</p>
+          )}
         </div>
         <div className="p-4 bg-gray-50">
           <button
@@ -133,8 +139,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const userType = getUserType();
   const [toast, setToast] = useState<ToastState | null>(null);
 
-  const show = useCallback((message: string, type: ToastType = 'info', options?: { onClose?: () => void }) => {
-    setToast({ message, type, onClose: options?.onClose });
+  const show = useCallback((message: string, type: ToastType = 'info', options?: { subtitle?: string; onClose?: () => void }) => {
+    setToast({ message, type, subtitle: options?.subtitle, onClose: options?.onClose });
   }, []);
 
   const close = useCallback(() => {
@@ -149,6 +155,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {toast && (
         <ToastModal
           message={toast.message}
+          subtitle={toast.subtitle}
           type={toast.type}
           onClose={close}
           onCloseCallback={toast.onClose}

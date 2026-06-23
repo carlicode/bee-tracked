@@ -3,6 +3,8 @@ export interface Turno {
   abejita: string; // Nombre del driver
   aperturaCaja: number;
   cierreCaja?: number;
+  pagosQR?: number;
+  diferencia?: number;
   totalGastos?: number;
   gastosCierre?: {
     tipo: string;

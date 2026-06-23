@@ -103,6 +103,11 @@ export const turnosApi = {
       const msg = ax?.response?.data?.error || (err instanceof Error ? err.message : 'Error de conexión');
       const status = ax?.response?.status;
       console.error('[turnosApi.iniciar]', status, msg, ax?.response?.data);
+      if (status === 401) {
+        const e = new Error(msg) as Error & { statusCode: number };
+        e.statusCode = 401;
+        throw e;
+      }
       throw new Error(status === 404 || (err instanceof Error && err.message.includes('Network Error')) ? 'Servidor no encontrado. ¿Está el backend en marcha en http://localhost:3001?' : msg);
     }
   },
@@ -114,6 +119,7 @@ export const turnosApi = {
     id: string,
     payload: {
       cierreCaja: number;
+      pagosQR?: number;
       gastos?: { tipo: string; monto: number; descripcion?: string }[];
       kilometraje?: number | string;
       bateria?: number | string;
