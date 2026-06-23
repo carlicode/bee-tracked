@@ -542,8 +542,12 @@ export const CerrarTurno = () => {
             type="button"
             onClick={handleGetLocation}
             disabled={locationLoading || checkingSession}
-            className={`w-full bg-beezero-yellow text-black px-4 py-3 rounded-lg hover:bg-beezero-yellow-dark transition font-semibold disabled:opacity-50 shadow-md ${
-              !location && !locationLoading && !checkingSession ? 'animate-pulse ring-2 ring-beezero-yellow ring-offset-2' : ''
+            className={`w-full px-4 py-3 rounded-lg transition font-semibold disabled:opacity-50 shadow-md ${
+              location
+                ? 'bg-green-500 text-white hover:bg-green-600'
+                : !locationLoading && !checkingSession
+                ? 'bg-red-600 text-white hover:bg-red-700 animate-pulse ring-2 ring-red-400 ring-offset-2'
+                : 'bg-red-600 text-white'
             }`}
           >
             {checkingSession || locationLoading ? (
