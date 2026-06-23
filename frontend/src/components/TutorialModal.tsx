@@ -155,23 +155,44 @@ function getSteps(userType: UserType): TutorialStep[] {
       return [
         {
           title: '¡Bienvenido a Bee Tracked!',
-          body: 'Esta app te ayuda a registrar turnos y carreras de forma rápida. Todo queda guardado para que el equipo pueda hacer seguimiento.',
+          body: 'Esta app registra tus turnos de trabajo. Por ahora solo tenés que hacer dos cosas: abrir tu turno al comenzar y cerrarlo al terminar. ¡Así de simple!',
           icon: <IconWave />,
         },
         {
           title: 'Cómo iniciar tu turno',
-          body: 'Desde el panel principal, toca "Iniciar Turno". Registra apertura de caja, fotos y ubicación. Confirma y listo.',
+          body: 'Desde el panel principal, toca "Iniciar Turno". Completá los datos, registrá las fotos y confirmá. Tu jornada queda guardada automáticamente.',
           icon: <IconPlay />,
         },
         {
-          title: 'Cómo registrar una carrera',
-          body: 'Durante el turno, entra a "Registrar carrera" y completa cliente, destino y precio. Puedes ver tu historial en "Mis Carreras".',
-          icon: <IconPlus />,
+          title: 'Cómo cerrar tu turno',
+          body: 'Al terminar tu jornada, toca "Cerrar Turno". Completá el cierre y las fotos finales. Es muy importante que lo hagas antes de irte.',
+          icon: <IconStop />,
         },
         {
-          title: 'Cómo cerrar tu turno',
-          body: 'Al terminar tu jornada, siempre cierra el turno desde el panel. Registra cierre de caja y fotos finales. ¡No olvides este paso!',
-          icon: <IconStop />,
+          title: 'Cerrá la app cuando termines',
+          body: 'Cada vez que dejes de usar la app, tocá el botón "Salir" que está arriba a la derecha. Esto evita problemas con tu turno.',
+          icon: <IconPlay />,
+          visual: (
+            <div className="mt-4 rounded-xl overflow-hidden border-2 border-gray-200 shadow-sm">
+              <div className="bg-beezero-yellow px-4 py-2 flex justify-between items-center">
+                <span className="text-black font-bold text-sm">bee-tracked</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-black/40 text-xs">?</span>
+                  <span className="bg-black text-beezero-yellow text-xs font-bold px-2 py-1 rounded-lg ring-2 ring-black animate-pulse">
+                    Salir
+                  </span>
+                </div>
+              </div>
+              <div className="bg-gray-50 px-4 py-2 flex justify-end">
+                <div className="flex flex-col items-end gap-0.5">
+                  <svg className="w-5 h-5 text-yellow-500 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                  </svg>
+                  <span className="text-xs text-yellow-600 font-semibold">¡Toca acá!</span>
+                </div>
+              </div>
+            </div>
+          ),
         },
       ];
   }
