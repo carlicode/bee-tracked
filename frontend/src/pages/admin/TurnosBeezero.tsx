@@ -31,7 +31,7 @@ const DRIVER_COLS: { label: string; aliases: string[]; isDate?: boolean }[] = [
 /* ── Columnas bikers (hoja Ecodelivery) ──────────────────────────────────── */
 const BIKER_COLS: { label: string; aliases: string[]; isDate?: boolean }[] = [
   { label: 'ID', aliases: ['turnoid', 'id'] },
-  { label: 'Biker', aliases: ['- turnos', '-turnos', 'abejita', 'nombre', 'biker'] },
+  { label: 'Biker', aliases: ['usuario', '- turnos', '-turnos', 'abejita', 'nombre', 'biker'] },
   { label: 'Fecha Inicio', aliases: ['fecha inicio'], isDate: true },
   { label: 'Hora Inicio', aliases: ['hora inicio'] },
   { label: 'Fecha Cierre', aliases: ['fecha cierre'], isDate: true },
