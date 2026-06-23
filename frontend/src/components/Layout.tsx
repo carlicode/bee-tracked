@@ -94,12 +94,23 @@ export const Layout = ({ children }: LayoutProps) => {
                 >
                   ?
                 </button>
-                <button
-                  onClick={handleLogout}
-                  className={`text-sm font-medium ${textClass} hover:opacity-70 transition`}
-                >
-                  Salir
-                </button>
+                <div className="relative flex flex-col items-center">
+                  {(userType === 'ecodelivery' || userType === 'operador') && (
+                    <span className="absolute -top-4 text-[10px] font-semibold text-white/90 whitespace-nowrap animate-bounce pointer-events-none">
+                      ↑ al salir
+                    </span>
+                  )}
+                  <button
+                    onClick={handleLogout}
+                    className={`text-sm font-semibold ${textClass} hover:opacity-70 transition px-2 py-1 rounded-lg ${
+                      userType === 'ecodelivery' || userType === 'operador'
+                        ? 'ring-2 ring-white/70 ring-offset-1 ring-offset-transparent'
+                        : ''
+                    }`}
+                  >
+                    Salir
+                  </button>
+                </div>
               </div>
             )}
           </div>

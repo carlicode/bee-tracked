@@ -5,6 +5,7 @@ interface TutorialStep {
   title: string;
   body: string;
   icon: React.ReactNode;
+  visual?: React.ReactNode;
 }
 
 interface TutorialModalProps {
@@ -76,23 +77,44 @@ function getSteps(userType: UserType): TutorialStep[] {
       return [
         {
           title: '¡Bienvenido a Bee Tracked!',
-          body: 'Esta app te ayuda a registrar turnos y kilometraje de forma rápida. Todo queda guardado para que el equipo pueda hacer seguimiento.',
+          body: 'Esta app registra tus turnos de trabajo. Por ahora solo tienes que hacer dos cosas: abrir tu turno al comenzar y cerrarlo al terminar. ¡Así de simple!',
           icon: <IconWave />,
         },
         {
           title: 'Cómo iniciar tu turno',
-          body: 'Desde el panel principal, toca "Iniciar Turno". La app pedirá tu ubicación. Confirma y listo: tu jornada queda registrada.',
+          body: 'Toca "Iniciar Turno" en el panel. La app pedirá acceso a tu ubicación — acéptalo. Si trabajas en Hillu, también deberás tomar una foto con la cámara.',
           icon: <IconPlay />,
         },
         {
-          title: 'Cómo registrar tu kilometraje',
-          body: 'Durante el turno, entra a "Kilometraje" para ver tus carreras del día y registrar los km de cada una.',
-          icon: <IconPlus />,
+          title: 'Cómo cerrar tu turno',
+          body: 'Cuando termines tu jornada, toca "Cerrar Turno". Es muy importante que lo hagas antes de irte. Así el equipo sabe que terminaste.',
+          icon: <IconStop />,
         },
         {
-          title: 'Cómo cerrar tu turno',
-          body: 'Al terminar tu jornada, siempre cierra el turno desde el panel. Así el equipo sabe que ya terminaste.',
-          icon: <IconStop />,
+          title: 'Cierra la app cuando termines',
+          body: 'Cada vez que dejes de usar la app, toca el botón "Salir" que está arriba a la derecha. Esto evita problemas con tu turno.',
+          icon: <IconPlay />,
+          visual: (
+            <div className="mt-4 rounded-xl overflow-hidden border-2 border-gray-200 shadow-sm">
+              <div className="bg-ecodelivery-green px-4 py-2 flex justify-between items-center">
+                <span className="text-white font-bold text-sm">bee-tracked</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-white/60 text-xs">?</span>
+                  <span className="bg-white text-ecodelivery-green text-xs font-bold px-2 py-1 rounded-lg ring-2 ring-white animate-pulse">
+                    Salir
+                  </span>
+                </div>
+              </div>
+              <div className="bg-gray-50 px-4 py-2 flex justify-end">
+                <div className="flex flex-col items-end gap-0.5">
+                  <svg className="w-5 h-5 text-ecodelivery-green animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                  </svg>
+                  <span className="text-xs text-ecodelivery-green font-semibold">¡Toca acá!</span>
+                </div>
+              </div>
+            </div>
+          ),
         },
       ];
     case 'admin':
@@ -220,6 +242,7 @@ export function TutorialModal({ userType, onComplete }: TutorialModalProps) {
             {current.title}
           </h2>
           <p className="text-gray-600 text-sm leading-relaxed">{current.body}</p>
+          {current.visual && <div className="mt-2">{current.visual}</div>}
         </div>
 
         <div className="px-6 pb-6 flex gap-3">
