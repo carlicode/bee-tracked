@@ -20,6 +20,7 @@ export const IniciarTurnoBiker = () => {
   const dashboardPath = isOperador ? '/operador/dashboard' : '/ecodelivery/dashboard';
   const [loading, setLoading] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
+  const [turnoIniciado, setTurnoIniciado] = useState(false);
   const { image: photoDataUrl, handleFileChange: handlePhotoChange, clearImage: clearPhoto, error: photoError } = useImageUpload();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { sessionExpired, sessionMessage, checkingSession, guardAction, relogin } = useSessionGate();
@@ -127,8 +128,7 @@ export const IniciarTurnoBiker = () => {
       };
 
       storage.setItem('turno_actual_biker', turnoData);
-      toast.show('¡Turno iniciado exitosamente!', 'success');
-      navigate(dashboardPath);
+      setTurnoIniciado(true);
     } catch (error) {
       console.error('Error iniciando turno:', error);
       toast.show('Error al iniciar el turno. Intenta nuevamente.', 'error');
@@ -155,8 +155,33 @@ export const IniciarTurnoBiker = () => {
 
       <div className="bg-white rounded-lg shadow-md p-8 space-y-6">
 
+        {/* ── Pantalla de éxito ── */}
+        {turnoIniciado && (
+          <div className="text-center py-4 space-y-5">
+            <div className="text-6xl animate-bounce">🐝</div>
+            <h3 className="text-2xl font-bold text-ecodelivery-green">¡Turno iniciado correctamente!</h3>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 space-y-3 text-left">
+              <p className="flex items-start gap-2 text-sm font-semibold text-amber-800">
+                <span className="text-lg leading-none">⚠️</span>
+                No olvides salir de la app cuando termines de usarla.
+              </p>
+              <p className="flex items-start gap-2 text-sm text-amber-700">
+                <span className="text-lg leading-none">🔄</span>
+                Cuando quieras cerrar tu turno, volvé a iniciar sesión y tocá <strong>"Cerrar Turno"</strong> desde el panel.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate(dashboardPath)}
+              className="w-full bg-ecodelivery-green text-white px-6 py-4 rounded-xl font-bold text-lg hover:bg-green-600 transition shadow"
+            >
+              Ir al panel
+            </button>
+          </div>
+        )}
+
         {/* ── Loading overlay ── */}
-        {(locationLoading || loading || checkingSession) && (
+        {!turnoIniciado && (locationLoading || loading || checkingSession) && (
           <div className="text-center py-6">
             <div className="text-5xl mb-5">🐝</div>
             <p className="text-xl font-bold text-gray-800 mb-1">
@@ -173,7 +198,7 @@ export const IniciarTurnoBiker = () => {
           </div>
         )}
 
-        <div className={`text-center ${locationLoading || loading || checkingSession ? 'hidden' : ''}`}>
+        <div className={`text-center ${turnoIniciado || locationLoading || loading || checkingSession ? 'hidden' : ''}`}>
           {sessionExpired ? (
             <SessionExpiredPrompt message={sessionMessage} onRelogin={relogin} theme="ecodelivery" />
           ) : (
@@ -248,7 +273,7 @@ export const IniciarTurnoBiker = () => {
           )}
         </div>
 
-        {!(locationLoading || loading || checkingSession || sessionExpired) && (
+        {!turnoIniciado && !(locationLoading || loading || checkingSession || sessionExpired) && (
         <div className="flex gap-4 pt-4 border-t border-gray-200">
           <button
             type="button"
