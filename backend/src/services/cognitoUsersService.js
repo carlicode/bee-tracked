@@ -7,6 +7,8 @@ const {
   AdminAddUserToGroupCommand,
   AdminRemoveUserFromGroupCommand,
   AdminUpdateUserAttributesCommand,
+  AdminEnableUserCommand,
+  AdminDisableUserCommand,
 } = require('@aws-sdk/client-cognito-identity-provider');
 
 const USER_POOL_ID = process.env.COGNITO_USER_POOL_ID || '';
@@ -172,8 +174,26 @@ async function createCognitoUser({ nombre, usuario, password, rol }) {
   };
 }
 
+async function toggleCognitoUser(username, enable) {
+  if (!USER_POOL_ID) {
+    throw new Error('COGNITO_USER_POOL_ID no configurado');
+  }
+  const cognitoUsername = String(username).trim();
+  if (!cognitoUsername) {
+    throw new Error('Usuario requerido');
+  }
+  const Cmd = enable ? AdminEnableUserCommand : AdminDisableUserCommand;
+  await getClient().send(
+    new Cmd({
+      UserPoolId: USER_POOL_ID,
+      Username: cognitoUsername,
+    })
+  );
+}
+
 module.exports = {
   listAllCognitoUsers,
   createCognitoUser,
+  toggleCognitoUser,
   ROL_TO_GROUP,
 };

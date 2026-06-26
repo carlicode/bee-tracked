@@ -69,6 +69,9 @@ export function GestionUsuarios() {
   const [showPassword, setShowPassword] = useState(false);
   const [invite, setInvite] = useState<CreatedUserInvite | null>(null);
   const [inviteCopyText, setInviteCopyText] = useState('');
+  const [search, setSearch] = useState('');
+  const [filterRol, setFilterRol] = useState('');
+  const [togglingUser, setTogglingUser] = useState<string | null>(null);
   const [form, setForm] = useState<CreateAdminUserInput>({
     nombre: '',
     usuario: '',
@@ -91,6 +94,34 @@ export function GestionUsuarios() {
   useEffect(() => {
     void loadUsers();
   }, [loadUsers]);
+
+  const searchLower = search.trim().toLowerCase();
+  const filteredUsers = users.filter((u) => {
+    const matchesRol = filterRol === '' || u.rol === filterRol;
+    const matchesSearch =
+      searchLower === '' ||
+      u.nombre.toLowerCase().includes(searchLower) ||
+      u.usuario.toLowerCase().includes(searchLower);
+    return matchesRol && matchesSearch;
+  });
+
+  const handleToggleUser = async (user: AdminUser) => {
+    const nextEnabled = !user.enabled;
+    const actionLabel = nextEnabled ? 'activar' : 'desactivar';
+    setTogglingUser(user.usuario);
+    try {
+      await adminApi.toggleUser(user.usuario, nextEnabled);
+      toast.show(
+        nextEnabled ? `Usuario ${user.nombre} activado` : `Usuario ${user.nombre} desactivado`,
+        'success'
+      );
+      await loadUsers();
+    } catch (err) {
+      toast.show(adminApi.parseError(err) || `No se pudo ${actionLabel} el usuario`, 'error');
+    } finally {
+      setTogglingUser(null);
+    }
+  };
 
   const copyInvite = async () => {
     if (!inviteCopyText) return;
@@ -138,9 +169,30 @@ export function GestionUsuarios() {
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        <h2 className="text-lg font-semibold text-gray-900 px-6 py-4 border-b border-gray-100">
-          Usuarios registrados
-        </h2>
+        <div className="px-6 py-4 border-b border-gray-100 space-y-4">
+          <h2 className="text-lg font-semibold text-gray-900">Usuarios registrados</h2>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por nombre o usuario…"
+              className="flex-1 border-2 border-gray-200 rounded-lg px-3 py-2 text-sm"
+            />
+            <select
+              value={filterRol}
+              onChange={(e) => setFilterRol(e.target.value)}
+              className="sm:w-48 border-2 border-gray-200 rounded-lg px-3 py-2 text-sm"
+            >
+              <option value="">Todos los roles</option>
+              {ROLES.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
         {loading ? (
           <div className="p-8 flex justify-center">
             <LoadingSpinner />
@@ -153,20 +205,65 @@ export function GestionUsuarios() {
                   <th className="px-6 py-3 font-medium text-gray-700">Nombre</th>
                   <th className="px-6 py-3 font-medium text-gray-700">Usuario</th>
                   <th className="px-6 py-3 font-medium text-gray-700">Rol</th>
+                  <th className="px-6 py-3 font-medium text-gray-700">Estado</th>
+                  <th className="px-6 py-3 font-medium text-gray-700">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {users.map((u) => (
-                  <tr key={u.usuario}>
-                    <td className="px-6 py-3 text-gray-900">{u.nombre}</td>
-                    <td className="px-6 py-3 text-gray-700">{u.usuario}</td>
-                    <td className="px-6 py-3 text-gray-700">{u.rol}</td>
-                  </tr>
-                ))}
+                {filteredUsers.map((u) => {
+                  const inactive = u.enabled === false;
+                  return (
+                    <tr key={u.usuario} className={inactive ? 'bg-gray-50/80' : undefined}>
+                      <td className={`px-6 py-3 ${inactive ? 'text-gray-400' : 'text-gray-900'}`}>
+                        {u.nombre}
+                      </td>
+                      <td className={`px-6 py-3 ${inactive ? 'text-gray-400' : 'text-gray-700'}`}>
+                        {u.usuario}
+                      </td>
+                      <td className={`px-6 py-3 ${inactive ? 'text-gray-400' : 'text-gray-700'}`}>
+                        {u.rol}
+                      </td>
+                      <td className="px-6 py-3">
+                        {inactive ? (
+                          <span className="inline-flex items-center rounded-full bg-gray-200 px-2.5 py-0.5 text-xs font-medium text-gray-600">
+                            Inactivo
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
+                            Activo
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-3">
+                        <button
+                          type="button"
+                          onClick={() => void handleToggleUser(u)}
+                          disabled={togglingUser === u.usuario}
+                          className={
+                            inactive
+                              ? 'px-3 py-1.5 rounded-lg border-2 border-emerald-600 text-emerald-700 text-xs font-semibold hover:bg-emerald-50 disabled:opacity-50'
+                              : 'px-3 py-1.5 rounded-lg border-2 border-red-300 text-red-600 text-xs font-semibold hover:bg-red-50 disabled:opacity-50'
+                          }
+                        >
+                          {togglingUser === u.usuario
+                            ? 'Guardando…'
+                            : inactive
+                              ? 'Activar'
+                              : 'Desactivar'}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
             {users.length === 0 && (
               <p className="px-6 py-8 text-gray-500 text-sm">No hay usuarios.</p>
+            )}
+            {users.length > 0 && filteredUsers.length === 0 && (
+              <p className="px-6 py-8 text-gray-500 text-sm">
+                No hay usuarios que coincidan con la búsqueda o el filtro.
+              </p>
             )}
           </div>
         )}
