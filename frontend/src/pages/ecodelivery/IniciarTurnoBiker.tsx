@@ -117,8 +117,7 @@ export const IniciarTurnoBiker = () => {
           console.error('Error registrando turno en sheet:', err);
           const axiosErr = err as { response?: { status?: number } };
           if (axiosErr?.response?.status === 401) {
-            toast.show('Tu sesión expiró. Iniciá sesión de nuevo.', 'error');
-            setTimeout(() => relogin(), 2500);
+            toast.show('Tu sesión expiró. Iniciá sesión de nuevo.', 'error', { onClose: relogin });
             return;
           }
           if (axiosErr?.response?.status === 409) {

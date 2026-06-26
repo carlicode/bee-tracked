@@ -135,8 +135,7 @@ export const CerrarTurnoBiker = () => {
           console.error('Error registrando cierre en servidor:', err);
           const axiosErr = err as { response?: { status?: number } };
           if (axiosErr?.response?.status === 401) {
-            toast.show('Tu sesión expiró. Iniciá sesión de nuevo para cerrar el turno.', 'error');
-            setTimeout(() => relogin(), 2500);
+            toast.show('Tu sesión expiró. Iniciá sesión de nuevo para cerrar el turno.', 'error', { onClose: relogin });
             return;
           }
           const msg =

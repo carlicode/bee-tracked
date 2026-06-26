@@ -359,8 +359,7 @@ export const CerrarTurno = () => {
           console.error('Error al cerrar turno en el servidor:', backendError);
           // Sesión expirada: informar y redirigir a login
           if ((backendError as { statusCode?: number }).statusCode === 401) {
-            toast.show('Tu sesión expiró. Iniciá sesión de nuevo para cerrar el turno.', 'error');
-            setTimeout(() => relogin(), 2500);
+            toast.show('Tu sesión expiró. Iniciá sesión de nuevo para cerrar el turno.', 'error', { onClose: relogin });
             return;
           }
           const msg =
