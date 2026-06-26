@@ -72,6 +72,20 @@ const cardsResto = [
     subtitle: 'Día libre',
     description: 'Pide un día libre con al menos un día de anticipación',
   },
+  {
+    to: '/beezero/mi-calendario',
+    icon: <IconCalendar />,
+    title: 'Mi calendario',
+    subtitle: 'Horario semanal',
+    description: 'Consulta tu horario publicado o propón cambios',
+  },
+  {
+    to: '/beezero/extraordinarios',
+    icon: <IconCalendar />,
+    title: 'Días extraordinarios',
+    subtitle: 'Feriados y operaciones',
+    description: 'Inscríbete en días especiales antes de trabajar',
+  },
 ];
 
 export const DashboardBeezero = () => {

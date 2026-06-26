@@ -45,6 +45,12 @@ import { GestionUsuarios } from './pages/admin/GestionUsuarios';
 import { OnboardingAdmin } from './pages/admin/OnboardingAdmin';
 import { Rendimiento } from './pages/admin/Rendimiento';
 import { KilometrajeAdmin } from './pages/admin/KilometrajeAdmin';
+import { CalendariosAdmin } from './pages/admin/CalendariosAdmin';
+import { ExtraordinariosAdmin } from './pages/admin/ExtraordinariosAdmin';
+import { AsistenciaAdmin } from './pages/admin/AsistenciaAdmin';
+import { MultasAdmin } from './pages/admin/MultasAdmin';
+import { MiCalendario } from './pages/calendario/MiCalendario';
+import { ExtraordinariosWorker } from './pages/calendario/ExtraordinariosWorker';
 import { NotFound } from './pages/NotFound';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
@@ -656,6 +662,176 @@ function AppContent() {
                   </ThemeProvider>
                 )}
               </AdminGuard>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/admin/calendarios"
+          element={
+            <PrivateRoute>
+              <AdminGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType="admin">
+                    <Layout>
+                      <CalendariosAdmin />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </AdminGuard>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/admin/extraordinarios"
+          element={
+            <PrivateRoute>
+              <AdminGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType="admin">
+                    <Layout>
+                      <ExtraordinariosAdmin />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </AdminGuard>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/admin/asistencia"
+          element={
+            <PrivateRoute>
+              <AdminGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType="admin">
+                    <Layout>
+                      <AsistenciaAdmin />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </AdminGuard>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/admin/multas"
+          element={
+            <PrivateRoute>
+              <AdminGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType="admin">
+                    <Layout>
+                      <MultasAdmin />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </AdminGuard>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/beezero/mi-calendario"
+          element={
+            <PrivateRoute>
+              <BeeZeroAccessGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType="beezero">
+                    <Layout>
+                      <MiCalendario variant="beezero" dashboardPath="/beezero/dashboard" />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </BeeZeroAccessGuard>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/beezero/extraordinarios"
+          element={
+            <PrivateRoute>
+              <BeeZeroAccessGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType="beezero">
+                    <Layout>
+                      <ExtraordinariosWorker variant="beezero" dashboardPath="/beezero/dashboard" />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </BeeZeroAccessGuard>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/ecodelivery/mi-calendario"
+          element={
+            <PrivateRoute>
+              <EcoDeliveryAccessGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType="ecodelivery">
+                    <Layout>
+                      <MiCalendario variant="ecodelivery" dashboardPath="/ecodelivery/dashboard" />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </EcoDeliveryAccessGuard>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/ecodelivery/extraordinarios"
+          element={
+            <PrivateRoute>
+              <EcoDeliveryAccessGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType="ecodelivery">
+                    <Layout>
+                      <ExtraordinariosWorker variant="ecodelivery" dashboardPath="/ecodelivery/dashboard" />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </EcoDeliveryAccessGuard>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/operador/mi-calendario"
+          element={
+            <PrivateRoute>
+              <OperadorGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType="ecodelivery">
+                    <Layout>
+                      <MiCalendario variant="operador" dashboardPath="/operador/dashboard" />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </OperadorGuard>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/operador/extraordinarios"
+          element={
+            <PrivateRoute>
+              <OperadorGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType="ecodelivery">
+                    <Layout>
+                      <ExtraordinariosWorker variant="operador" dashboardPath="/operador/dashboard" />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </OperadorGuard>
             </PrivateRoute>
           }
         />

@@ -12,6 +12,7 @@ export const CerrarTurno = () => {
   const [loading, setLoading] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [turnoInicio, setTurnoInicio] = useState<Turno | null>(null);
   const [photoUploading, setPhotoUploading] = useState<{ fotoPantalla?: boolean; fotoExterior?: boolean }>({});
 
   const [formData, setFormData] = useState<Partial<Turno>>({

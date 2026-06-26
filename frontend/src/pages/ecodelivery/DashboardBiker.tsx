@@ -142,6 +142,24 @@ export const DashboardBiker = () => {
           description="Pide un día libre con al menos un día de anticipación"
           theme="ecodelivery"
         />
+
+        <DashboardCard
+          to="/ecodelivery/mi-calendario"
+          icon={<IconCalendar />}
+          title="Mi calendario"
+          subtitle="Horario semanal"
+          description="Consulta tu horario publicado o propón cambios"
+          theme="ecodelivery"
+        />
+
+        <DashboardCard
+          to="/ecodelivery/extraordinarios"
+          icon={<IconCalendar />}
+          title="Días extraordinarios"
+          subtitle="Feriados y operaciones"
+          description="Inscríbete en días especiales antes de trabajar"
+          theme="ecodelivery"
+        />
       </div>
     </div>
   );

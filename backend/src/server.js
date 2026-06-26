@@ -49,6 +49,10 @@ const uploadRouter = require('./routes/upload');
 const adminUsersRouter = require('./routes/adminUsers');
 const { userRouter: onboardingRouter, adminRouter: adminOnboardingRouter } = require('./routes/onboarding');
 const adminKilometrajeRouter = require('./routes/adminKilometraje');
+const calendariosRouter = require('./routes/calendarios');
+const extraordinariosRouter = require('./routes/extraordinarios');
+const asistenciaRouter = require('./routes/asistencia');
+const multasRouter = require('./routes/multas');
 const { sessionAuth, requireAdmin } = require('./middleware/sessionAuth');
 
 app.use('/api/turnos', turnosRouter);
@@ -66,6 +70,10 @@ app.use('/api/andi', andiRouter);
 app.use('/api/announcements', announcementsRouter);
 app.use('/api/push', pushRouter);
 app.use('/api/permisos', permisosRouter);
+app.use('/api/calendarios', calendariosRouter);
+app.use('/api/extraordinarios', extraordinariosRouter);
+app.use('/api/asistencia', asistenciaRouter);
+app.use('/api/multas', multasRouter);
 app.use('/api/upload', uploadRouter);
 
 app.use((err, req, res, next) => {

@@ -28,6 +28,9 @@ custom:
   auditTableName: bee-tracked-audit-${sls:stage}
   pushSubsTableName: bee-tracked-push-subs-${sls:stage}
   onboardingTableName: bee-tracked-onboarding-${sls:stage}
+  calendariosTableName: bee-tracked-calendarios-${sls:stage}
+  extraordinariosTableName: bee-tracked-extraordinarios-${sls:stage}
+  multasTableName: bee-tracked-multas-${sls:stage}
 
 provider:
   name: aws
@@ -53,6 +56,9 @@ provider:
     AUDIT_TABLE: ${self:custom.auditTableName}
     PUSH_SUBS_TABLE: ${self:custom.pushSubsTableName}
     ONBOARDING_TABLE: ${self:custom.onboardingTableName}
+    CALENDARIOS_TABLE: ${self:custom.calendariosTableName}
+    EXTRAORDINARIOS_TABLE: ${self:custom.extraordinariosTableName}
+    MULTAS_TABLE: ${self:custom.multasTableName}
     VAPID_SUBJECT: 'mailto:admin@beezero.com'
     GOOGLE_SHEET_ID: '1L69tZzVSHlhuKGP9MCdcezOGPsYyjC2Mm-i03Hm5tM8'
     CARRERAS_BIKERS_SHEET_ID: '1OkM4FLSe0CsLo8w4o50xcVdzsUcHVzpaYRqhGBwJRcs'
@@ -112,6 +118,12 @@ provider:
             - !GetAtt AuditTable.Arn
             - !GetAtt PushSubsTable.Arn
             - !GetAtt OnboardingTable.Arn
+            - !GetAtt CalendariosTable.Arn
+            - Fn::Join: ['', [!GetAtt CalendariosTable.Arn, '/index/*']]
+            - !GetAtt ExtraordinariosTable.Arn
+            - Fn::Join: ['', [!GetAtt ExtraordinariosTable.Arn, '/index/*']]
+            - !GetAtt MultasTable.Arn
+            - Fn::Join: ['', [!GetAtt MultasTable.Arn, '/index/*']]
         - Effect: Allow
           Action:
             - cognito-idp:ListUsers
@@ -421,3 +433,108 @@ resources:
         KeySchema:
           - AttributeName: PK
             KeyType: HASH
+
+    CalendariosTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.calendariosTableName}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: S
+          - AttributeName: semana
+            AttributeType: S
+          - AttributeName: estado
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: semana-index
+            KeySchema:
+              - AttributeName: semana
+                KeyType: HASH
+              - AttributeName: PK
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+          - IndexName: estado-index
+            KeySchema:
+              - AttributeName: estado
+                KeyType: HASH
+              - AttributeName: PK
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+
+    ExtraordinariosTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.extraordinariosTableName}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: S
+          - AttributeName: estado
+            AttributeType: S
+          - AttributeName: fecha
+            AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: estado-fecha-index
+            KeySchema:
+              - AttributeName: estado
+                KeyType: HASH
+              - AttributeName: fecha
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+          - IndexName: userId-index
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+              - AttributeName: PK
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+
+    MultasTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.multasTableName}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: S
+          - AttributeName: entityScope
+            AttributeType: S
+          - AttributeName: fecha
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: fecha-index
+            KeySchema:
+              - AttributeName: entityScope
+                KeyType: HASH
+              - AttributeName: fecha
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL

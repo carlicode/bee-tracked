@@ -47,6 +47,9 @@ const config = {
     auditTable: optionalEnv('AUDIT_TABLE', `bee-tracked-audit-${stage}`),
     pushSubsTable: optionalEnv('PUSH_SUBS_TABLE', `bee-tracked-push-subs-${stage}`),
     onboardingTable: optionalEnv('ONBOARDING_TABLE', `bee-tracked-onboarding-${stage}`),
+    calendariosTable: optionalEnv('CALENDARIOS_TABLE', `bee-tracked-calendarios-${stage}`),
+    extraordinariosTable: optionalEnv('EXTRAORDINARIOS_TABLE', `bee-tracked-extraordinarios-${stage}`),
+    multasTable: optionalEnv('MULTAS_TABLE', `bee-tracked-multas-${stage}`),
   },
   s3: {
     bucket: optionalEnv('AWS_S3_BUCKET', 'bee-tracked-photos'),

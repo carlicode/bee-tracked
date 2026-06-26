@@ -16,7 +16,7 @@ env:
   # Configurar en GitHub → Settings → Variables (ver docs/STAGING_ENVIRONMENT.md)
   S3_BUCKET: ${{ vars.STAGING_S3_BUCKET }}
   CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.STAGING_CLOUDFRONT_DISTRIBUTION_ID }}
-  STAGING_API_URL: https://bxa273i618.execute-api.us-east-1.amazonaws.com/staging
+  STAGING_API_URL: https://9kdfuqd21a.execute-api.us-east-1.amazonaws.com/staging
 
 jobs:
   deploy-backend-staging:

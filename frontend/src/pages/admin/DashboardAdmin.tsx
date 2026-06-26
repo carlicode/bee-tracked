@@ -118,6 +118,38 @@ export function DashboardAdmin() {
           </p>
           <span className="mt-4 inline-flex text-beeadmin-purple font-medium text-sm">Abrir →</span>
         </Link>
+
+        <Link to="/admin/calendarios" className={cardBase}>
+          <h2 className="text-xl font-semibold text-gray-900">Calendarios</h2>
+          <p className="mt-2 text-gray-600 text-sm">
+            Publica horarios semanales y aprueba propuestas de trabajadores.
+          </p>
+          <span className="mt-4 inline-flex text-beeadmin-purple font-medium text-sm">Abrir →</span>
+        </Link>
+
+        <Link to="/admin/extraordinarios" className={cardBase}>
+          <h2 className="text-xl font-semibold text-gray-900">Días extraordinarios</h2>
+          <p className="mt-2 text-gray-600 text-sm">
+            Feriados u operaciones especiales con inscripción previa.
+          </p>
+          <span className="mt-4 inline-flex text-beeadmin-purple font-medium text-sm">Abrir →</span>
+        </Link>
+
+        <Link to="/admin/asistencia" className={cardBase}>
+          <h2 className="text-xl font-semibold text-gray-900">Asistencia</h2>
+          <p className="mt-2 text-gray-600 text-sm">
+            Compara calendario vs turnos reales y exporta reportes.
+          </p>
+          <span className="mt-4 inline-flex text-beeadmin-purple font-medium text-sm">Abrir →</span>
+        </Link>
+
+        <Link to="/admin/multas" className={cardBase}>
+          <h2 className="text-xl font-semibold text-gray-900">Multas</h2>
+          <p className="mt-2 text-gray-600 text-sm">
+            Multas automáticas por tardanza o ausencia, con reglas configurables.
+          </p>
+          <span className="mt-4 inline-flex text-beeadmin-purple font-medium text-sm">Abrir →</span>
+        </Link>
       </div>
     </div>
   );

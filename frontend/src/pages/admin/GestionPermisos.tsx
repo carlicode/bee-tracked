@@ -143,6 +143,11 @@ export function GestionPermisos() {
                       <strong>Nota:</strong> {p.nota}
                     </p>
                   )}
+                  {p.reemplazo && (
+                    <p className="text-sm text-gray-600 mt-1">
+                      <strong>Reemplazo:</strong> {p.reemplazo}
+                    </p>
+                  )}
                   {p.estado === 'rechazado' && p.razonRechazo && (
                     <p className="text-sm text-red-600 mt-1">
                       <strong>Rechazo:</strong> {p.razonRechazo}

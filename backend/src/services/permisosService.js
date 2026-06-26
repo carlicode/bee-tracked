@@ -48,6 +48,9 @@ function mapPermiso(item) {
     respondidoEn: item.respondidoEn || null,
     razonRechazo: item.razonRechazo || null,
     comprobante: item.comprobante || null,
+    reemplazo: item.reemplazo || '',
+    horaInicio: item.horaInicio || '',
+    horaFin: item.horaFin || '',
   };
 }
 
@@ -87,7 +90,7 @@ async function mirrorToSheets(row) {
   }
 }
 
-async function createPermiso({ userId, userName, userType, fecha, motivo, nota, comprobante }) {
+async function createPermiso({ userId, userName, userType, fecha, motivo, nota, comprobante, reemplazo, horaInicio, horaFin }) {
   const fechaNorm = normalizeFecha(fecha);
   const minFecha = tomorrowYmd();
 
@@ -133,6 +136,15 @@ async function createPermiso({ userId, userName, userType, fecha, motivo, nota, 
 
   if (comprobante && String(comprobante).trim()) {
     item.comprobante = String(comprobante).trim();
+  }
+  if (reemplazo && String(reemplazo).trim()) {
+    item.reemplazo = String(reemplazo).trim().slice(0, 120);
+  }
+  if (horaInicio && String(horaInicio).trim()) {
+    item.horaInicio = String(horaInicio).trim();
+  }
+  if (horaFin && String(horaFin).trim()) {
+    item.horaFin = String(horaFin).trim();
   }
 
   await dynamo.send(

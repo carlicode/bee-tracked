@@ -1,0 +1,62 @@
+import axios, { AxiosError } from 'axios';
+import { storage } from './storage';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
+function authHeaders(): Record<string, string> {
+  const token = storage.getToken();
+  const sessionId = storage.getSessionId();
+  const username = storage.getUsername();
+  const headers: Record<string, string> = {};
+  if (token && token !== 'demo-token') headers.Authorization = `Bearer ${token}`;
+  if (sessionId) headers['X-Session-Id'] = sessionId;
+  if (username) headers['X-User-Id'] = username;
+  return headers;
+}
+
+function getErrorMessage(err: unknown): string {
+  if (
+    err instanceof AxiosError &&
+    err.response?.data &&
+    typeof err.response.data === 'object' &&
+    'error' in err.response.data
+  ) {
+    return String((err.response.data as { error?: string }).error);
+  }
+  return err instanceof Error ? err.message : 'Error de conexión';
+}
+
+export type DiaAsistencia = {
+  fecha: string;
+  resultado: string;
+  detalle: string;
+  horaEsperadaInicio?: string;
+  horaEsperadaFin?: string;
+  horaRealInicio?: string;
+  horaRealFin?: string;
+  minutosRetraso?: number;
+};
+
+export type ReporteAsistencia = {
+  userId: string;
+  userName: string;
+  userType: string;
+  semana: string;
+  dias: DiaAsistencia[];
+};
+
+export const asistenciaApi = {
+  async getReporte(semana: string, userType = 'all', generarMultas = false): Promise<ReporteAsistencia[]> {
+    const { data } = await axios.get<{ success: boolean; reporte: ReporteAsistencia[] }>(
+      `${API_BASE}/api/asistencia/reporte?semana=${encodeURIComponent(semana)}&userType=${userType}&generarMultas=${generarMultas}`,
+      { headers: authHeaders(), timeout: 60000 }
+    );
+    return data.reporte || [];
+  },
+
+  exportCsvUrl(semana: string, userType = 'all'): string {
+    return `${API_BASE}/api/asistencia/export?semana=${encodeURIComponent(semana)}&userType=${userType}`;
+  },
+
+  parseError: getErrorMessage,
+};
