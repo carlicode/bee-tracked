@@ -165,3 +165,25 @@ __pycache__/
 .vite/
 .turbo/
 storybook-static/
+
+# ===========================
+# Archivos de trabajo / no son del producto
+# ===========================
+# Análisis y planificación interna
+ANALISIS_ARQUITECTURA.md
+PLAN_MAESTRO_110_USUARIOS.md
+PLAN_SPRINT_8.md
+REGISTROS.md
+CURSOR_PROMPTS.md
+CLAUDE.md
+
+# Reportes generados manualmente (van a /reports/ si se versionan)
+reporte-*.md
+Horas\ Tecnología\ -\ *.csv
+
+# Herramientas/experimentos HTML sueltos en la raíz
+dashboard_ingresos.html
+transcribe.html
+
+# Carpeta Analisis (archivos de análisis pre-desarrollo)
+Analisis/
