@@ -63,6 +63,14 @@ export function setupAxiosInterceptors() {
         return Promise.reject(error);
       }
 
+      // Si ya intentamos renovar y el backend sigue rechazando con 401
+      // (ej: sesión DynamoDB expirada aunque el token Cognito se renovó con éxito)
+      if (error.response?.status === 401 && originalRequest._retry) {
+        storage.clear();
+        window.location.href = '/';
+        return Promise.reject(error);
+      }
+
       // Si es 401 y no hemos intentado renovar ya (usuario con sesión expirada)
       if (error.response?.status === 401 && !originalRequest._retry) {
         // Si ya estamos renovando, esperar a que termine
