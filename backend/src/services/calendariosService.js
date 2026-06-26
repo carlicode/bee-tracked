@@ -100,7 +100,7 @@ async function getUltimoHorario(userNameOrId) {
 async function listByEstado(estado) {
   const res = await dynamo.send(new QueryCommand({
     TableName: TABLE,
-    IndexName: 'estado-index',
+    IndexName: 'estado-enviadoEn-index',
     KeyConditionExpression: 'estado = :e',
     ExpressionAttributeValues: marshall({ ':e': estado }),
     ScanIndexForward: false,

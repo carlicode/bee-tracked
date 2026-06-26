@@ -444,8 +444,6 @@ resources:
             AttributeType: S
           - AttributeName: SK
             AttributeType: S
-          - AttributeName: semana
-            AttributeType: S
           - AttributeName: estado
             AttributeType: S
           - AttributeName: enviadoEn
@@ -456,15 +454,7 @@ resources:
           - AttributeName: SK
             KeyType: RANGE
         GlobalSecondaryIndexes:
-          - IndexName: semana-index
-            KeySchema:
-              - AttributeName: semana
-                KeyType: HASH
-              - AttributeName: PK
-                KeyType: RANGE
-            Projection:
-              ProjectionType: ALL
-          - IndexName: estado-index
+          - IndexName: estado-enviadoEn-index
             KeySchema:
               - AttributeName: estado
                 KeyType: HASH
