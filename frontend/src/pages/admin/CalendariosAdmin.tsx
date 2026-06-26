@@ -21,6 +21,7 @@ export function CalendariosAdmin() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [ventanas, setVentanas] = useState<VentanaAbierta[]>([]);
   const [pendientes, setPendientes] = useState<Horario[]>([]);
+  const [selectedRol, setSelectedRol] = useState('');
   const [selectedUser, setSelectedUser] = useState('');
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
@@ -34,6 +35,7 @@ export function CalendariosAdmin() {
   const [saving, setSaving] = useState(false);
 
   const workers = users.filter((u) => WORKER_ROLES.has(u.rol));
+  const workersDelRol = selectedRol ? workers.filter((u) => u.rol === selectedRol) : [];
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -58,7 +60,7 @@ export function CalendariosAdmin() {
   }, [load]);
 
   const habilitar = async () => {
-    const user = workers.find((u) => u.nombre === selectedUser || u.usuario === selectedUser);
+    const user = workersDelRol.find((u) => u.nombre === selectedUser || u.usuario === selectedUser);
     if (!user || !fechaDesde || !fechaHasta) {
       toast.show('Selecciona trabajador y rango de fechas', 'error');
       return;
@@ -162,17 +164,31 @@ export function CalendariosAdmin() {
       {tab === 'habilitar' && !loading && (
         <div className="space-y-6">
           <div className="rounded-xl border p-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 items-end">
-            <label className="text-sm sm:col-span-2">
+            <label className="text-sm">
+              Rol
+              <select
+                className="block mt-1 w-full border rounded-lg px-3 py-2"
+                value={selectedRol}
+                onChange={(e) => { setSelectedRol(e.target.value); setSelectedUser(''); }}
+              >
+                <option value="">— Elegir rol —</option>
+                <option value="beezero">BeeZero ({workers.filter(u => u.rol === 'beezero').length})</option>
+                <option value="ecodelivery">EcoDelivery ({workers.filter(u => u.rol === 'ecodelivery').length})</option>
+                <option value="operador">Operador ({workers.filter(u => u.rol === 'operador').length})</option>
+              </select>
+            </label>
+            <label className="text-sm">
               Trabajador
               <select
                 className="block mt-1 w-full border rounded-lg px-3 py-2"
                 value={selectedUser}
                 onChange={(e) => setSelectedUser(e.target.value)}
+                disabled={!selectedRol}
               >
                 <option value="">— Seleccionar —</option>
-                {workers.map((u) => (
+                {workersDelRol.map((u) => (
                   <option key={u.usuario} value={u.nombre}>
-                    {u.nombre} ({u.rol})
+                    {u.nombre}
                   </option>
                 ))}
               </select>
