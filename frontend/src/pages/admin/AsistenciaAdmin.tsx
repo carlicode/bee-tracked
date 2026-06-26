@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AdminBackNav } from './AdminBackNav';
-import { calendariosApi } from '../../services/calendariosApi';
 import { asistenciaApi, type ReporteAsistencia } from '../../services/asistenciaApi';
 import { useToast } from '../../contexts/ToastContext';
 import { storage } from '../../services/storage';
@@ -16,20 +15,25 @@ const resultadoStyles: Record<string, string> = {
 
 export function AsistenciaAdmin() {
   const toast = useToast();
-  const [semana, setSemana] = useState('');
+  const [fechaDesde, setFechaDesde] = useState('');
+  const [fechaHasta, setFechaHasta] = useState('');
   const [userType, setUserType] = useState('all');
   const [reporte, setReporte] = useState<ReporteAsistencia[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    calendariosApi.getSemanaActual().then((m) => setSemana(m.semana)).catch(() => {});
+    const hoy = new Date();
+    const inicio = new Date(hoy);
+    inicio.setDate(inicio.getDate() - 7);
+    setFechaDesde(inicio.toISOString().slice(0, 10));
+    setFechaHasta(hoy.toISOString().slice(0, 10));
   }, []);
 
   const calcular = useCallback(async (generarMultas = false) => {
-    if (!semana) return;
+    if (!fechaDesde || !fechaHasta) return;
     setLoading(true);
     try {
-      const data = await asistenciaApi.getReporte(semana, userType, generarMultas);
+      const data = await asistenciaApi.getReporte(fechaDesde, fechaHasta, userType, generarMultas);
       setReporte(data);
       if (generarMultas) toast.show('Reporte calculado y multas generadas donde aplica', 'success');
     } catch (err) {
@@ -37,10 +41,10 @@ export function AsistenciaAdmin() {
     } finally {
       setLoading(false);
     }
-  }, [semana, userType, toast]);
+  }, [fechaDesde, fechaHasta, userType, toast]);
 
   const exportCsv = () => {
-    const url = asistenciaApi.exportCsvUrl(semana, userType);
+    const url = asistenciaApi.exportCsvUrl(fechaDesde, fechaHasta, userType);
     const headers: Record<string, string> = {};
     const token = storage.getToken();
     if (token) headers.Authorization = `Bearer ${token}`;
@@ -53,7 +57,7 @@ export function AsistenciaAdmin() {
       .then((blob) => {
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = `asistencia-${semana}.csv`;
+        a.download = `asistencia-${fechaDesde}_${fechaHasta}.csv`;
         a.click();
       })
       .catch(() => toast.show('Error al exportar CSV', 'error'));
@@ -64,13 +68,17 @@ export function AsistenciaAdmin() {
       <AdminBackNav currentPath="/admin/asistencia" />
       <div>
         <h1 className="text-2xl font-bold">Asistencia</h1>
-        <p className="text-gray-600 text-sm mt-1">Compara calendario publicado vs turnos reales.</p>
+        <p className="text-gray-600 text-sm mt-1">Compara horario publicado vs turnos reales.</p>
       </div>
 
       <div className="flex flex-wrap gap-3 items-end">
         <label className="text-sm">
-          Semana
-          <input className="block mt-1 border rounded-lg px-3 py-2" value={semana} onChange={(e) => setSemana(e.target.value)} />
+          Desde
+          <input type="date" className="block mt-1 border rounded-lg px-3 py-2" value={fechaDesde} onChange={(e) => setFechaDesde(e.target.value)} />
+        </label>
+        <label className="text-sm">
+          Hasta
+          <input type="date" className="block mt-1 border rounded-lg px-3 py-2" value={fechaHasta} onChange={(e) => setFechaHasta(e.target.value)} />
         </label>
         <select className="border rounded-lg px-3 py-2" value={userType} onChange={(e) => setUserType(e.target.value)}>
           <option value="all">Todos</option>

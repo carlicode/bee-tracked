@@ -75,9 +75,9 @@ const cardsResto = [
   {
     to: '/beezero/mi-calendario',
     icon: <IconCalendar />,
-    title: 'Mi calendario',
-    subtitle: 'Horario semanal',
-    description: 'Consulta tu horario publicado o propón cambios',
+    title: 'Mi horario',
+    subtitle: 'Horario de trabajo',
+    description: 'Llena el rango que te habilitó admin (solo cuando la ventana está abierta)',
   },
   {
     to: '/beezero/extraordinarios',

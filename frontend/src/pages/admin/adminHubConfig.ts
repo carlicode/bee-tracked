@@ -69,8 +69,8 @@ export const ADMIN_GROUPS: AdminGroup[] = [
     sections: [
       {
         to: '/admin/calendarios',
-        title: 'Calendarios',
-        description: 'Publica horarios semanales y aprueba propuestas de trabajadores.',
+        title: 'Horarios de trabajo',
+        description: 'Habilita ventanas, revisa envíos y edita horarios oficiales.',
       },
       {
         to: '/admin/extraordinarios',

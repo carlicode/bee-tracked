@@ -53,6 +53,41 @@ function parseHoraMin(hora) {
   return Number(m[1]) * 60 + Number(m[2]);
 }
 
+function normalizeYmd(value) {
+  const s = String(value || '').trim();
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[1]}-${m[2]}-${m[3]}` : '';
+}
+
+/** Fechas inclusive YYYY-MM-DD, máx maxDays */
+function fechasEnRango(fechaDesde, fechaHasta, maxDays = 35) {
+  const desde = normalizeYmd(fechaDesde);
+  const hasta = normalizeYmd(fechaHasta);
+  if (!desde || !hasta || hasta < desde) return [];
+  const p = parseYmd(desde);
+  const out = [];
+  let cur = Date.UTC(p.y, p.mo - 1, p.d);
+  const end = Date.parse(`${hasta}T12:00:00Z`);
+  while (cur <= end) {
+    out.push(new Date(cur).toISOString().slice(0, 10));
+    cur += 86400000;
+  }
+  if (out.length > maxDays) {
+    const err = new Error(`El rango no puede superar ${maxDays} días`);
+    err.statusCode = 400;
+    err.code = 'RANGE_TOO_LONG';
+    throw err;
+  }
+  return out;
+}
+
+function diffDaysInclusive(desde, hasta) {
+  const d = normalizeYmd(desde);
+  const h = normalizeYmd(hasta);
+  if (!d || !h) return 0;
+  return fechasEnRango(d, h, 9999).length;
+}
+
 module.exports = {
   TZ_LA_PAZ,
   todayYmdLaPaz,
@@ -60,4 +95,7 @@ module.exports = {
   isoWeekKey,
   diasDeSemana,
   parseHoraMin,
+  normalizeYmd,
+  fechasEnRango,
+  diffDaysInclusive,
 };

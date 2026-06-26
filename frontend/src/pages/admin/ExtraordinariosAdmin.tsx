@@ -14,6 +14,7 @@ export function ExtraordinariosAdmin() {
   const [descripcion, setDescripcion] = useState('');
   const [horaIni, setHoraIni] = useState('08:00');
   const [horaFin, setHoraFin] = useState('14:00');
+  const [reemplaza, setReemplaza] = useState<'suma' | 'reemplaza'>('suma');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -42,6 +43,7 @@ export function ExtraordinariosAdmin() {
         descripcion,
         horaInicioSugerida: horaIni,
         horaFinSugerida: horaFin,
+        reemplazaHorarioNormal: reemplaza === 'reemplaza',
       });
       toast.show('Día extraordinario creado', 'success');
       setTitulo('');
@@ -86,6 +88,13 @@ export function ExtraordinariosAdmin() {
         <input type="time" className="border rounded-lg px-3 py-2" value={horaIni} onChange={(e) => setHoraIni(e.target.value)} />
         <input type="time" className="border rounded-lg px-3 py-2" value={horaFin} onChange={(e) => setHoraFin(e.target.value)} />
         <textarea className="border rounded-lg px-3 py-2 sm:col-span-2" placeholder="Descripción" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} rows={2} />
+        <label className="text-sm sm:col-span-2">
+          Efecto sobre horario normal
+          <select className="block mt-1 w-full border rounded-lg px-3 py-2" value={reemplaza} onChange={(e) => setReemplaza(e.target.value as 'suma' | 'reemplaza')}>
+            <option value="suma">Se suma al horario normal</option>
+            <option value="reemplaza">Reemplaza el horario de ese día</option>
+          </select>
+        </label>
         <button type="button" onClick={() => void crear()} className="px-4 py-2 rounded-lg bg-beeadmin-purple text-white text-sm sm:col-span-2">
           Crear día extraordinario
         </button>
@@ -126,6 +135,9 @@ export function ExtraordinariosAdmin() {
                   <p className="font-medium">{ins.userName}</p>
                   <p className="text-sm text-gray-600">{ins.horaInicio}–{ins.horaFin} · {ins.estado}</p>
                 </div>
+                {ins.estado === 'anotado' && (
+                  <span className="text-xs text-green-700">Anotado</span>
+                )}
                 {ins.estado === 'pendiente' && (
                   <div className="flex gap-2">
                     <button type="button" onClick={() => void responder(ins, 'aprobar')} className="px-3 py-1 rounded bg-green-600 text-white text-sm">Aprobar</button>

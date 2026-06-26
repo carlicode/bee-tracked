@@ -24,6 +24,7 @@ function mapInfo(item) {
     estado: item.estado,
     creadoEn: item.creadoEn,
     creadoPor: item.creadoPor || null,
+    reemplazaHorarioNormal: item.reemplazaHorarioNormal ?? null,
     cerradoEn: item.cerradoEn || null,
   };
 }
@@ -44,7 +45,15 @@ function mapInscripcion(item) {
   };
 }
 
-async function createExtraordinario({ titulo, fecha, descripcion, horaInicioSugerida, horaFinSugerida, creadoPor }) {
+async function createExtraordinario({
+  titulo,
+  fecha,
+  descripcion,
+  horaInicioSugerida,
+  horaFinSugerida,
+  reemplazaHorarioNormal,
+  creadoPor,
+}) {
   const extraId = crypto.randomUUID();
   const item = {
     PK: `EXTRA#${extraId}`,
@@ -56,6 +65,7 @@ async function createExtraordinario({ titulo, fecha, descripcion, horaInicioSuge
     descripcion: descripcion || '',
     horaInicioSugerida: horaInicioSugerida || '',
     horaFinSugerida: horaFinSugerida || '',
+    reemplazaHorarioNormal: reemplazaHorarioNormal == null ? null : Boolean(reemplazaHorarioNormal),
     estado: 'abierto',
     creadoEn: Date.now(),
     creadoPor: creadoPor || null,
@@ -121,7 +131,7 @@ async function inscribirse({ extraId, userId, userName, userType, horaInicio, ho
     userType: userType || 'ecodelivery',
     horaInicio: horaInicio || info.horaInicioSugerida,
     horaFin: horaFin || info.horaFinSugerida,
-    estado: 'pendiente',
+    estado: 'anotado',
     creadoEn: Date.now(),
   };
   await dynamo.send(new PutItemCommand({

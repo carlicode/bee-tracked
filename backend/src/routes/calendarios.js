@@ -1,42 +1,34 @@
 const express = require('express');
 const { sessionAuth, requireRrhh } = require('../middleware/sessionAuth');
 const calendariosService = require('../services/calendariosService');
-const usersProfileService = require('../services/usersProfileService');
-const { isoWeekKey, mondayOfWeekYmd } = require('../utils/weekUtils');
 const { createRequestLogger } = require('../utils/logger');
 
 const router = express.Router();
 
-router.get('/mi-calendario', sessionAuth, async (req, res) => {
+router.get('/mi-estado', sessionAuth, async (req, res) => {
   try {
-    const { semana } = req.query;
-    const { userId, name } = req.authUser;
-    if (semana) {
-      const cal = await calendariosService.getSemanaCalendario(name, String(semana));
-      return res.json({ success: true, calendario: cal });
-    }
-    const list = await calendariosService.listSemanasByUser(name);
-    res.json({ success: true, calendarios: list });
+    const estado = await calendariosService.getWorkerEstado(req.authUser.name);
+    res.json({ success: true, ...estado });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
-router.post('/propuesta', sessionAuth, async (req, res) => {
+router.post('/enviar', sessionAuth, async (req, res) => {
   const log = createRequestLogger(req);
   try {
-    const { semana, fechaInicioSemana, dias } = req.body || {};
+    const { dias, fechaDesde, fechaHasta } = req.body || {};
     const { userId, userType, name } = req.authUser;
-    const propuesta = await calendariosService.createPropuesta({
+    const horario = await calendariosService.submitHorario({
       userId,
       userName: name,
       userType,
-      semana,
-      fechaInicioSemana,
       dias,
+      fechaDesde,
+      fechaHasta,
     });
-    log.info('Propuesta calendario', { propuestaId: propuesta.propuestaId });
-    res.json({ success: true, propuesta });
+    log.info('Horario enviado', { horarioId: horario.horarioId, userId });
+    res.json({ success: true, horario });
   } catch (err) {
     res.status(err.statusCode || 500).json({
       success: false,
@@ -46,105 +38,123 @@ router.post('/propuesta', sessionAuth, async (req, res) => {
   }
 });
 
-router.get('/admin/semana', sessionAuth, requireRrhh, async (req, res) => {
+router.get('/mi-historial', sessionAuth, async (req, res) => {
   try {
-    const semana = String(req.query.semana || '');
-    const userType = String(req.query.userType || 'all');
-    if (!semana) {
-      return res.status(400).json({ success: false, error: 'Falta parámetro semana' });
-    }
-    const calendarios = await calendariosService.listCalendariosSemana(semana, userType);
-    res.json({ success: true, calendarios });
+    const historial = await calendariosService.listHorariosUser(req.authUser.name);
+    res.json({ success: true, historial });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
-router.post('/admin/semana', sessionAuth, requireRrhh, async (req, res) => {
+router.get('/admin/ventanas', sessionAuth, requireRrhh, async (req, res) => {
+  try {
+    const ventanas = await calendariosService.listVentanasAbiertas();
+    res.json({ success: true, ventanas });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.get('/admin/pendientes', sessionAuth, requireRrhh, async (req, res) => {
+  try {
+    const horarios = await calendariosService.listByEstado('enviado');
+    res.json({ success: true, horarios });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.get('/admin/activos', sessionAuth, requireRrhh, async (req, res) => {
+  try {
+    const horarios = await calendariosService.listByEstado('activo');
+    res.json({ success: true, horarios });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.get('/admin/visual', sessionAuth, requireRrhh, async (req, res) => {
+  try {
+    const { fechaDesde, fechaHasta } = req.query;
+    if (!fechaDesde || !fechaHasta) {
+      return res.status(400).json({ success: false, error: 'Faltan fechaDesde o fechaHasta' });
+    }
+    const calendario = await calendariosService.getCalendarioVisual(
+      String(fechaDesde),
+      String(fechaHasta)
+    );
+    res.json({ success: true, calendario });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ success: false, error: err.message });
+  }
+});
+
+router.post('/admin/habilitar', sessionAuth, requireRrhh, async (req, res) => {
   const log = createRequestLogger(req);
   try {
-    const { semana, fechaInicioSemana, calendarios } = req.body || {};
-    if (!semana || !Array.isArray(calendarios)) {
-      return res.status(400).json({ success: false, error: 'Faltan semana o calendarios' });
+    const { userId, userName, userType, fechaDesde, fechaHasta, baseHorarioId } = req.body || {};
+    if (!userName || !fechaDesde || !fechaHasta) {
+      return res.status(400).json({ success: false, error: 'Faltan userName, fechaDesde o fechaHasta' });
     }
-    const saved = await calendariosService.bulkSaveSemana({
-      semana,
-      fechaInicioSemana,
-      calendarios,
-      publicadoPor: req.authUser.userId,
-    });
-    log.info('Calendarios publicados', { semana, count: saved.length });
-    res.json({ success: true, calendarios: saved });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-router.post('/admin/repetir', sessionAuth, requireRrhh, async (req, res) => {
-  try {
-    const { userId, userName, userType, targetSemana, targetInicio, sourceSemana } = req.body || {};
-    const cal = await calendariosService.repeatFromPreviousWeek({
-      userId,
+    const hab = await calendariosService.habilitarWorker({
+      userId: userId || userName,
       userName,
       userType,
-      targetSemana,
-      targetInicio,
-      sourceSemana,
-      publicadoPor: req.authUser.userId,
+      fechaDesde,
+      fechaHasta,
+      habilitadoPor: req.authUser.userId,
+      baseHorarioId,
     });
-    res.json({ success: true, calendario: cal });
+    log.info('Ventana habilitada', { userName, fechaDesde, fechaHasta });
+    res.json({ success: true, habilitacion: hab });
   } catch (err) {
     res.status(err.statusCode || 500).json({ success: false, error: err.message });
   }
 });
 
-router.get('/admin/propuestas', sessionAuth, requireRrhh, async (req, res) => {
+router.post('/admin/rehabilitar', sessionAuth, requireRrhh, async (req, res) => {
   try {
-    const propuestas = await calendariosService.listPropuestasPendientes();
-    res.json({ success: true, propuestas });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-router.post('/admin/propuestas/:propuestaId/responder', sessionAuth, requireRrhh, async (req, res) => {
-  try {
-    const { userName, accion, razon } = req.body || {};
-    const propuesta = await calendariosService.respondPropuesta(
-      req.params.propuestaId,
+    const { userId, userName, userType } = req.body || {};
+    if (!userName) {
+      return res.status(400).json({ success: false, error: 'Falta userName' });
+    }
+    const hab = await calendariosService.rehabilitarWorker({
+      userId: userId || userName,
       userName,
-      accion,
-      req.authUser.userId,
-      razon
-    );
-    res.json({ success: true, propuesta });
+      userType,
+      habilitadoPor: req.authUser.userId,
+    });
+    res.json({ success: true, habilitacion: hab });
   } catch (err) {
     res.status(err.statusCode || 500).json({ success: false, error: err.message });
   }
 });
 
-router.patch('/admin/perfil/:userId/propuesta', sessionAuth, requireRrhh, async (req, res) => {
+router.put('/admin/editar/:userName/:horarioId', sessionAuth, requireRrhh, async (req, res) => {
   try {
-    const { habilitada } = req.body || {};
-    const perfil = await usersProfileService.setCalendarioPropuestaHabilitada(
-      req.params.userId,
-      Boolean(habilitada),
-      req.authUser.userId
+    const { dias, marcarActivo } = req.body || {};
+    const horario = await calendariosService.editarHorario(
+      req.params.userName,
+      req.params.horarioId,
+      dias,
+      req.authUser.userId,
+      marcarActivo !== false
     );
-    res.json({ success: true, perfil });
+    res.json({ success: true, horario });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    res.status(err.statusCode || 500).json({ success: false, error: err.message });
   }
 });
 
-router.get('/utils/semana-actual', sessionAuth, async (req, res) => {
-  const hoy = req.query.fecha || new Date().toLocaleDateString('en-CA', { timeZone: 'America/La_Paz' });
-  res.json({
-    success: true,
-    semana: isoWeekKey(String(hoy)),
-    fechaInicioSemana: mondayOfWeekYmd(String(hoy)),
-    dias: calendariosService.DIAS,
-  });
+router.get('/admin/usuario/:userName', sessionAuth, requireRrhh, async (req, res) => {
+  try {
+    const historial = await calendariosService.listHorariosUser(req.params.userName);
+    const habilitacion = await calendariosService.getHabilitacion(req.params.userName);
+    res.json({ success: true, historial, habilitacion });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 module.exports = router;

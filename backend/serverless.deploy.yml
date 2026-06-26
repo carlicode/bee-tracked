@@ -448,6 +448,8 @@ resources:
             AttributeType: S
           - AttributeName: estado
             AttributeType: S
+          - AttributeName: enviadoEn
+            AttributeType: N
         KeySchema:
           - AttributeName: PK
             KeyType: HASH
@@ -466,7 +468,7 @@ resources:
             KeySchema:
               - AttributeName: estado
                 KeyType: HASH
-              - AttributeName: PK
+              - AttributeName: enviadoEn
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL

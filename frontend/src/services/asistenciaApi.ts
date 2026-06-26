@@ -41,21 +41,27 @@ export type ReporteAsistencia = {
   userId: string;
   userName: string;
   userType: string;
-  semana: string;
+  fechaDesde?: string;
+  fechaHasta?: string;
   dias: DiaAsistencia[];
 };
 
 export const asistenciaApi = {
-  async getReporte(semana: string, userType = 'all', generarMultas = false): Promise<ReporteAsistencia[]> {
+  async getReporte(
+    fechaDesde: string,
+    fechaHasta: string,
+    userType = 'all',
+    generarMultas = false
+  ): Promise<ReporteAsistencia[]> {
     const { data } = await axios.get<{ success: boolean; reporte: ReporteAsistencia[] }>(
-      `${API_BASE}/api/asistencia/reporte?semana=${encodeURIComponent(semana)}&userType=${userType}&generarMultas=${generarMultas}`,
+      `${API_BASE}/api/asistencia/reporte?fechaDesde=${encodeURIComponent(fechaDesde)}&fechaHasta=${encodeURIComponent(fechaHasta)}&userType=${userType}&generarMultas=${generarMultas}`,
       { headers: authHeaders(), timeout: 60000 }
     );
     return data.reporte || [];
   },
 
-  exportCsvUrl(semana: string, userType = 'all'): string {
-    return `${API_BASE}/api/asistencia/export?semana=${encodeURIComponent(semana)}&userType=${userType}`;
+  exportCsvUrl(fechaDesde: string, fechaHasta: string, userType = 'all'): string {
+    return `${API_BASE}/api/asistencia/export?fechaDesde=${encodeURIComponent(fechaDesde)}&fechaHasta=${encodeURIComponent(fechaHasta)}&userType=${userType}`;
   },
 
   parseError: getErrorMessage,

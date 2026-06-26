@@ -2,107 +2,77 @@ import { useCallback, useEffect, useState } from 'react';
 import { AdminBackNav } from './AdminBackNav';
 import {
   calendariosApi,
-  DIAS_SEMANA,
-  type CalendarioSemana,
-  type DiaCalendario,
-  type PropuestaCalendario,
+  type DiaHorario,
+  type Horario,
+  type VentanaAbierta,
+  type FilaVisual,
 } from '../../services/calendariosApi';
+import { adminApi, type AdminUser } from '../../services/adminApi';
+import { HorarioGrid } from '../../components/HorarioGrid';
 import { useToast } from '../../contexts/ToastContext';
 
-type RowDraft = {
-  userId: string;
-  userName: string;
-  userType: string;
-  dias: Record<string, DiaCalendario>;
-};
+type Tab = 'habilitar' | 'pendientes' | 'visual';
 
-function emptyDias(fechaInicio: string): Record<string, DiaCalendario> {
-  const start = new Date(fechaInicio + 'T12:00:00');
-  const out: Record<string, DiaCalendario> = {};
-  DIAS_SEMANA.forEach((nombre, i) => {
-    const d = new Date(start);
-    d.setDate(d.getDate() + i);
-    out[nombre] = {
-      fecha: d.toISOString().slice(0, 10),
-      trabaja: false,
-      horaInicio: '08:00',
-      horaFin: '17:00',
-      nota: '',
-    };
-  });
-  return out;
-}
+const WORKER_ROLES = new Set(['beezero', 'ecodelivery', 'operador']);
 
 export function CalendariosAdmin() {
   const toast = useToast();
-  const [semana, setSemana] = useState('');
-  const [fechaInicio, setFechaInicio] = useState('');
-  const [userType, setUserType] = useState('all');
-  const [calendarios, setCalendarios] = useState<CalendarioSemana[]>([]);
-  const [propuestas, setPropuestas] = useState<PropuestaCalendario[]>([]);
-  const [draft, setDraft] = useState<RowDraft | null>(null);
+  const [tab, setTab] = useState<Tab>('habilitar');
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [ventanas, setVentanas] = useState<VentanaAbierta[]>([]);
+  const [pendientes, setPendientes] = useState<Horario[]>([]);
+  const [selectedUser, setSelectedUser] = useState('');
+  const [fechaDesde, setFechaDesde] = useState('');
+  const [fechaHasta, setFechaHasta] = useState('');
+  const [editHorario, setEditHorario] = useState<Horario | null>(null);
+  const [editDias, setEditDias] = useState<Record<string, DiaHorario>>({});
+  const [visualDesde, setVisualDesde] = useState('');
+  const [visualHasta, setVisualHasta] = useState('');
+  const [visualRows, setVisualRows] = useState<FilaVisual[]>([]);
+  const [visualFechas, setVisualFechas] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const loadMeta = useCallback(async () => {
-    const meta = await calendariosApi.getSemanaActual();
-    setSemana(meta.semana);
-    setFechaInicio(meta.fechaInicioSemana);
-  }, []);
+  const workers = users.filter((u) => WORKER_ROLES.has(u.rol));
 
   const load = useCallback(async () => {
-    if (!semana) return;
     setLoading(true);
     try {
-      const [cals, props] = await Promise.all([
-        calendariosApi.getAdminSemana(semana, userType),
-        calendariosApi.getPropuestasPendientes(),
+      const [u, v, p] = await Promise.all([
+        adminApi.getUsers(),
+        calendariosApi.getVentanas(),
+        calendariosApi.getPendientes(),
       ]);
-      setCalendarios(cals);
-      setPropuestas(props);
+      setUsers(u);
+      setVentanas(v);
+      setPendientes(p);
     } catch (err) {
       toast.show(calendariosApi.parseError(err), 'error');
     } finally {
       setLoading(false);
     }
-  }, [semana, userType, toast]);
-
-  useEffect(() => {
-    void loadMeta();
-  }, [loadMeta]);
+  }, [toast]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  const addRow = () => {
-    setDraft({
-      userId: '',
-      userName: '',
-      userType: 'ecodelivery',
-      dias: emptyDias(fechaInicio),
-    });
-  };
-
-  const saveDraft = async () => {
-    if (!draft?.userName.trim()) {
-      toast.show('Indica el nombre del trabajador', 'error');
+  const habilitar = async () => {
+    const user = workers.find((u) => u.nombre === selectedUser || u.usuario === selectedUser);
+    if (!user || !fechaDesde || !fechaHasta) {
+      toast.show('Selecciona trabajador y rango de fechas', 'error');
       return;
     }
     setSaving(true);
     try {
-      await calendariosApi.saveAdminSemana({
-        semana,
-        fechaInicioSemana: fechaInicio,
-        calendarios: [{
-          userId: draft.userId || draft.userName.toLowerCase().replace(/\s+/g, '.'),
-          userName: draft.userName.trim(),
-          userType: draft.userType,
-          dias: draft.dias,
-        }],
+      await calendariosApi.habilitar({
+        userId: user.usuario,
+        userName: user.nombre,
+        userType: user.rol,
+        fechaDesde,
+        fechaHasta,
       });
-      toast.show('Calendario guardado', 'success');
-      setDraft(null);
+      toast.show(`Ventana abierta para ${user.nombre}`, 'success');
       await load();
     } catch (err) {
       toast.show(calendariosApi.parseError(err), 'error');
@@ -111,193 +81,233 @@ export function CalendariosAdmin() {
     }
   };
 
-  const responder = async (p: PropuestaCalendario, accion: 'aprobar' | 'rechazar') => {
+  const abrirEdicion = (h: Horario) => {
+    setEditHorario(h);
+    setEditDias({ ...h.dias });
+  };
+
+  const guardarEdicion = async () => {
+    if (!editHorario) return;
+    setSaving(true);
     try {
-      await calendariosApi.responderPropuesta(p.propuestaId, p.userName, accion);
-      toast.show(accion === 'aprobar' ? 'Propuesta aprobada' : 'Propuesta rechazada', 'success');
+      await calendariosApi.editarHorario(editHorario.userName, editHorario.horarioId, editDias, true);
+      toast.show('Horario guardado', 'success');
+      setEditHorario(null);
+      await load();
+    } catch (err) {
+      toast.show(calendariosApi.parseError(err), 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const rehabilitar = async (h: Horario) => {
+    try {
+      await calendariosApi.rehabilitar({
+        userId: h.userId,
+        userName: h.userName,
+        userType: h.userType,
+      });
+      toast.show('Worker puede editar de nuevo desde la versión actual', 'success');
       await load();
     } catch (err) {
       toast.show(calendariosApi.parseError(err), 'error');
     }
   };
 
+  const cargarVisual = async () => {
+    if (!visualDesde || !visualHasta) return;
+    try {
+      const data = await calendariosApi.getVisual(visualDesde, visualHasta);
+      setVisualFechas(data.fechas);
+      setVisualRows(data.rows);
+    } catch (err) {
+      toast.show(calendariosApi.parseError(err), 'error');
+    }
+  };
+
+  const tabs: { id: Tab; label: string }[] = [
+    { id: 'habilitar', label: 'Habilitar' },
+    { id: 'pendientes', label: `Recibidos (${pendientes.length})` },
+    { id: 'visual', label: 'Calendario visual' },
+  ];
+
   return (
     <div className="space-y-6">
       <AdminBackNav currentPath="/admin/calendarios" />
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Calendarios semanales</h1>
-        <p className="text-gray-600 text-sm mt-1">Publica horarios semana por semana para cada trabajador.</p>
+        <h1 className="text-2xl font-bold text-gray-900">Horarios de trabajo</h1>
+        <p className="text-gray-600 text-sm mt-1">
+          Habilita ventanas, revisa envíos de trabajadores y edita horarios oficiales.
+        </p>
       </div>
 
-      <div className="flex flex-wrap gap-3 items-end">
-        <label className="text-sm">
-          Semana
-          <input
-            className="block mt-1 border rounded-lg px-3 py-2"
-            value={semana}
-            onChange={(e) => setSemana(e.target.value)}
-            placeholder="2026-W26"
-          />
-        </label>
-        <label className="text-sm">
-          Inicio (lunes)
-          <input
-            type="date"
-            className="block mt-1 border rounded-lg px-3 py-2"
-            value={fechaInicio}
-            onChange={(e) => setFechaInicio(e.target.value)}
-          />
-        </label>
-        <label className="text-sm">
-          Tipo
-          <select className="block mt-1 border rounded-lg px-3 py-2" value={userType} onChange={(e) => setUserType(e.target.value)}>
-            <option value="all">Todos</option>
-            <option value="beezero">BeeZero</option>
-            <option value="ecodelivery">EcoDelivery</option>
-            <option value="operador">Operador</option>
-          </select>
-        </label>
-        <button type="button" onClick={() => void load()} className="px-4 py-2 rounded-lg bg-beeadmin-purple text-white text-sm">
-          Actualizar
-        </button>
-        <button type="button" onClick={addRow} className="px-4 py-2 rounded-lg border border-beeadmin-purple text-beeadmin-purple text-sm">
-          + Agregar trabajador
-        </button>
+      <div className="flex flex-wrap gap-2">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setTab(t.id)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium ${
+              tab === t.id ? 'bg-beeadmin-purple text-white' : 'bg-white border text-gray-700'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      {draft && (
-        <div className="rounded-xl border p-4 space-y-3 bg-violet-50">
-          <h2 className="font-semibold">Nuevo calendario</h2>
-          <div className="flex flex-wrap gap-3">
-            <input
-              className="border rounded-lg px-3 py-2"
-              placeholder="Nombre (ej. Leonardo Alarcon)"
-              value={draft.userName}
-              onChange={(e) => setDraft({ ...draft, userName: e.target.value })}
-            />
-            <select
-              className="border rounded-lg px-3 py-2"
-              value={draft.userType}
-              onChange={(e) => setDraft({ ...draft, userType: e.target.value })}
-            >
-              <option value="beezero">beezero</option>
-              <option value="ecodelivery">ecodelivery</option>
-              <option value="operador">operador</option>
-            </select>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm border bg-white">
-              <thead>
-                <tr className="bg-gray-50">
-                  <th className="p-2 border">Día</th>
-                  <th className="p-2 border">Trabaja</th>
-                  <th className="p-2 border">Inicio</th>
-                  <th className="p-2 border">Fin</th>
-                </tr>
-              </thead>
-              <tbody>
-                {DIAS_SEMANA.map((d) => (
-                  <tr key={d}>
-                    <td className="p-2 border capitalize">{d}</td>
-                    <td className="p-2 border text-center">
-                      <input
-                        type="checkbox"
-                        checked={draft.dias[d]?.trabaja}
-                        onChange={(e) =>
-                          setDraft({
-                            ...draft,
-                            dias: { ...draft.dias, [d]: { ...draft.dias[d], trabaja: e.target.checked } },
-                          })
-                        }
-                      />
-                    </td>
-                    <td className="p-2 border">
-                      <input
-                        type="time"
-                        className="border rounded px-2 py-1"
-                        value={draft.dias[d]?.horaInicio || ''}
-                        onChange={(e) =>
-                          setDraft({
-                            ...draft,
-                            dias: { ...draft.dias, [d]: { ...draft.dias[d], horaInicio: e.target.value } },
-                          })
-                        }
-                      />
-                    </td>
-                    <td className="p-2 border">
-                      <input
-                        type="time"
-                        className="border rounded px-2 py-1"
-                        value={draft.dias[d]?.horaFin || ''}
-                        onChange={(e) =>
-                          setDraft({
-                            ...draft,
-                            dias: { ...draft.dias, [d]: { ...draft.dias[d], horaFin: e.target.value } },
-                          })
-                        }
-                      />
-                    </td>
-                  </tr>
+      {loading && <p className="text-gray-500 text-sm">Cargando…</p>}
+
+      {tab === 'habilitar' && !loading && (
+        <div className="space-y-6">
+          <div className="rounded-xl border p-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 items-end">
+            <label className="text-sm sm:col-span-2">
+              Trabajador
+              <select
+                className="block mt-1 w-full border rounded-lg px-3 py-2"
+                value={selectedUser}
+                onChange={(e) => setSelectedUser(e.target.value)}
+              >
+                <option value="">— Seleccionar —</option>
+                {workers.map((u) => (
+                  <option key={u.usuario} value={u.nombre}>
+                    {u.nombre} ({u.rol})
+                  </option>
                 ))}
-              </tbody>
-            </table>
+              </select>
+            </label>
+            <label className="text-sm">
+              Desde
+              <input type="date" className="block mt-1 w-full border rounded-lg px-3 py-2" value={fechaDesde} onChange={(e) => setFechaDesde(e.target.value)} />
+            </label>
+            <label className="text-sm">
+              Hasta (máx. 35 días)
+              <input type="date" className="block mt-1 w-full border rounded-lg px-3 py-2" value={fechaHasta} onChange={(e) => setFechaHasta(e.target.value)} />
+            </label>
+            <button type="button" disabled={saving} onClick={() => void habilitar()} className="px-4 py-2 rounded-lg bg-beeadmin-purple text-white text-sm disabled:opacity-50">
+              Habilitar envío
+            </button>
           </div>
-          <div className="flex gap-2">
-            <button type="button" disabled={saving} onClick={() => void saveDraft()} className="px-4 py-2 rounded-lg bg-beeadmin-purple text-white text-sm disabled:opacity-50">
-              Guardar
-            </button>
-            <button type="button" onClick={() => setDraft(null)} className="px-4 py-2 rounded-lg border text-sm">
-              Cancelar
-            </button>
+
+          <div>
+            <h2 className="font-semibold mb-2">Esperando envío ({ventanas.length})</h2>
+            {ventanas.length === 0 ? (
+              <p className="text-gray-500 text-sm">Nadie con ventana abierta.</p>
+            ) : (
+              <div className="space-y-2">
+                {ventanas.map((v) => (
+                  <div key={v.userId} className="rounded-lg border p-3 flex flex-wrap justify-between gap-2 text-sm">
+                    <span><strong>{v.userName}</strong> · {v.userType}</span>
+                    <span className="text-gray-600">{v.fechaDesde} → {v.fechaHasta}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {propuestas.length > 0 && (
-        <div className="rounded-xl border p-4 space-y-3">
-          <h2 className="font-semibold">Propuestas pendientes ({propuestas.length})</h2>
-          {propuestas.map((p) => (
-            <div key={p.propuestaId} className="flex flex-wrap items-center justify-between gap-2 border rounded-lg p-3">
-              <div>
-                <p className="font-medium">{p.userName}</p>
-                <p className="text-sm text-gray-600">Semana {p.semana} · {p.userType}</p>
-              </div>
-              <div className="flex gap-2">
-                <button type="button" onClick={() => void responder(p, 'aprobar')} className="px-3 py-1 rounded bg-green-600 text-white text-sm">Aprobar</button>
-                <button type="button" onClick={() => void responder(p, 'rechazar')} className="px-3 py-1 rounded bg-red-600 text-white text-sm">Rechazar</button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {loading ? (
-        <p className="text-gray-500">Cargando…</p>
-      ) : calendarios.length === 0 ? (
-        <p className="text-gray-500">No hay calendarios publicados para esta semana.</p>
-      ) : (
+      {tab === 'pendientes' && !loading && (
         <div className="space-y-4">
-          {calendarios.map((c) => (
-            <div key={`${c.userId}-${c.semana}`} className="rounded-xl border p-4">
-              <p className="font-semibold">{c.userName} <span className="text-sm text-gray-500">({c.userType})</span></p>
-              <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 text-xs">
-                {DIAS_SEMANA.map((d) => {
-                  const dia = c.dias[d];
-                  if (!dia) return null;
-                  return (
-                    <div key={d} className={`rounded p-2 border ${dia.trabaja ? 'bg-green-50' : 'bg-gray-50'}`}>
-                      <p className="font-medium capitalize">{d.slice(0, 3)}</p>
-                      {dia.trabaja ? (
-                        <p>{dia.horaInicio} – {dia.horaFin}</p>
-                      ) : (
-                        <p className="text-gray-500">Libre</p>
-                      )}
-                    </div>
-                  );
-                })}
+          {pendientes.length === 0 ? (
+            <p className="text-gray-500">No hay horarios enviados pendientes de revisión.</p>
+          ) : (
+            pendientes.map((h) => (
+              <div key={h.horarioId} className="rounded-xl border p-4 space-y-3">
+                <div className="flex flex-wrap justify-between gap-2">
+                  <div>
+                    <p className="font-semibold">{h.userName}</p>
+                    <p className="text-sm text-gray-600">{h.fechaDesde} → {h.fechaHasta} · {h.estado}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => abrirEdicion(h)} className="px-3 py-1 rounded-lg bg-beeadmin-purple text-white text-sm">
+                      Ver / editar
+                    </button>
+                    <button type="button" onClick={() => void rehabilitar(h)} className="px-3 py-1 rounded-lg border text-sm">
+                      Re-habilitar worker
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+
+          {editHorario && (
+            <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 overflow-y-auto">
+              <div className="bg-white rounded-2xl shadow-xl max-w-3xl w-full p-6 space-y-4 my-8">
+                <h2 className="text-lg font-bold">Editar horario — {editHorario.userName}</h2>
+                <HorarioGrid
+                  fechaDesde={editHorario.fechaDesde}
+                  fechaHasta={editHorario.fechaHasta}
+                  dias={editDias}
+                  onChange={setEditDias}
+                />
+                <div className="flex gap-2">
+                  <button type="button" disabled={saving} onClick={() => void guardarEdicion()} className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm disabled:opacity-50">
+                    Guardar como horario oficial
+                  </button>
+                  <button type="button" onClick={() => setEditHorario(null)} className="px-4 py-2 rounded-lg border text-sm">
+                    Cerrar
+                  </button>
+                </div>
               </div>
             </div>
-          ))}
+          )}
+        </div>
+      )}
+
+      {tab === 'visual' && (
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-3 items-end">
+            <label className="text-sm">
+              Desde
+              <input type="date" className="block mt-1 border rounded-lg px-3 py-2" value={visualDesde} onChange={(e) => setVisualDesde(e.target.value)} />
+            </label>
+            <label className="text-sm">
+              Hasta
+              <input type="date" className="block mt-1 border rounded-lg px-3 py-2" value={visualHasta} onChange={(e) => setVisualHasta(e.target.value)} />
+            </label>
+            <button type="button" onClick={() => void cargarVisual()} className="px-4 py-2 rounded-lg bg-beeadmin-purple text-white text-sm">
+              Cargar
+            </button>
+          </div>
+
+          {visualRows.length > 0 && (
+            <div className="overflow-x-auto rounded-xl border">
+              <table className="min-w-full text-xs">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="p-2 border sticky left-0 bg-gray-50">Trabajador</th>
+                    {visualFechas.map((f) => (
+                      <th key={f} className="p-1 border whitespace-nowrap">{f.slice(5)}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {visualRows.map((row) => (
+                    <tr key={row.horarioId}>
+                      <td className="p-2 border sticky left-0 bg-white font-medium whitespace-nowrap">
+                        {row.userName}
+                        <span className="block text-gray-400">{row.estado}</span>
+                      </td>
+                      {visualFechas.map((f) => {
+                        const c = row.celdas[f];
+                        const bg =
+                          c?.tipo === 'trabaja' ? 'bg-green-100' :
+                          c?.tipo === 'libre' ? 'bg-gray-50' : 'bg-white';
+                        return (
+                          <td key={f} className={`p-1 border text-center ${bg}`} title={c?.tipo === 'trabaja' ? `${c.horaInicio}–${c.horaFin}` : c?.tipo}>
+                            {c?.tipo === 'trabaja' ? `${c.horaInicio?.slice(0, 5)}` : c?.tipo === 'libre' ? '—' : ''}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </div>

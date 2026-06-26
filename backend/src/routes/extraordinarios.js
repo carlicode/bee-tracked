@@ -63,7 +63,7 @@ router.get('/admin', sessionAuth, requireRrhh, async (req, res) => {
 router.post('/admin', sessionAuth, requireRrhh, async (req, res) => {
   const log = createRequestLogger(req);
   try {
-    const { titulo, fecha, descripcion, horaInicioSugerida, horaFinSugerida } = req.body || {};
+    const { titulo, fecha, descripcion, horaInicioSugerida, horaFinSugerida, reemplazaHorarioNormal } = req.body || {};
     if (!titulo || !fecha) {
       return res.status(400).json({ success: false, error: 'Faltan titulo o fecha' });
     }
@@ -73,6 +73,7 @@ router.post('/admin', sessionAuth, requireRrhh, async (req, res) => {
       descripcion,
       horaInicioSugerida,
       horaFinSugerida,
+      reemplazaHorarioNormal,
       creadoPor: req.authUser.userId,
     });
     log.info('Extraordinario creado', { extraId: extra.extraId });

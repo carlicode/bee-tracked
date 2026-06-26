@@ -26,122 +26,179 @@ function getErrorMessage(err: unknown): string {
   return err instanceof Error ? err.message : 'Error de conexión';
 }
 
-export type DiaCalendario = {
+export type DiaHorario = {
   fecha: string;
   trabaja: boolean;
   horaInicio: string;
   horaFin: string;
-  nota?: string;
 };
 
-export type CalendarioSemana = {
+export type Horario = {
+  horarioId: string;
   userId: string;
   userName: string;
   userType: string;
-  semana: string;
-  fechaInicioSemana: string;
-  dias: Record<string, DiaCalendario>;
-  estado?: string;
+  fechaDesde: string;
+  fechaHasta: string;
+  dias: Record<string, DiaHorario>;
+  estado: 'enviado' | 'activo' | string;
+  version: number;
+  enviadoPor?: string | null;
+  enviadoEn: number;
+  editadoPor?: string | null;
+  editadoEn?: number | null;
 };
 
-export type PropuestaCalendario = {
-  propuestaId: string;
+export type Habilitacion = {
+  habilitada: boolean;
+  fechaDesde: string;
+  fechaHasta: string;
+  habilitadoPor?: string | null;
+  habilitadoEn?: number | null;
+  baseHorarioId?: string | null;
+};
+
+export type WorkerEstado = {
+  habilitacion: Habilitacion | null;
+  puedeEnviar: boolean;
+  horarioActivo: Horario | null;
+  ultimoHorario: Horario | null;
+  baseParaFormulario: Horario | null;
+  historial: Horario[];
+};
+
+export type VentanaAbierta = {
   userId: string;
   userName: string;
   userType: string;
-  semana: string;
-  fechaInicioSemana: string;
-  dias: Record<string, DiaCalendario>;
+  fechaDesde: string;
+  fechaHasta: string;
+  habilitadoEn: number;
+  baseHorarioId?: string | null;
+};
+
+export type CeldaVisual = {
+  tipo: 'trabaja' | 'libre' | 'fuera_rango';
+  horaInicio?: string;
+  horaFin?: string;
+};
+
+export type FilaVisual = {
+  userId: string;
+  userName: string;
+  userType: string;
+  horarioId: string;
   estado: string;
+  celdas: Record<string, CeldaVisual>;
 };
 
-export const DIAS_SEMANA = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'] as const;
+export function fechasEnRango(fechaDesde: string, fechaHasta: string): string[] {
+  const out: string[] = [];
+  let cur = new Date(`${fechaDesde}T12:00:00`);
+  const end = new Date(`${fechaHasta}T12:00:00`);
+  while (cur <= end && out.length < 35) {
+    out.push(cur.toISOString().slice(0, 10));
+    cur = new Date(cur.getTime() + 86400000);
+  }
+  return out;
+}
+
+export function diaSemanaLabel(fecha: string): string {
+  const d = new Date(`${fecha}T12:00:00`);
+  return d.toLocaleDateString('es-BO', { weekday: 'short' });
+}
+
+export function emptyDias(fechaDesde: string, fechaHasta: string): Record<string, DiaHorario> {
+  const out: Record<string, DiaHorario> = {};
+  for (const fecha of fechasEnRango(fechaDesde, fechaHasta)) {
+    out[fecha] = { fecha, trabaja: false, horaInicio: '06:00', horaFin: '14:00' };
+  }
+  return out;
+}
 
 export const calendariosApi = {
-  async getSemanaActual(): Promise<{ semana: string; fechaInicioSemana: string }> {
-    const { data } = await axios.get<{
-      success: boolean;
-      semana: string;
-      fechaInicioSemana: string;
-    }>(`${API_BASE}/api/calendarios/utils/semana-actual`, {
-      headers: authHeaders(),
-      timeout: 15000,
-    });
-    return { semana: data.semana, fechaInicioSemana: data.fechaInicioSemana };
-  },
-
-  async getMiCalendario(semana?: string): Promise<CalendarioSemana | CalendarioSemana[]> {
-    const url = semana
-      ? `${API_BASE}/api/calendarios/mi-calendario?semana=${encodeURIComponent(semana)}`
-      : `${API_BASE}/api/calendarios/mi-calendario`;
-    const { data } = await axios.get<{
-      success: boolean;
-      calendario?: CalendarioSemana;
-      calendarios?: CalendarioSemana[];
-    }>(url, { headers: authHeaders(), timeout: 20000 });
-    if (semana) return data.calendario as CalendarioSemana;
-    return data.calendarios || [];
-  },
-
-  async enviarPropuesta(input: {
-    semana: string;
-    fechaInicioSemana: string;
-    dias: Record<string, Partial<DiaCalendario>>;
-  }): Promise<PropuestaCalendario> {
-    const { data } = await axios.post<{ success: boolean; propuesta: PropuestaCalendario }>(
-      `${API_BASE}/api/calendarios/propuesta`,
-      input,
+  async getMiEstado(): Promise<WorkerEstado> {
+    const { data } = await axios.get<{ success: boolean } & WorkerEstado>(
+      `${API_BASE}/api/calendarios/mi-estado`,
       { headers: authHeaders(), timeout: 20000 }
     );
-    return data.propuesta;
+    return data;
   },
 
-  async getAdminSemana(semana: string, userType = 'all'): Promise<CalendarioSemana[]> {
-    const { data } = await axios.get<{ success: boolean; calendarios: CalendarioSemana[] }>(
-      `${API_BASE}/api/calendarios/admin/semana?semana=${encodeURIComponent(semana)}&userType=${userType}`,
-      { headers: authHeaders(), timeout: 20000 }
-    );
-    return data.calendarios || [];
-  },
-
-  async saveAdminSemana(input: {
-    semana: string;
-    fechaInicioSemana: string;
-    calendarios: Array<{
-      userId: string;
-      userName: string;
-      userType: string;
-      dias: Record<string, Partial<DiaCalendario>>;
-    }>;
-  }): Promise<CalendarioSemana[]> {
-    const { data } = await axios.post<{ success: boolean; calendarios: CalendarioSemana[] }>(
-      `${API_BASE}/api/calendarios/admin/semana`,
+  async enviarHorario(input: {
+    dias: Record<string, DiaHorario>;
+    fechaDesde: string;
+    fechaHasta: string;
+  }): Promise<Horario> {
+    const { data } = await axios.post<{ success: boolean; horario: Horario }>(
+      `${API_BASE}/api/calendarios/enviar`,
       input,
       { headers: authHeaders(), timeout: 30000 }
     );
-    return data.calendarios || [];
+    return data.horario;
   },
 
-  async getPropuestasPendientes(): Promise<PropuestaCalendario[]> {
-    const { data } = await axios.get<{ success: boolean; propuestas: PropuestaCalendario[] }>(
-      `${API_BASE}/api/calendarios/admin/propuestas`,
+  async getVentanas(): Promise<VentanaAbierta[]> {
+    const { data } = await axios.get<{ success: boolean; ventanas: VentanaAbierta[] }>(
+      `${API_BASE}/api/calendarios/admin/ventanas`,
       { headers: authHeaders(), timeout: 20000 }
     );
-    return data.propuestas || [];
+    return data.ventanas || [];
   },
 
-  async responderPropuesta(
-    propuestaId: string,
+  async getPendientes(): Promise<Horario[]> {
+    const { data } = await axios.get<{ success: boolean; horarios: Horario[] }>(
+      `${API_BASE}/api/calendarios/admin/pendientes`,
+      { headers: authHeaders(), timeout: 20000 }
+    );
+    return data.horarios || [];
+  },
+
+  async habilitar(input: {
+    userId?: string;
+    userName: string;
+    userType: string;
+    fechaDesde: string;
+    fechaHasta: string;
+    baseHorarioId?: string;
+  }): Promise<Habilitacion> {
+    const { data } = await axios.post<{ success: boolean; habilitacion: Habilitacion }>(
+      `${API_BASE}/api/calendarios/admin/habilitar`,
+      input,
+      { headers: authHeaders(), timeout: 20000 }
+    );
+    return data.habilitacion;
+  },
+
+  async rehabilitar(input: { userId?: string; userName: string; userType: string }): Promise<Habilitacion> {
+    const { data } = await axios.post<{ success: boolean; habilitacion: Habilitacion }>(
+      `${API_BASE}/api/calendarios/admin/rehabilitar`,
+      input,
+      { headers: authHeaders(), timeout: 20000 }
+    );
+    return data.habilitacion;
+  },
+
+  async editarHorario(
     userName: string,
-    accion: 'aprobar' | 'rechazar',
-    razon?: string
-  ): Promise<PropuestaCalendario> {
-    const { data } = await axios.post<{ success: boolean; propuesta: PropuestaCalendario }>(
-      `${API_BASE}/api/calendarios/admin/propuestas/${encodeURIComponent(propuestaId)}/responder`,
-      { userName, accion, razon },
-      { headers: authHeaders(), timeout: 20000 }
+    horarioId: string,
+    dias: Record<string, DiaHorario>,
+    marcarActivo = true
+  ): Promise<Horario> {
+    const { data } = await axios.put<{ success: boolean; horario: Horario }>(
+      `${API_BASE}/api/calendarios/admin/editar/${encodeURIComponent(userName)}/${encodeURIComponent(horarioId)}`,
+      { dias, marcarActivo },
+      { headers: authHeaders(), timeout: 30000 }
     );
-    return data.propuesta;
+    return data.horario;
+  },
+
+  async getVisual(fechaDesde: string, fechaHasta: string): Promise<{ fechas: string[]; rows: FilaVisual[] }> {
+    const { data } = await axios.get<{ success: boolean; calendario: { fechas: string[]; rows: FilaVisual[] } }>(
+      `${API_BASE}/api/calendarios/admin/visual?fechaDesde=${encodeURIComponent(fechaDesde)}&fechaHasta=${encodeURIComponent(fechaHasta)}`,
+      { headers: authHeaders(), timeout: 30000 }
+    );
+    return data.calendario;
   },
 
   parseError: getErrorMessage,

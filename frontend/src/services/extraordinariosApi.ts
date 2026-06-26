@@ -34,6 +34,7 @@ export type Extraordinario = {
   horaInicioSugerida: string;
   horaFinSugerida: string;
   estado: string;
+  reemplazaHorarioNormal?: boolean | null;
 };
 
 export type InscripcionExtra = {
@@ -85,6 +86,7 @@ export const extraordinariosApi = {
     descripcion?: string;
     horaInicioSugerida?: string;
     horaFinSugerida?: string;
+    reemplazaHorarioNormal?: boolean;
   }): Promise<Extraordinario> {
     const { data } = await axios.post<{ success: boolean; extraordinario: Extraordinario }>(
       `${API_BASE}/api/extraordinarios/admin`,

@@ -50,7 +50,7 @@ import { CalendariosAdmin } from './pages/admin/CalendariosAdmin';
 import { ExtraordinariosAdmin } from './pages/admin/ExtraordinariosAdmin';
 import { AsistenciaAdmin } from './pages/admin/AsistenciaAdmin';
 import { MultasAdmin } from './pages/admin/MultasAdmin';
-import { MiCalendario } from './pages/calendario/MiCalendario';
+import { MiHorario } from './pages/calendario/MiHorario';
 import { ExtraordinariosWorker } from './pages/calendario/ExtraordinariosWorker';
 import { NotFound } from './pages/NotFound';
 
@@ -759,7 +759,7 @@ function AppContent() {
                 {isAuthenticated() && (
                   <ThemeProvider userType="beezero">
                     <Layout>
-                      <MiCalendario variant="beezero" dashboardPath="/beezero/dashboard" />
+                      <MiHorario variant="beezero" dashboardPath="/beezero/dashboard" />
                     </Layout>
                   </ThemeProvider>
                 )}
@@ -793,7 +793,7 @@ function AppContent() {
                 {isAuthenticated() && (
                   <ThemeProvider userType="ecodelivery">
                     <Layout>
-                      <MiCalendario variant="ecodelivery" dashboardPath="/ecodelivery/dashboard" />
+                      <MiHorario variant="ecodelivery" dashboardPath="/ecodelivery/dashboard" />
                     </Layout>
                   </ThemeProvider>
                 )}
@@ -827,7 +827,7 @@ function AppContent() {
                 {isAuthenticated() && (
                   <ThemeProvider userType="ecodelivery">
                     <Layout>
-                      <MiCalendario variant="operador" dashboardPath="/operador/dashboard" />
+                      <MiHorario variant="operador" dashboardPath="/operador/dashboard" />
                     </Layout>
                   </ThemeProvider>
                 )}
