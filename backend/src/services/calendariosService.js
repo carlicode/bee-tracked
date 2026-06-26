@@ -20,7 +20,48 @@ function userPk(userNameOrId) {
   return `USER#${slugUserId(userNameOrId)}`;
 }
 
+function deriveHorasFromTurnos(turnos) {
+  if (!turnos || turnos.length === 0) return { horaInicio: '', horaFin: '' };
+  return {
+    horaInicio: turnos[0].inicio,
+    horaFin: turnos[turnos.length - 1].fin,
+  };
+}
+
+function normalizeTurnos(src) {
+  if (Array.isArray(src.turnos) && src.turnos.length > 0) {
+    return src.turnos
+      .filter((t) => t && t.inicio && t.fin)
+      .map((t) => ({
+        inicio: t.inicio,
+        fin: t.fin,
+      }));
+  }
+  if (src.trabaja && src.horaInicio && src.horaFin) {
+    return [{ inicio: src.horaInicio, fin: src.horaFin }];
+  }
+  return [];
+}
+
+function normalizeDiaFromStorage(dia) {
+  if (!dia) return dia;
+  const turnos = normalizeTurnos(dia);
+  const { horaInicio, horaFin } = deriveHorasFromTurnos(turnos);
+  return {
+    ...dia,
+    trabaja: turnos.length > 0,
+    turnos,
+    horaInicio: turnos.length > 0 ? horaInicio : '',
+    horaFin: turnos.length > 0 ? horaFin : '',
+  };
+}
+
 function mapHorario(item) {
+  const rawDias = item.dias || {};
+  const dias = {};
+  for (const [fecha, d] of Object.entries(rawDias)) {
+    dias[fecha] = normalizeDiaFromStorage(d);
+  }
   return {
     horarioId: item.horarioId,
     userId: item.userId,
@@ -28,7 +69,7 @@ function mapHorario(item) {
     userType: item.userType,
     fechaDesde: item.fechaDesde,
     fechaHasta: item.fechaHasta,
-    dias: item.dias || {},
+    dias,
     estado: item.estado,
     version: item.version || 1,
     enviadoPor: item.enviadoPor || null,
@@ -55,11 +96,14 @@ function normalizeDiasPorFecha(dias, fechaDesde, fechaHasta) {
   const out = {};
   for (const fecha of fechas) {
     const src = dias?.[fecha] || {};
+    const turnos = normalizeTurnos(src);
+    const { horaInicio, horaFin } = deriveHorasFromTurnos(turnos);
     out[fecha] = {
       fecha,
-      trabaja: Boolean(src.trabaja),
-      horaInicio: src.trabaja ? (src.horaInicio || '06:00') : '',
-      horaFin: src.trabaja ? (src.horaFin || '14:00') : '',
+      trabaja: turnos.length > 0,
+      turnos,
+      horaInicio: turnos.length > 0 ? horaInicio : '',
+      horaFin: turnos.length > 0 ? horaFin : '',
     };
   }
   return out;

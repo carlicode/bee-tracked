@@ -26,12 +26,117 @@ function getErrorMessage(err: unknown): string {
   return err instanceof Error ? err.message : 'Error de conexión';
 }
 
+export type Turno = {
+  inicio: string;
+  fin: string;
+};
+
 export type DiaHorario = {
   fecha: string;
   trabaja: boolean;
+  turnos: Turno[];
   horaInicio: string;
   horaFin: string;
 };
+
+export const SLOT_MINUTES = 30;
+export const GRID_HORA_INICIO = '05:00';
+export const GRID_HORA_FIN = '22:00';
+
+export function timeToMinutes(h: string): number {
+  const [hh, mm] = h.split(':').map(Number);
+  return hh * 60 + (mm || 0);
+}
+
+export function minutesToTime(m: number): string {
+  const hh = Math.floor(m / 60);
+  const mm = m % 60;
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+}
+
+export function slotsInRange(inicio = GRID_HORA_INICIO, fin = GRID_HORA_FIN): string[] {
+  const start = timeToMinutes(inicio);
+  const end = timeToMinutes(fin);
+  const out: string[] = [];
+  for (let m = start; m < end; m += SLOT_MINUTES) {
+    out.push(minutesToTime(m));
+  }
+  return out;
+}
+
+export function deriveHorasFromTurnos(turnos: Turno[]): { horaInicio: string; horaFin: string } {
+  if (turnos.length === 0) return { horaInicio: '', horaFin: '' };
+  return {
+    horaInicio: turnos[0].inicio,
+    horaFin: turnos[turnos.length - 1].fin,
+  };
+}
+
+export function normalizeDiaHorario(d: Partial<DiaHorario> & { fecha: string }): DiaHorario {
+  let turnos = d.turnos;
+  if (!turnos || turnos.length === 0) {
+    if (d.trabaja && d.horaInicio && d.horaFin) {
+      turnos = [{ inicio: d.horaInicio, fin: d.horaFin }];
+    } else {
+      turnos = [];
+    }
+  }
+  const trabaja = turnos.length > 0;
+  const { horaInicio, horaFin } = deriveHorasFromTurnos(turnos);
+  return { fecha: d.fecha, trabaja, turnos, horaInicio, horaFin };
+}
+
+export function turnosToBlocks(
+  turnos: Turno[],
+  gridInicio = GRID_HORA_INICIO,
+  gridFin = GRID_HORA_FIN
+): Set<number> {
+  const gridStart = timeToMinutes(gridInicio);
+  const slots = slotsInRange(gridInicio, gridFin);
+  const selected = new Set<number>();
+  for (const t of turnos) {
+    const ini = timeToMinutes(t.inicio);
+    const fin = timeToMinutes(t.fin);
+    for (let m = ini; m < fin; m += SLOT_MINUTES) {
+      const idx = (m - gridStart) / SLOT_MINUTES;
+      if (idx >= 0 && idx < slots.length) selected.add(idx);
+    }
+  }
+  return selected;
+}
+
+export function blocksToTurnos(
+  blocks: Set<number>,
+  gridInicio = GRID_HORA_INICIO,
+  gridFin = GRID_HORA_FIN
+): Turno[] {
+  if (blocks.size === 0) return [];
+  const gridStart = timeToMinutes(gridInicio);
+  const slots = slotsInRange(gridInicio, gridFin);
+  const sorted = [...blocks].sort((a, b) => a - b);
+  const turnos: Turno[] = [];
+  let startIdx = sorted[0];
+  let prevIdx = sorted[0];
+  for (let i = 1; i <= sorted.length; i++) {
+    const cur = sorted[i];
+    if (cur !== prevIdx + 1) {
+      const inicio = minutesToTime(gridStart + startIdx * SLOT_MINUTES);
+      const fin = minutesToTime(gridStart + (prevIdx + 1) * SLOT_MINUTES);
+      if (startIdx < slots.length) turnos.push({ inicio, fin });
+      startIdx = cur;
+    }
+    if (cur != null) prevIdx = cur;
+  }
+  return turnos;
+}
+
+export function groupIntoWeeks(fechas: string[]): string[][] {
+  const weeks: string[][] = [];
+  for (let i = 0; i < fechas.length; i += 7) {
+    weeks.push(fechas.slice(i, i + 7));
+  }
+  return weeks;
+}
 
 export type Horario = {
   horarioId: string;
@@ -111,7 +216,7 @@ export function diaSemanaLabel(fecha: string): string {
 export function emptyDias(fechaDesde: string, fechaHasta: string): Record<string, DiaHorario> {
   const out: Record<string, DiaHorario> = {};
   for (const fecha of fechasEnRango(fechaDesde, fechaHasta)) {
-    out[fecha] = { fecha, trabaja: false, horaInicio: '06:00', horaFin: '14:00' };
+    out[fecha] = normalizeDiaHorario({ fecha, trabaja: false, turnos: [], horaInicio: '', horaFin: '' });
   }
   return out;
 }

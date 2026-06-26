@@ -44,6 +44,28 @@ async function getExtraAnotado(userName, fecha) {
   return null;
 }
 
+function getExpectedFromCalDia(calDia) {
+  const turnos = Array.isArray(calDia.turnos) && calDia.turnos.length > 0
+    ? calDia.turnos
+    : (calDia.trabaja && calDia.horaInicio && calDia.horaFin
+      ? [{ inicio: calDia.horaInicio, fin: calDia.horaFin }]
+      : []);
+  if (turnos.length === 0) {
+    return { turnos: [], horaInicio: '', horaFin: '', minutosEsperados: 0 };
+  }
+  const minutosEsperados = turnos.reduce((sum, t) => {
+    const ini = parseHoraMin(t.inicio);
+    const fin = parseHoraMin(t.fin);
+    return sum + (fin != null && ini != null ? fin - ini : 0);
+  }, 0);
+  return {
+    turnos,
+    horaInicio: turnos[0].inicio,
+    horaFin: turnos[turnos.length - 1].fin,
+    minutosEsperados,
+  };
+}
+
 function evaluarDia({ calDia, turnos, permiso, extra, reglas, extraReemplaza }) {
   const fecha = calDia.fecha;
 
@@ -81,8 +103,9 @@ function evaluarDia({ calDia, turnos, permiso, extra, reglas, extraReemplaza }) 
     // Día normal + extra sumado — evaluar turno vs horario normal
   }
 
-  const horaEspIni = calDia.horaInicio;
-  const horaEspFin = calDia.horaFin;
+  const esperado = getExpectedFromCalDia(calDia);
+  const horaEspIni = esperado.horaInicio;
+  const horaEspFin = esperado.horaFin;
 
   if (turnos.length === 0) {
     return {
@@ -91,6 +114,7 @@ function evaluarDia({ calDia, turnos, permiso, extra, reglas, extraReemplaza }) 
       detalle: 'No registró turno',
       horaEsperadaInicio: horaEspIni,
       horaEsperadaFin: horaEspFin,
+      minutosEsperados: esperado.minutosEsperados,
       minutosRetraso: 9999,
     };
   }
@@ -111,7 +135,9 @@ function evaluarDia({ calDia, turnos, permiso, extra, reglas, extraReemplaza }) 
   }
 
   let resultado = 'ok';
-  let detalle = 'Asistencia correcta';
+  let detalle = esperado.turnos.length > 1
+    ? `Asistencia correcta (${esperado.turnos.length} bloques, ${esperado.minutosEsperados} min esperados)`
+    : 'Asistencia correcta';
   if (minutosRetraso > reglas.margenMinutos) {
     resultado = 'tardanza';
     detalle = `Llegó ${minutosRetraso} min tarde (margen ${reglas.margenMinutos} min)`;
@@ -127,6 +153,7 @@ function evaluarDia({ calDia, turnos, permiso, extra, reglas, extraReemplaza }) 
     detalle,
     horaEsperadaInicio: horaEspIni,
     horaEsperadaFin: horaEspFin,
+    minutosEsperados: esperado.minutosEsperados,
     horaRealInicio: turno.horaInicio,
     horaRealFin: turno.horaCierre || '',
     turnoId: turno.turnoId,
