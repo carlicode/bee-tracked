@@ -49,13 +49,22 @@ export const ecodeliveryApi = {
     tipo?: 'ecodelivery' | 'operador';
   }): Promise<{ turnoId: string }> {
     if (!API_BASE) throw new Error('Backend no configurado');
-    const { data } = await axios.post<{ success: boolean; turnoId?: string; error?: string }>(
-      `${API_BASE}/api/ecodelivery/turnos/iniciar`,
-      params,
-      { headers: { ...authHeaders(), 'Content-Type': 'application/json' }, timeout: 15000 }
-    );
-    if (!data.success || !data.turnoId) throw new Error(data.error || 'Error al registrar inicio de turno');
-    return { turnoId: data.turnoId };
+    const attempt = async () => {
+      const { data } = await axios.post<{ success: boolean; turnoId?: string; error?: string }>(
+        `${API_BASE}/api/ecodelivery/turnos/iniciar`,
+        params,
+        { headers: { ...authHeaders(), 'Content-Type': 'application/json' }, timeout: 20000 }
+      );
+      if (!data.success || !data.turnoId) throw new Error(data.error || 'Error al registrar inicio de turno');
+      return { turnoId: data.turnoId };
+    };
+    try {
+      return await attempt();
+    } catch {
+      // Reintento automático tras cold start de Lambda (espera 4s y vuelve a intentar)
+      await new Promise(resolve => setTimeout(resolve, 4000));
+      return await attempt();
+    }
   },
 
   /**

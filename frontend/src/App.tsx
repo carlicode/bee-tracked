@@ -9,6 +9,7 @@ import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
 import { useInactivityTimeout } from './hooks/useInactivityTimeout';
 import { setupAxiosInterceptors } from './services/axiosInterceptor';
+import { StagingBanner } from './components/StagingBanner';
 
 // BeeZero pages
 import { DashboardBeezero } from './pages/beezero/DashboardBeezero';
@@ -43,6 +44,7 @@ import { GestionPermisos } from './pages/admin/GestionPermisos';
 import { GestionUsuarios } from './pages/admin/GestionUsuarios';
 import { OnboardingAdmin } from './pages/admin/OnboardingAdmin';
 import { Rendimiento } from './pages/admin/Rendimiento';
+import { KilometrajeAdmin } from './pages/admin/KilometrajeAdmin';
 import { NotFound } from './pages/NotFound';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
@@ -121,6 +123,7 @@ function AppContent() {
   
   return (
     <BrowserRouter>
+      <StagingBanner />
       <Routes>
         <Route path="/" element={<Login />} />
         
@@ -632,6 +635,23 @@ function AppContent() {
                   <ThemeProvider userType="admin">
                     <Layout>
                       <Rendimiento />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </AdminGuard>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/admin/kilometraje"
+          element={
+            <PrivateRoute>
+              <AdminGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType="admin">
+                    <Layout>
+                      <KilometrajeAdmin />
                     </Layout>
                   </ThemeProvider>
                 )}

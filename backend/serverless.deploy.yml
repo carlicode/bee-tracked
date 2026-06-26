@@ -1,5 +1,20 @@
 # Config para deploy (sin serverless-offline que causa conflicto)
+# Prod:  npx serverless deploy --stage prod --config serverless.deploy.yml
+# Stage: npx serverless deploy --stage staging --config serverless.deploy.yml
 service: bee-tracked-backend
+
+params:
+  prod:
+    frontendUrl: 'https://d19ls0k7de9u6w.cloudfront.net'
+    sheetsWriteEnabled: 'true'
+    warmupEnabled: true
+    nodeEnv: production
+  staging:
+    # Actualizar tras crear CloudFront de staging (ver docs/STAGING_ENVIRONMENT.md)
+    frontendUrl: 'https://STAGING_CLOUDFRONT_URL.cloudfront.net'
+    sheetsWriteEnabled: 'false'
+    warmupEnabled: false
+    nodeEnv: staging
 
 custom:
   sessionsTableName: bee-tracked-sessions-${sls:stage}
@@ -18,13 +33,14 @@ provider:
   name: aws
   runtime: nodejs18.x
   region: us-east-1
-  stage: prod
+  stage: ${opt:stage, 'prod'}
   timeout: 30
   memorySize: 512
   environment:
-    NODE_ENV: production
+    NODE_ENV: ${param:nodeEnv}
     STAGE: ${sls:stage}
-    FRONTEND_URL: 'https://d19ls0k7de9u6w.cloudfront.net'
+    FRONTEND_URL: ${param:frontendUrl}
+    SHEETS_WRITE_ENABLED: ${param:sheetsWriteEnabled}
     SESSION_STORE: dynamodb
     SESSIONS_TABLE_NAME: ${self:custom.sessionsTableName}
     TURNOS_TABLE: ${self:custom.turnosTableName}
@@ -112,6 +128,12 @@ functions:
   api:
     handler: lambda.handler
     events:
+      - schedule:
+          rate: rate(5 minutes)
+          enabled: ${param:warmupEnabled}
+          description: 'Warmup ping para evitar cold starts en horario de turnos'
+          input:
+            warmup: true
       - http:
           path: /
           method: ANY

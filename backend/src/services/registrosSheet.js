@@ -242,10 +242,154 @@ async function getKilometrajesByBiker(bikerName) {
   return registros;
 }
 
+/**
+ * Obtiene TODOS los registros de la hoja Kilometraje (para admin).
+ * @param {{ bikerName?: string, from?: string, to?: string }} [filters]
+ * @returns {Promise<Array>}
+ */
+async function getAllKilometrajes(filters = {}) {
+  const spreadsheetId = getRegistrosSpreadsheetId();
+  let headers, rows;
+  try {
+    const result = await getAllRowsWithHeadersFromSpreadsheet(
+      spreadsheetId,
+      SHEET_KILOMETRAJE,
+      'A:U'
+    );
+    headers = result.headers;
+    rows = result.rows;
+  } catch (err) {
+    const msg = (err && err.message) || '';
+    if (msg.includes('Unable to parse') || msg.includes('Could not find') || msg.includes('not found')) {
+      return [];
+    }
+    throw err;
+  }
+
+  const { bikerName, from, to } = filters;
+  const bikerLower = bikerName ? String(bikerName).trim().toLowerCase() : null;
+
+  const registros = [];
+  for (let i = 0; i < rows.length; i++) {
+    const obj = rowToObject(headers, rows[i]);
+
+    if (bikerLower) {
+      const rowBiker = (obj['Biker'] || obj['biker'] || '').trim().toLowerCase();
+      if (rowBiker !== bikerLower) continue;
+    }
+
+    if (from || to) {
+      const fechaRaw = obj['Fechas'] || obj['Fecha Registro'] || obj['fecha'] || '';
+      const fechaNorm = normalizarFecha(fechaRaw);
+      if (from && fechaNorm && fechaNorm < from) continue;
+      if (to && fechaNorm && fechaNorm > to) continue;
+    }
+
+    const id = obj['ID'] ?? obj['id'] ?? rows[i][0] ?? '';
+    registros.push({ id: String(id), ...obj });
+  }
+  return registros;
+}
+
+/**
+ * Obtiene carreras del tab Registros que NO tienen km llenado (para admin).
+ * @param {{ bikerName?: string, from?: string, to?: string }} [filters]
+ * @returns {Promise<Array>}
+ */
+async function getRegistrosSinKm(filters = {}) {
+  const spreadsheetId = getRegistrosSpreadsheetId();
+  const { headers, rows } = await getAllRowsWithHeadersFromSpreadsheet(
+    spreadsheetId,
+    SHEET_REGISTROS,
+    'A:AF'
+  );
+
+  const { bikerName, from, to } = filters;
+  const bikerLower = bikerName ? String(bikerName).trim().toLowerCase() : null;
+
+  const pendientes = [];
+  for (let i = 0; i < rows.length; i++) {
+    const obj = rowToObject(headers, rows[i]);
+
+    const km = (obj['Kilometraje'] || obj['kilometraje'] || '').trim();
+    if (km) continue; // ya tiene km
+
+    if (bikerLower) {
+      const rowBiker = (obj['Biker'] || obj['biker'] || '').trim().toLowerCase();
+      if (rowBiker !== bikerLower) continue;
+    }
+
+    if (from || to) {
+      const fechaRaw = obj['Fechas'] || obj['Fecha Registro'] || obj['fecha'] || '';
+      const fechaNorm = normalizarFecha(fechaRaw);
+      if (from && fechaNorm && fechaNorm < from) continue;
+      if (to && fechaNorm && fechaNorm > to) continue;
+    }
+
+    const id = obj['ID'] ?? obj['id'] ?? rows[i][0] ?? '';
+    pendientes.push({ id: String(id), ...obj });
+  }
+  return pendientes;
+}
+
+/**
+ * Escribe una nueva fila en el tab Registros (sync automático al crear carrera).
+ * Best-effort: no lanza si REGISTROS_SHEET_ID no está configurado.
+ * @param {object} data
+ */
+async function syncCarreraToRegistros(data) {
+  let spreadsheetId;
+  try {
+    spreadsheetId = getRegistrosSpreadsheetId();
+  } catch {
+    return; // no configurado, silenciar
+  }
+
+  const REGISTROS_HEADERS = [
+    'ID', 'Fecha Registro', 'Hora Registro', 'Operador', 'Cliente',
+    'Recojo', 'Entrega', 'Direccion Recojo', 'Direccion Entrega',
+    'Detalles de la Carrera', 'Dist. [Km]', 'Medio Transporte', 'Precio [Bs]',
+    'Biker', 'WhatsApp', 'Fechas', 'Hora Ini', 'Hora Fin', 'Estado', 'Kilometraje',
+  ];
+
+  await getOrCreateSheetInSpreadsheet(spreadsheetId, SHEET_REGISTROS, REGISTROS_HEADERS);
+
+  const row = REGISTROS_HEADERS.map((col) => {
+    const map = {
+      'ID': data.id || '',
+      'Fecha Registro': data.fechaRegistro || '',
+      'Hora Registro': data.horaRegistro || '',
+      'Operador': data.operador || '',
+      'Cliente': data.cliente || '',
+      'Recojo': data.recojo || data.lugarOrigen || '',
+      'Entrega': data.entrega || data.lugarDestino || '',
+      'Direccion Recojo': data.direccionRecojo || data.lugarOrigen || '',
+      'Direccion Entrega': data.direccionEntrega || data.lugarDestino || '',
+      'Detalles de la Carrera': data.detalles || data.notas || '',
+      'Dist. [Km]': data.distancia != null ? String(data.distancia) : '',
+      'Medio Transporte': data.medioTransporte || '',
+      'Precio [Bs]': data.precio != null ? String(data.precio) : '',
+      'Biker': data.biker || data.bikerName || '',
+      'WhatsApp': data.whatsapp || '',
+      'Fechas': data.fechas || data.fechaRegistro || '',
+      'Hora Ini': data.horaIni || data.horaInicio || '',
+      'Hora Fin': data.horaFin || '',
+      'Estado': data.estado || 'Completado',
+      'Kilometraje': '',
+    };
+    return map[col] ?? '';
+  });
+
+  await appendRowToSpreadsheet(spreadsheetId, SHEET_REGISTROS, row);
+}
+
 module.exports = {
   getCarrerasDelDia,
   getCarreraById,
   registrarKilometraje,
   getKilometrajesByBiker,
+  getAllKilometrajes,
+  getRegistrosSinKm,
+  syncCarreraToRegistros,
   getHoyBolivia,
 };

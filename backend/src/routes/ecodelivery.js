@@ -14,6 +14,7 @@ const {
   getAllRowsFromSpreadsheet,
 } = require('../services/googleSheets');
 const { saveTurnoToDynamo, saveCarreraToDynamo } = require('../services/dualWrite');
+const { syncCarreraToRegistros } = require('../services/registrosSheet');
 const { todayYmdLaPaz } = require('../utils/dateLaPaz');
 
 const SHEET_ECODELIVERY = 'Ecodelivery';
@@ -595,6 +596,26 @@ router.post('/deliveries/registrar', async (req, res) => {
       porHora: porHora ? 'Sí' : 'No',
       observaciones: notas ? String(notas).trim() : '',
       foto: foto || '',
+    });
+
+    // Sync best-effort al sheet de Registros/Kilometraje
+    syncCarreraToRegistros({
+      id: String(deliveryId),
+      fechaRegistro: fecha,
+      horaRegistro: horaReg,
+      operador: '',
+      cliente: String(cliente).trim(),
+      lugarOrigen: String(lugarOrigen).trim(),
+      lugarDestino: String(lugarDestino).trim(),
+      notas: notas ? String(notas).trim() : '',
+      distancia: Number(distancia),
+      bikerName: String(bikerName).trim(),
+      horaInicio: horaIni,
+      horaFin: horaF,
+      fechas: fecha,
+      estado: 'Completado',
+    }).catch((err) => {
+      console.warn('[ecodelivery] syncCarreraToRegistros falló (best-effort):', err.message);
     });
 
     res.json({

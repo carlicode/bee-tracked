@@ -28,6 +28,7 @@ const permisosRouter = require('./src/routes/permisos');
 const uploadRouter = require('./src/routes/upload');
 const adminUsersRouter = require('./src/routes/adminUsers');
 const { userRouter: onboardingRouter, adminRouter: adminOnboardingRouter } = require('./src/routes/onboarding');
+const adminKilometrajeRouter = require('./src/routes/adminKilometraje');
 const { sessionAuth, requireAdmin } = require('./src/middleware/sessionAuth');
 
 app.use('/api/auth', authRouter);
@@ -39,6 +40,7 @@ app.use('/api/admin/usuarios', sessionAuth, requireAdmin, adminUsersRouter);
 app.use('/api/admin/anuncios', adminAnunciosRouter);
 app.use('/api/onboarding', onboardingRouter);
 app.use('/api/admin/onboarding', adminOnboardingRouter);
+app.use('/api/admin/kilometraje', adminKilometrajeRouter);
 app.use('/api/andi', andiRouter);
 app.use('/api/announcements', announcementsRouter);
 app.use('/api/push', pushRouter);
@@ -75,6 +77,12 @@ app.use((req, res) => {
 // Strip stage para que Express reciba /api/...
 const slsHandler = serverless(app);
 module.exports.handler = async (event, context) => {
+  // Ping de warmup desde EventBridge (evita cold starts en hora pico de turnos)
+  if (event.warmup) {
+    console.log('[warmup] Lambda caliente');
+    return { statusCode: 200, body: JSON.stringify({ warm: true }) };
+  }
+
   const stage = event?.requestContext?.stage;
   if (stage) {
     if (event.path?.startsWith(`/${stage}/`)) {

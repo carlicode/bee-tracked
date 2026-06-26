@@ -110,6 +110,14 @@ export function DashboardAdmin() {
           </p>
           <span className="mt-4 inline-flex text-beeadmin-purple font-medium text-sm">Abrir →</span>
         </Link>
+
+        <Link to="/admin/kilometraje" className={cardBase}>
+          <h2 className="text-xl font-semibold text-gray-900">Kilometraje</h2>
+          <p className="mt-2 text-gray-600 text-sm">
+            Seguimiento de km por biker: registros llenados, pendientes y exportación CSV por mes.
+          </p>
+          <span className="mt-4 inline-flex text-beeadmin-purple font-medium text-sm">Abrir →</span>
+        </Link>
       </div>
     </div>
   );
