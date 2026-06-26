@@ -13,7 +13,7 @@ import { useToast } from '../../contexts/ToastContext';
 
 type Tab = 'habilitar' | 'pendientes' | 'visual';
 
-const WORKER_ROLES = new Set(['beezero', 'ecodelivery', 'operador']);
+const WORKER_ROLES = new Set(['Bee Zero', 'Ecodelivery', 'Operador']);
 
 export function CalendariosAdmin() {
   const toast = useToast();
@@ -172,9 +172,9 @@ export function CalendariosAdmin() {
                 onChange={(e) => { setSelectedRol(e.target.value); setSelectedUser(''); }}
               >
                 <option value="">— Elegir rol —</option>
-                <option value="beezero">BeeZero ({workers.filter(u => u.rol === 'beezero').length})</option>
-                <option value="ecodelivery">EcoDelivery ({workers.filter(u => u.rol === 'ecodelivery').length})</option>
-                <option value="operador">Operador ({workers.filter(u => u.rol === 'operador').length})</option>
+                <option value="Bee Zero">BeeZero ({workers.filter(u => u.rol === 'Bee Zero').length})</option>
+                <option value="Ecodelivery">EcoDelivery ({workers.filter(u => u.rol === 'Ecodelivery').length})</option>
+                <option value="Operador">Operador ({workers.filter(u => u.rol === 'Operador').length})</option>
               </select>
             </label>
             <label className="text-sm">
