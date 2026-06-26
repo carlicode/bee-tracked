@@ -133,6 +133,8 @@ provider:
             - cognito-idp:AdminAddUserToGroup
             - cognito-idp:AdminRemoveUserFromGroup
             - cognito-idp:AdminUpdateUserAttributes
+            - cognito-idp:AdminEnableUser
+            - cognito-idp:AdminDisableUser
           Resource:
             - arn:aws:cognito-idp:us-east-1:*:userpool/us-east-1_REsVOVqcY
 
