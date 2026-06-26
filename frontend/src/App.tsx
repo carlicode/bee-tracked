@@ -33,6 +33,7 @@ import { MisTurnos as MisTurnosBiker } from './pages/ecodelivery/MisTurnos';
 
 // Admin
 import { DashboardAdmin } from './pages/admin/DashboardAdmin';
+import { AdminGroupHub } from './pages/admin/AdminGroupHub';
 import { CarrerasDrivers } from './pages/admin/CarrerasDrivers';
 import { TurnosBeezero } from './pages/admin/TurnosBeezero';
 import { DashboardLive } from './pages/admin/DashboardLive';
@@ -465,6 +466,22 @@ function AppContent() {
                   <ThemeProvider userType="admin">
                     <Layout>
                       <DashboardAdmin />
+                    </Layout>
+                  </ThemeProvider>
+                )}
+              </AdminGuard>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin/grupo/:groupId"
+          element={
+            <PrivateRoute>
+              <AdminGuard>
+                {isAuthenticated() && (
+                  <ThemeProvider userType="admin">
+                    <Layout>
+                      <AdminGroupHub />
                     </Layout>
                   </ThemeProvider>
                 )}

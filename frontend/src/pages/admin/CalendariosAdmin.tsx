@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { AdminBackNav } from './AdminBackNav';
 import {
   calendariosApi,
   DIAS_SEMANA,
@@ -123,9 +123,7 @@ export function CalendariosAdmin() {
 
   return (
     <div className="space-y-6">
-      <Link to="/admin/dashboard" className="text-sm font-medium text-beeadmin-purple hover:text-beeadmin-purple-dark">
-        ← Volver al panel
-      </Link>
+      <AdminBackNav currentPath="/admin/calendarios" />
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Calendarios semanales</h1>
         <p className="text-gray-600 text-sm mt-1">Publica horarios semana por semana para cada trabajador.</p>

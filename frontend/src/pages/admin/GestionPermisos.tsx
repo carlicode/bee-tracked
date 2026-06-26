@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { AdminBackNav } from './AdminBackNav';
 import { permisosApi, type Permiso, type PermisoEstado } from '../../services/permisosApi';
 import { useToast } from '../../contexts/ToastContext';
 import { usePagination } from '../../hooks/usePagination';
@@ -83,14 +83,7 @@ export function GestionPermisos() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-4">
-        <Link
-          to="/admin/dashboard"
-          className="text-sm font-medium text-beeadmin-purple hover:text-beeadmin-purple-dark"
-        >
-          ← Volver al panel
-        </Link>
-      </div>
+      <AdminBackNav currentPath="/admin/permisos" />
 
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Gestión de permisos</h1>

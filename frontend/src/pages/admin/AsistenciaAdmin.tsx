@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { AdminBackNav } from './AdminBackNav';
 import { calendariosApi } from '../../services/calendariosApi';
 import { asistenciaApi, type ReporteAsistencia } from '../../services/asistenciaApi';
 import { useToast } from '../../contexts/ToastContext';
@@ -61,7 +61,7 @@ export function AsistenciaAdmin() {
 
   return (
     <div className="space-y-6">
-      <Link to="/admin/dashboard" className="text-sm font-medium text-beeadmin-purple">← Volver al panel</Link>
+      <AdminBackNav currentPath="/admin/asistencia" />
       <div>
         <h1 className="text-2xl font-bold">Asistencia</h1>
         <p className="text-gray-600 text-sm mt-1">Compara calendario publicado vs turnos reales.</p>

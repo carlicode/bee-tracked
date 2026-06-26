@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { AdminBackNav } from './AdminBackNav';
 import { multasApi, type Multa, type ReglasMultas } from '../../services/multasApi';
 import { useToast } from '../../contexts/ToastContext';
 
@@ -53,7 +53,7 @@ export function MultasAdmin() {
 
   return (
     <div className="space-y-6">
-      <Link to="/admin/dashboard" className="text-sm font-medium text-beeadmin-purple">← Volver al panel</Link>
+      <AdminBackNav currentPath="/admin/multas" />
       <div>
         <h1 className="text-2xl font-bold">Multas</h1>
         <p className="text-gray-600 text-sm mt-1">Multas automáticas por tardanza o ausencia.</p>

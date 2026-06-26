@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { AdminBackNav } from './AdminBackNav';
 import { extraordinariosApi, type Extraordinario, type InscripcionExtra } from '../../services/extraordinariosApi';
 import { useToast } from '../../contexts/ToastContext';
 
@@ -74,7 +74,7 @@ export function ExtraordinariosAdmin() {
 
   return (
     <div className="space-y-6">
-      <Link to="/admin/dashboard" className="text-sm font-medium text-beeadmin-purple">← Volver al panel</Link>
+      <AdminBackNav currentPath="/admin/extraordinarios" />
       <div>
         <h1 className="text-2xl font-bold">Días extraordinarios</h1>
         <p className="text-gray-600 text-sm mt-1">Feriados u operaciones especiales. Los trabajadores se inscriben con horario propuesto.</p>
