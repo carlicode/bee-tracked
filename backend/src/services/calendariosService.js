@@ -401,9 +401,14 @@ async function getCalendarioVisual(fechaDesde, fechaHasta) {
         celdas[f] = { tipo: 'fuera_rango' };
       } else {
         const d = h.dias?.[f];
-        celdas[f] = d?.trabaja
-          ? { tipo: 'trabaja', horaInicio: d.horaInicio, horaFin: d.horaFin }
-          : { tipo: 'libre' };
+        if (d?.trabaja) {
+          const turnos = Array.isArray(d.turnos) && d.turnos.length > 0
+            ? d.turnos
+            : [{ inicio: d.horaInicio, fin: d.horaFin }];
+          celdas[f] = { tipo: 'trabaja', horaInicio: d.horaInicio, horaFin: d.horaFin, turnos };
+        } else {
+          celdas[f] = { tipo: 'libre' };
+        }
       }
     }
     return {

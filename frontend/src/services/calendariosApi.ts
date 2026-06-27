@@ -186,6 +186,7 @@ export type CeldaVisual = {
   tipo: 'trabaja' | 'libre' | 'fuera_rango';
   horaInicio?: string;
   horaFin?: string;
+  turnos?: { inicio: string; fin: string }[];
 };
 
 export type FilaVisual = {
