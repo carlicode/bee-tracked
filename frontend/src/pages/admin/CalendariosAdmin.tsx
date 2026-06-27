@@ -272,9 +272,21 @@ function VisualTab({
   );
 }
 
+function currentWeekRange(): { desde: string; hasta: string } {
+  const now = new Date();
+  const day = now.getDay(); // 0=Sun, 1=Mon ...
+  const diffToMonday = (day === 0 ? -6 : 1 - day);
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + diffToMonday);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  return { desde: fmt(monday), hasta: fmt(sunday) };
+}
+
 export function CalendariosAdmin() {
   const toast = useToast();
-  const [tab, setTab] = useState<Tab>('habilitar');
+  const [tab, setTab] = useState<Tab>('visual');
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [ventanas, setVentanas] = useState<VentanaAbierta[]>([]);
   const [pendientes, setPendientes] = useState<Horario[]>([]);
@@ -284,8 +296,9 @@ export function CalendariosAdmin() {
   const [fechaHasta, setFechaHasta] = useState('');
   const [editHorario, setEditHorario] = useState<Horario | null>(null);
   const [editDias, setEditDias] = useState<Record<string, DiaHorario>>({});
-  const [visualDesde, setVisualDesde] = useState('');
-  const [visualHasta, setVisualHasta] = useState('');
+  const { desde: initDesde, hasta: initHasta } = currentWeekRange();
+  const [visualDesde, setVisualDesde] = useState(initDesde);
+  const [visualHasta, setVisualHasta] = useState(initHasta);
   const [visualRows, setVisualRows] = useState<FilaVisual[]>([]);
   const [visualFechas, setVisualFechas] = useState<string[]>([]);
   const [modoVisual, setModoVisual] = useState<ModoVisual>('cobertura');
@@ -314,9 +327,22 @@ export function CalendariosAdmin() {
     }
   }, [toast]);
 
+  const cargarVisual = useCallback(async (desde = visualDesde, hasta = visualHasta) => {
+    if (!desde || !hasta) return;
+    try {
+      const data = await calendariosApi.getVisual(desde, hasta);
+      setVisualFechas(data.fechas);
+      setVisualRows(data.rows);
+    } catch (err) {
+      toast.show(calendariosApi.parseError(err), 'error');
+    }
+  }, [toast, visualDesde, visualHasta]);
+
   useEffect(() => {
     void load();
-  }, [load]);
+    void cargarVisual(initDesde, initHasta);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const habilitar = async () => {
     const user = workersDelRol.find((u) => u.nombre === selectedUser || u.usuario === selectedUser);
@@ -376,16 +402,6 @@ export function CalendariosAdmin() {
     }
   };
 
-  const cargarVisual = async () => {
-    if (!visualDesde || !visualHasta) return;
-    try {
-      const data = await calendariosApi.getVisual(visualDesde, visualHasta);
-      setVisualFechas(data.fechas);
-      setVisualRows(data.rows);
-    } catch (err) {
-      toast.show(calendariosApi.parseError(err), 'error');
-    }
-  };
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'habilitar', label: 'Habilitar' },
