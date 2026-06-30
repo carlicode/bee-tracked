@@ -26,13 +26,14 @@ router.get('/mis-inscripciones', sessionAuth, async (req, res) => {
 router.post('/:extraId/inscribirse', sessionAuth, async (req, res) => {
   const log = createRequestLogger(req);
   try {
-    const { horaInicio, horaFin } = req.body || {};
+    const { horaInicio, horaFin, turnos } = req.body || {};
     const { userId, userType, name } = req.authUser;
     const inscripcion = await extraordinariosService.inscribirse({
       extraId: req.params.extraId,
       userId,
       userName: name,
       userType,
+      turnos,
       horaInicio,
       horaFin,
     });

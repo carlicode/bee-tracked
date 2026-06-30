@@ -37,12 +37,15 @@ export type Extraordinario = {
   reemplazaHorarioNormal?: boolean | null;
 };
 
+export type Turno = { inicio: string; fin: string };
+
 export type InscripcionExtra = {
   extraId: string;
   userId: string;
   userName: string;
   horaInicio: string;
   horaFin: string;
+  turnos: Turno[];
   estado: string;
 };
 
@@ -55,10 +58,10 @@ export const extraordinariosApi = {
     return data.extraordinarios || [];
   },
 
-  async inscribirse(extraId: string, horaInicio?: string, horaFin?: string): Promise<InscripcionExtra> {
+  async inscribirse(extraId: string, turnos: Turno[]): Promise<InscripcionExtra> {
     const { data } = await axios.post<{ success: boolean; inscripcion: InscripcionExtra }>(
       `${API_BASE}/api/extraordinarios/${encodeURIComponent(extraId)}/inscribirse`,
-      { horaInicio, horaFin },
+      { turnos },
       { headers: authHeaders(), timeout: 20000 }
     );
     return data.inscripcion;

@@ -5,6 +5,19 @@ const { createRequestLogger } = require('../utils/logger');
 
 const router = express.Router();
 
+router.get('/tiempo-real', sessionAuth, requireRrhh, async (req, res) => {
+  const log = createRequestLogger(req);
+  try {
+    const fecha = String(req.query.fecha || asistenciaService.todayYmdLaPaz());
+    const userType = String(req.query.userType || 'all');
+    const { trabajadores, resumen } = await asistenciaService.calcularEstadoTiempoReal(fecha, userType);
+    log.info('Asistencia tiempo real', { fecha, total: trabajadores.length });
+    res.json({ success: true, fecha, trabajadores, resumen });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 router.get('/reporte', sessionAuth, requireRrhh, async (req, res) => {
   const log = createRequestLogger(req);
   try {

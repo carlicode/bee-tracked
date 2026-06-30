@@ -35,6 +35,7 @@ export type DiaAsistencia = {
   horaRealInicio?: string;
   horaRealFin?: string;
   minutosRetraso?: number;
+  turnoId?: string | null;
 };
 
 export type ReporteAsistencia = {
@@ -46,7 +47,56 @@ export type ReporteAsistencia = {
   dias: DiaAsistencia[];
 };
 
+export type TrabajadorTiempoReal = {
+  userId: string;
+  userName: string;
+  userType: string;
+  horaEsperadaInicio: string;
+  horaEsperadaFin: string;
+  horaRealInicio: string;
+  horaRealFin: string;
+  estado: string;
+  minutosRetraso: number;
+  turnoActivo: boolean;
+  detalle: string;
+  turnoId?: string | null;
+};
+
+export type ResumenTiempoReal = {
+  debeTrabajar: number;
+  trabajandoAhora: number;
+  ausentes: number;
+  libre: number;
+  sinHorario: number;
+  pendientes: number;
+};
+
+export type EstadoTiempoReal = {
+  fecha: string;
+  trabajadores: TrabajadorTiempoReal[];
+  resumen: ResumenTiempoReal;
+};
+
 export const asistenciaApi = {
+  async getTiempoReal(fecha?: string, userType = 'all'): Promise<EstadoTiempoReal> {
+    const params = new URLSearchParams({ userType });
+    if (fecha) params.set('fecha', fecha);
+    const { data } = await axios.get<{
+      success: boolean;
+      fecha: string;
+      trabajadores: TrabajadorTiempoReal[];
+      resumen: ResumenTiempoReal;
+    }>(`${API_BASE}/api/asistencia/tiempo-real?${params.toString()}`, {
+      headers: authHeaders(),
+      timeout: 30000,
+    });
+    return {
+      fecha: data.fecha,
+      trabajadores: data.trabajadores || [],
+      resumen: data.resumen,
+    };
+  },
+
   async getReporte(
     fechaDesde: string,
     fechaHasta: string,

@@ -1,21 +1,32 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { extraordinariosApi, type Extraordinario } from '../../services/extraordinariosApi';
+import { extraordinariosApi, type Extraordinario, type Turno } from '../../services/extraordinariosApi';
 import { useToast } from '../../contexts/ToastContext';
+import { HorarioGrid } from '../../components/HorarioGrid';
+import { normalizeDiaHorario, type DiaHorario } from '../../services/calendariosApi';
 
 type ExtraordinariosWorkerProps = {
   variant: 'beezero' | 'ecodelivery' | 'operador';
   dashboardPath: string;
 };
 
-type HorarioForm = { extraId: string; horaInicio: string; horaFin: string };
+function initDias(extra: Extraordinario): Record<string, DiaHorario> {
+  const turnos: Turno[] =
+    extra.horaInicioSugerida && extra.horaFinSugerida
+      ? [{ inicio: extra.horaInicioSugerida, fin: extra.horaFinSugerida }]
+      : [];
+  return {
+    [extra.fecha]: normalizeDiaHorario({ fecha: extra.fecha, trabaja: turnos.length > 0, turnos }),
+  };
+}
 
 export function ExtraordinariosWorker({ variant, dashboardPath }: ExtraordinariosWorkerProps) {
   const toast = useToast();
   const [list, setList] = useState<Extraordinario[]>([]);
   const [loading, setLoading] = useState(true);
   const [inscribiendo, setInscribiendo] = useState<string | null>(null);
-  const [horarioForm, setHorarioForm] = useState<HorarioForm | null>(null);
+  const [formExtra, setFormExtra] = useState<Extraordinario | null>(null);
+  const [dias, setDias] = useState<Record<string, DiaHorario>>({});
 
   const linkClass =
     variant === 'beezero'
@@ -40,20 +51,23 @@ export function ExtraordinariosWorker({ variant, dashboardPath }: Extraordinario
   }, [load]);
 
   const abrirFormulario = (extra: Extraordinario) => {
-    setHorarioForm({
-      extraId: extra.extraId,
-      horaInicio: extra.horaInicioSugerida || '',
-      horaFin: extra.horaFinSugerida || '',
-    });
+    setFormExtra(extra);
+    setDias(initDias(extra));
   };
 
   const confirmarInscripcion = async () => {
-    if (!horarioForm) return;
-    setInscribiendo(horarioForm.extraId);
+    if (!formExtra) return;
+    const diaSeleccionado = dias[formExtra.fecha];
+    const turnos: Turno[] = diaSeleccionado?.turnos ?? [];
+    if (turnos.length === 0) {
+      toast.show('Seleccioná al menos un bloque horario.', 'error');
+      return;
+    }
+    setInscribiendo(formExtra.extraId);
     try {
-      await extraordinariosApi.inscribirse(horarioForm.extraId, horarioForm.horaInicio, horarioForm.horaFin);
+      await extraordinariosApi.inscribirse(formExtra.extraId, turnos);
       toast.show('Inscripción enviada. RRHH debe aprobarla.', 'success');
-      setHorarioForm(null);
+      setFormExtra(null);
       void load();
     } catch (err) {
       toast.show(extraordinariosApi.parseError(err), 'error');
@@ -78,9 +92,9 @@ export function ExtraordinariosWorker({ variant, dashboardPath }: Extraordinario
         <p className="text-gray-500">No hay días extraordinarios abiertos.</p>
       ) : (
         list.map((e) => {
-          const isOpen = horarioForm?.extraId === e.extraId;
+          const isOpen = formExtra?.extraId === e.extraId;
           return (
-            <div key={e.extraId} className="rounded-xl border p-4 space-y-3">
+            <div key={e.extraId} className="rounded-xl border p-4 space-y-4">
               <div className="flex flex-wrap justify-between gap-3">
                 <div>
                   <p className="font-semibold">{e.titulo}</p>
@@ -101,41 +115,29 @@ export function ExtraordinariosWorker({ variant, dashboardPath }: Extraordinario
                 )}
               </div>
 
-              {isOpen && horarioForm && (
-                <div className="border-t pt-3 space-y-3">
-                  <p className="text-sm font-medium text-gray-700">Confirmá tu horario para este día:</p>
-                  <div className="flex flex-wrap gap-4">
-                    <label className="flex flex-col gap-1 text-sm">
-                      <span className="text-gray-600">Entrada</span>
-                      <input
-                        type="time"
-                        value={horarioForm.horaInicio}
-                        onChange={(ev) => setHorarioForm({ ...horarioForm, horaInicio: ev.target.value })}
-                        className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
-                      />
-                    </label>
-                    <label className="flex flex-col gap-1 text-sm">
-                      <span className="text-gray-600">Salida</span>
-                      <input
-                        type="time"
-                        value={horarioForm.horaFin}
-                        onChange={(ev) => setHorarioForm({ ...horarioForm, horaFin: ev.target.value })}
-                        className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
-                      />
-                    </label>
-                  </div>
+              {isOpen && formExtra && (
+                <div className="border-t pt-4 space-y-4">
+                  <p className="text-sm font-medium text-gray-700">
+                    Marcá los bloques en los que querés trabajar este día:
+                  </p>
+                  <HorarioGrid
+                    fechaDesde={formExtra.fecha}
+                    fechaHasta={formExtra.fecha}
+                    dias={dias}
+                    onChange={setDias}
+                  />
                   <div className="flex gap-2">
                     <button
                       type="button"
-                      disabled={inscribiendo === e.extraId || !horarioForm.horaInicio || !horarioForm.horaFin}
+                      disabled={inscribiendo === formExtra.extraId}
                       onClick={() => void confirmarInscripcion()}
                       className="px-4 py-2 rounded-lg bg-gray-900 text-white text-sm disabled:opacity-50"
                     >
-                      {inscribiendo === e.extraId ? 'Enviando…' : 'Confirmar inscripción'}
+                      {inscribiendo === formExtra.extraId ? 'Enviando…' : 'Confirmar inscripción'}
                     </button>
                     <button
                       type="button"
-                      onClick={() => setHorarioForm(null)}
+                      onClick={() => setFormExtra(null)}
                       className="px-4 py-2 rounded-lg border text-sm text-gray-700"
                     >
                       Cancelar

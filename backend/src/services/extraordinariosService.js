@@ -37,6 +37,7 @@ function mapInscripcion(item) {
     userType: item.userType,
     horaInicio: item.horaInicio,
     horaFin: item.horaFin,
+    turnos: Array.isArray(item.turnos) ? item.turnos : [],
     estado: item.estado,
     creadoEn: item.creadoEn,
     respondidoPor: item.respondidoPor || null,
@@ -109,7 +110,7 @@ async function cerrarExtraordinario(extraId, cerradoPor) {
   return getExtraordinario(extraId);
 }
 
-async function inscribirse({ extraId, userId, userName, userType, horaInicio, horaFin }) {
+async function inscribirse({ extraId, userId, userName, userType, turnos, horaInicio, horaFin }) {
   const info = await getExtraordinario(extraId);
   if (!info) {
     const err = new Error('Día extraordinario no encontrado');
@@ -121,6 +122,12 @@ async function inscribirse({ extraId, userId, userName, userType, horaInicio, ho
     err.statusCode = 400;
     throw err;
   }
+
+  // Derive horaInicio/horaFin from turnos array if provided
+  const turnosNorm = Array.isArray(turnos) && turnos.length > 0 ? turnos : null;
+  const resolvedHoraInicio = turnosNorm ? turnosNorm[0].inicio : (horaInicio || info.horaInicioSugerida);
+  const resolvedHoraFin = turnosNorm ? turnosNorm[turnosNorm.length - 1].fin : (horaFin || info.horaFinSugerida);
+
   const item = {
     PK: `EXTRA#${extraId}`,
     SK: `USER#${slugUserId(userName || userId)}`,
@@ -129,8 +136,9 @@ async function inscribirse({ extraId, userId, userName, userType, horaInicio, ho
     userId: String(userId).toLowerCase(),
     userName: userName || userId,
     userType: userType || 'ecodelivery',
-    horaInicio: horaInicio || info.horaInicioSugerida,
-    horaFin: horaFin || info.horaFinSugerida,
+    horaInicio: resolvedHoraInicio,
+    horaFin: resolvedHoraFin,
+    turnos: turnosNorm || [{ inicio: resolvedHoraInicio, fin: resolvedHoraFin }],
     estado: 'anotado',
     creadoEn: Date.now(),
   };
