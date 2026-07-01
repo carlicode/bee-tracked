@@ -17,6 +17,8 @@ export interface Carrera {
   pagoPorQR?: boolean;
   observaciones?: string;
   foto?: string;
+  fechaCreacion?: string;
+  horaCreacion?: string;
   email?: string;
   createdAt?: string;
   rowNumber?: number;
