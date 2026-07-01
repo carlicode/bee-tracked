@@ -12,6 +12,9 @@ export const CarreraCard = ({ carrera, onEdit }: CarreraCardProps) => {
         <div>
           <h3 className="font-semibold text-black">{carrera.cliente}</h3>
           <p className="text-sm text-gray-600">{carrera.fecha}</p>
+          {carrera.carreraId != null && (
+            <p className="text-xs text-gray-400">ID #{carrera.carreraId}</p>
+          )}
         </div>
         <div className="flex items-start gap-2">
           {onEdit && (

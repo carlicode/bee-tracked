@@ -113,6 +113,9 @@ export const beezeroApi = {
         precio: number;
         observaciones: string;
         foto: string;
+        fechaCreacion: string;
+        horaCreacion: string;
+        porHora?: boolean;
         aCuenta?: boolean;
         pagoPorQR?: boolean;
       }>;
@@ -135,6 +138,9 @@ export const beezeroApi = {
       precio: c.precio,
       observaciones: c.observaciones,
       foto: c.foto,
+      fechaCreacion: c.fechaCreacion,
+      horaCreacion: c.horaCreacion,
+      porHora: c.porHora,
       aCuenta: c.aCuenta,
       pagoPorQR: c.pagoPorQR,
     }));

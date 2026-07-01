@@ -368,7 +368,7 @@ export const MisCarreras = () => {
             <CarreraCard
               key={index}
               carrera={carrera}
-              onEdit={isBeezeroApiEnabled() && carrera.carreraId != null ? () => setEditingCarrera(carrera) : undefined}
+              onEdit={isBeezeroApiEnabled() ? () => setEditingCarrera(carrera) : undefined}
             />
           ))}
           <Pagination
