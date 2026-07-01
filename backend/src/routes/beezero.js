@@ -22,6 +22,7 @@ const CARRERAS_DRIVERS_HEADERS = [
   'CarreraId', 'Abejita', 'Fecha', 'Cliente', 'Hora Inicio', 'Hora Fin',
   'Lugar Recojo', 'Lugar Destino', 'Tiempo', 'Distancia (km)', 'Precio (Bs)',
   'Observaciones', 'Foto', 'Fecha creación', 'Hora creación', 'Por hora', 'A cuenta', 'Pago por QR',
+  'Log',
 ];
 
 /**
@@ -235,6 +236,13 @@ router.get('/carreras/:driverName', async (req, res) => {
   }
 });
 
+// Nombres de columna (índice → etiqueta legible para el log)
+const CARRERAS_COL_LABELS = [
+  'CarreraId', 'Abejita', 'Fecha', 'Cliente', 'Hora Inicio', 'Hora Fin',
+  'Lugar Recojo', 'Lugar Destino', 'Tiempo', 'Distancia (km)', 'Precio (Bs)',
+  'Observaciones', 'Foto', 'Fecha creación', 'Hora creación', 'Por hora', 'A cuenta', 'Pago por QR',
+];
+
 /**
  * PUT /api/beezero/carreras/:driverName/:carreraId
  * Edita una carrera existente en la pestaña del driver.
@@ -262,7 +270,7 @@ router.put('/carreras/:driverName/:carreraId', async (req, res) => {
 
     const esPorHora = porHora === true || porHora === 'true' || String(porHora || '').toLowerCase() === 'si';
 
-    const row = [
+    const newRow = [
       carreraId,
       String(driverName).trim(),
       String(fecha || '').trim(),
@@ -282,6 +290,32 @@ router.put('/carreras/:driverName/:carreraId', async (req, res) => {
       (aCuenta === true || aCuenta === 'true' || String(aCuenta || '').toLowerCase() === 'si') ? 'si' : 'no',
       (pagoPorQR === true || pagoPorQR === 'true' || String(pagoPorQR || '').toLowerCase() === 'si') ? 'si' : 'no',
     ];
+
+    // Leer fila actual para construir el log de cambios
+    const todosRows = await getAllRowsFromSpreadsheet(spreadsheetId, driverName);
+    const oldRow = todosRows.find((r) => String(r[0]) === String(carreraId)) || [];
+
+    const cambios = [];
+    for (let i = 2; i < newRow.length; i++) {
+      const antes = String(oldRow[i] ?? '');
+      const despues = String(newRow[i] ?? '');
+      if (antes !== despues && CARRERAS_COL_LABELS[i]) {
+        cambios.push({ columna: CARRERAS_COL_LABELS[i], antes, despues });
+      }
+    }
+
+    // Construir entrada de log y acumular sobre el log anterior
+    const ahora = new Date();
+    const nuevaEntrada = {
+      fecha: ahora.toLocaleDateString('en-CA', { timeZone: 'America/La_Paz' }),
+      hora: ahora.toLocaleTimeString('en-GB', { timeZone: 'America/La_Paz', hour: '2-digit', minute: '2-digit', hour12: false }),
+      editor: String(driverName).trim(),
+      cambios,
+    };
+    const logPrevio = oldRow[18] ? (() => { try { return JSON.parse(oldRow[18]); } catch { return []; } })() : [];
+    const logActualizado = [...(Array.isArray(logPrevio) ? logPrevio : [logPrevio]), nuevaEntrada];
+
+    const row = [...newRow, JSON.stringify(logActualizado)];
 
     await updateRowInSpreadsheet(spreadsheetId, driverName, carreraId, row);
 
