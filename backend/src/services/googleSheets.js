@@ -1,7 +1,12 @@
 const { google } = require('googleapis');
 const fs = require('fs');
 const path = require('path');
-const { isSheetsWriteEnabled } = require('./dynamoUtils');
+
+function isSheetsWriteEnabled() {
+  const val = process.env.SHEETS_WRITE_ENABLED;
+  if (val === undefined || val === '') return true;
+  return ['1', 'true', 'yes', 'on'].includes(String(val).trim().toLowerCase());
+}
 
 let sheetsClient = null;
 let auth = null;
