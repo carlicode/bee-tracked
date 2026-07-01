@@ -1,4 +1,5 @@
 export interface Carrera {
+  carreraId?: string;
   fecha: string;
   cliente: string;
   horaInicio: string;

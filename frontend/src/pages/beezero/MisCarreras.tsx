@@ -8,7 +8,246 @@ import { usePagination } from '../../hooks/usePagination';
 import { apiService } from '../../services/api';
 import { beezeroApi, isBeezeroApiEnabled } from '../../services/beezeroApi';
 import { formatters } from '../../utils/formatters';
+import { TimeSelect } from '../../components/TimeSelect';
+import { useToast } from '../../contexts/ToastContext';
 import type { Carrera } from '../../types';
+
+// ─── Edit modal ──────────────────────────────────────────────────────────────
+
+interface EditModalProps {
+  carrera: Carrera;
+  driverName: string;
+  onClose: () => void;
+  onSaved: () => void;
+}
+
+function EditModal({ carrera, driverName, onClose, onSaved }: EditModalProps) {
+  const toast = useToast();
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState<Partial<Carrera>>({ ...carrera });
+  const [precioStr, setPrecioStr] = useState(carrera.precio != null && carrera.precio !== 0 ? String(carrera.precio) : '');
+  const [distanciaStr, setDistanciaStr] = useState(carrera.distancia != null && carrera.distancia !== 0 ? String(carrera.distancia) : '');
+
+  const porHora = form.porHora ?? false;
+
+  const set = (key: keyof Carrera, value: unknown) => setForm((prev) => ({ ...prev, [key]: value }));
+
+  const sanitizeDecimal = (raw: string) => {
+    const v = raw.replace(',', '.');
+    const parts = v.split('.');
+    return (parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : v).replace(/[^0-9.]/g, '');
+  };
+
+  const handleSave = async () => {
+    if (!carrera.carreraId) return;
+    if (!form.cliente) { toast.show('Ingresá el cliente', 'error'); return; }
+    setSaving(true);
+    try {
+      await beezeroApi.editarCarrera(driverName, carrera.carreraId, {
+        ...form,
+        precio: parseFloat(precioStr) || 0,
+        distancia: parseFloat(distanciaStr) || 0,
+      });
+      toast.show('Carrera actualizada correctamente', 'success');
+      onSaved();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'Error al guardar', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const inputClass = 'w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow text-sm';
+  const labelClass = 'block text-sm font-medium text-black mb-1';
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4">
+      <div className="bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b">
+          <div>
+            <h2 className="font-bold text-lg">Editar carrera</h2>
+            {carrera.carreraId && (
+              <p className="text-xs text-gray-500">ID #{carrera.carreraId} · {carrera.fecha}</p>
+            )}
+          </div>
+          <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
+          {/* Fecha */}
+          <div>
+            <label className={labelClass}>Fecha</label>
+            <input
+              type="date"
+              value={form.fecha || ''}
+              onChange={(e) => set('fecha', e.target.value)}
+              className={inputClass}
+            />
+          </div>
+
+          {/* Cliente */}
+          <div>
+            <label className={labelClass}>Cliente *</label>
+            <input
+              type="text"
+              value={form.cliente || ''}
+              onChange={(e) => set('cliente', e.target.value)}
+              className={inputClass}
+              placeholder="Nombre del cliente"
+            />
+          </div>
+
+          {/* Horas */}
+          <div className="grid grid-cols-2 gap-3">
+            <TimeSelect
+              label="Hora inicio"
+              value={form.horaInicio || ''}
+              onChange={(v) => set('horaInicio', v)}
+              focusRingClass="focus:ring-beezero-yellow focus:border-beezero-yellow"
+            />
+            <TimeSelect
+              label="Hora fin"
+              value={form.horaFin || ''}
+              onChange={(v) => set('horaFin', v)}
+              focusRingClass="focus:ring-beezero-yellow focus:border-beezero-yellow"
+            />
+          </div>
+
+          {/* Por hora checkbox */}
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={porHora}
+              onChange={(e) => set('porHora', e.target.checked)}
+              className="w-4 h-4 accent-beezero-yellow"
+            />
+            <span className="text-sm font-medium">Carrera por hora</span>
+          </label>
+
+          {/* Lugares y distancia (ocultos si por hora) */}
+          {!porHora && (
+            <>
+              <div>
+                <label className={labelClass}>Lugar de recojo</label>
+                <input
+                  type="text"
+                  value={form.lugarRecojo || ''}
+                  onChange={(e) => set('lugarRecojo', e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Lugar de destino</label>
+                <input
+                  type="text"
+                  value={form.lugarDestino || ''}
+                  onChange={(e) => set('lugarDestino', e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Distancia (km)</label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={distanciaStr}
+                  onChange={(e) => setDistanciaStr(sanitizeDecimal(e.target.value))}
+                  className={inputClass}
+                  placeholder="0"
+                />
+              </div>
+            </>
+          )}
+
+          {/* Tiempo */}
+          <div>
+            <label className={labelClass}>Tiempo</label>
+            <input
+              type="text"
+              value={form.tiempo || ''}
+              onChange={(e) => set('tiempo', e.target.value)}
+              className={inputClass}
+              placeholder="ej: 1h 30m"
+            />
+          </div>
+
+          {/* Precio */}
+          <div>
+            <label className={labelClass}>Precio (Bs) *</label>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={precioStr}
+              onChange={(e) => setPrecioStr(sanitizeDecimal(e.target.value))}
+              className={`${inputClass} text-lg font-semibold`}
+              placeholder="0"
+            />
+          </div>
+
+          {/* A cuenta / QR */}
+          <div className="flex gap-6">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.aCuenta ?? false}
+                onChange={(e) => set('aCuenta', e.target.checked)}
+                className="w-4 h-4 accent-beezero-yellow"
+              />
+              <span className="text-sm">A cuenta</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.pagoPorQR ?? false}
+                onChange={(e) => set('pagoPorQR', e.target.checked)}
+                className="w-4 h-4 accent-beezero-yellow"
+              />
+              <span className="text-sm">Pago por QR</span>
+            </label>
+          </div>
+
+          {/* Observaciones */}
+          <div>
+            <label className={labelClass}>Observaciones</label>
+            <textarea
+              value={form.observaciones || ''}
+              onChange={(e) => set('observaciones', e.target.value)}
+              rows={2}
+              className={inputClass}
+            />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-4 border-t flex gap-3">
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={saving}
+            className="flex-1 bg-beezero-yellow text-black font-semibold py-3 rounded-xl hover:bg-beezero-yellow-dark transition disabled:opacity-50"
+          >
+            {saving ? 'Guardando…' : 'Guardar cambios'}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 border-2 border-gray-300 text-gray-700 font-semibold py-3 rounded-xl hover:bg-gray-50 transition"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
 
 export const MisCarreras = () => {
   const navigate = useNavigate();
@@ -16,6 +255,9 @@ export const MisCarreras = () => {
   const [carreras, setCarreras] = useState<Carrera[]>([]);
   const [loading, setLoading] = useState(true);
   const [fecha, setFecha] = useState(() => formatters.dateToInput(new Date()));
+  const [editingCarrera, setEditingCarrera] = useState<Carrera | null>(null);
+
+  const driverName = getCurrentUser()?.name || getCurrentUser()?.driverName || '';
 
   useEffect(() => {
     loadCarreras();
@@ -25,8 +267,6 @@ export const MisCarreras = () => {
     try {
       setLoading(true);
       if (isBeezeroApiEnabled()) {
-        const user = getCurrentUser();
-        const driverName = user?.name || user?.driverName || '';
         if (driverName) {
           const { carreras: data } = await beezeroApi.getCarreras(driverName, fecha);
           setCarreras(data);
@@ -53,6 +293,15 @@ export const MisCarreras = () => {
 
   return (
     <div>
+      {editingCarrera && (
+        <EditModal
+          carrera={editingCarrera}
+          driverName={driverName}
+          onClose={() => setEditingCarrera(null)}
+          onSaved={() => { setEditingCarrera(null); void loadCarreras(); }}
+        />
+      )}
+
       <div className="mb-4">
         <button
           type="button"
@@ -116,7 +365,11 @@ export const MisCarreras = () => {
       ) : (
         <div>
           {pagination.pageItems.map((carrera, index) => (
-            <CarreraCard key={index} carrera={carrera} />
+            <CarreraCard
+              key={index}
+              carrera={carrera}
+              onEdit={isBeezeroApiEnabled() && carrera.carreraId != null ? () => setEditingCarrera(carrera) : undefined}
+            />
           ))}
           <Pagination
             page={pagination.page}
@@ -132,4 +385,3 @@ export const MisCarreras = () => {
     </div>
   );
 };
-

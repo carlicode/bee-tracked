@@ -4,6 +4,7 @@ const {
   getOrCreateSheetInSpreadsheet,
   getOrCreateSheetAndRowCount,
   appendRowToSpreadsheet,
+  updateRowInSpreadsheet,
   getRowCountInSpreadsheet,
   getAllRowsFromSpreadsheet,
   getSheetsInSpreadsheet,
@@ -231,6 +232,86 @@ router.get('/carreras/:driverName', async (req, res) => {
       success: false,
       error: err.message || 'Error al obtener carreras',
     });
+  }
+});
+
+/**
+ * PUT /api/beezero/carreras/:driverName/:carreraId
+ * Edita una carrera existente en la pestaña del driver.
+ * Body: cliente, fecha, horaInicio, horaFin, lugarRecojo, lugarDestino,
+ *       tiempo, distancia, precio, observaciones, porHora, aCuenta, pagoPorQR, foto
+ */
+router.put('/carreras/:driverName/:carreraId', async (req, res) => {
+  try {
+    const spreadsheetId = getCarrerasSpreadsheetId();
+    if (!spreadsheetId) {
+      return res.status(503).json({ success: false, error: 'CARRERAS_DRIVERS_SHEET_ID no está configurado' });
+    }
+
+    const { driverName, carreraId } = req.params;
+    const body = req.body || {};
+    const {
+      fecha, cliente, horaInicio, horaFin, lugarRecojo, lugarDestino,
+      tiempo, distancia, precio, observaciones, porHora, aCuenta, pagoPorQR,
+      foto, fechaCreacion, horaCreacion,
+    } = body;
+
+    if (!driverName || carreraId == null) {
+      return res.status(400).json({ success: false, error: 'Faltan driverName o carreraId' });
+    }
+
+    const esPorHora = porHora === true || porHora === 'true' || String(porHora || '').toLowerCase() === 'si';
+
+    const row = [
+      carreraId,
+      String(driverName).trim(),
+      String(fecha || '').trim(),
+      String(cliente || '').trim(),
+      horaInicio ? String(horaInicio).trim() : '',
+      horaFin ? String(horaFin).trim() : '',
+      esPorHora ? '' : String(lugarRecojo || '').trim(),
+      esPorHora ? '' : String(lugarDestino || '').trim(),
+      tiempo ? String(tiempo).trim() : '',
+      esPorHora ? 0 : (distancia != null ? Number(distancia) : 0),
+      precio != null && precio !== '' ? Number(precio) : 0,
+      observaciones ? String(observaciones).trim() : '',
+      foto || '',
+      fechaCreacion || '',
+      horaCreacion || '',
+      esPorHora ? 'si' : 'no',
+      (aCuenta === true || aCuenta === 'true' || String(aCuenta || '').toLowerCase() === 'si') ? 'si' : 'no',
+      (pagoPorQR === true || pagoPorQR === 'true' || String(pagoPorQR || '').toLowerCase() === 'si') ? 'si' : 'no',
+    ];
+
+    await updateRowInSpreadsheet(spreadsheetId, driverName, carreraId, row);
+
+    // Mirror update to DynamoDB (best-effort)
+    saveCarreraToDynamo({
+      carreraId: String(carreraId),
+      nombre: String(driverName).trim(),
+      tipo: 'beezero',
+      fecha: String(fecha || '').trim(),
+      cliente: String(cliente || '').trim(),
+      horaInicio: horaInicio ? String(horaInicio).trim() : '',
+      horaFin: horaFin ? String(horaFin).trim() : '',
+      lugarRecojo: esPorHora ? '' : String(lugarRecojo || '').trim(),
+      lugarDestino: esPorHora ? '' : String(lugarDestino || '').trim(),
+      tiempo: tiempo ? String(tiempo).trim() : '',
+      distancia: esPorHora ? 0 : (distancia != null ? Number(distancia) : 0),
+      precio: precio != null && precio !== '' ? Number(precio) : 0,
+      observaciones: observaciones ? String(observaciones).trim() : '',
+      foto: foto || '',
+      porHora: esPorHora ? 'si' : 'no',
+      aCuenta: (aCuenta === true || aCuenta === 'true' || String(aCuenta || '').toLowerCase() === 'si') ? 'si' : 'no',
+      pagoPorQR: (pagoPorQR === true || pagoPorQR === 'true' || String(pagoPorQR || '').toLowerCase() === 'si') ? 'si' : 'no',
+      fechaCreacion: fechaCreacion || '',
+      horaCreacion: horaCreacion || '',
+    });
+
+    res.json({ success: true, carreraId: String(carreraId) });
+  } catch (err) {
+    console.error('Error editando carrera BeeZero:', err.message);
+    res.status(500).json({ success: false, error: err.message || 'Error al editar la carrera' });
   }
 });
 
