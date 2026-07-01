@@ -263,6 +263,40 @@ async function getOrCreateSheetInSpreadsheet(spreadsheetId, sheetTitle, headers)
 /**
  * Agrega una fila a una hoja de un spreadsheet por ID (para Carreras_bikers).
  */
+/**
+ * Actualiza una fila completa en un spreadsheet buscándola por el valor de la columna A (carreraId).
+ * @param {string} spreadsheetId
+ * @param {string} sheetName - Nombre de la pestaña (tab del driver)
+ * @param {string|number} carreraId - Valor en columna A que identifica la fila
+ * @param {any[]} values - Arreglo de valores para reemplazar toda la fila
+ */
+async function updateRowInSpreadsheet(spreadsheetId, sheetName, carreraId, values) {
+  if (!isSheetsWriteEnabled()) {
+    console.log('[sheets] skip updateRowInSpreadsheet (SHEETS_WRITE_ENABLED=false)', sheetName, carreraId);
+    return { skipped: true };
+  }
+  const sheets = await getSheetsClient();
+  const quotedName = quoteSheetName(sheetName);
+  const colRes = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: `${quotedName}!A:A`,
+  });
+  const colValues = colRes.data.values || [];
+  const rowIndex = colValues.findIndex((row) => String(row[0]) === String(carreraId));
+  if (rowIndex === -1) {
+    throw new Error(`CarreraId ${carreraId} no encontrada en la hoja "${sheetName}"`);
+  }
+  const rowNumber = rowIndex + 1;
+  const lastCol = String.fromCharCode(64 + values.length); // A=65; 18 cols → R
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: `${quotedName}!A${rowNumber}:${lastCol}${rowNumber}`,
+    valueInputOption: 'USER_ENTERED',
+    resource: { values: [values] },
+  });
+  return { rowNumber };
+}
+
 async function appendRowToSpreadsheet(spreadsheetId, sheetName, values) {
   const sheets = await getSheetsClient();
   try {
@@ -517,6 +551,7 @@ module.exports = {
   getOrCreateSheetInSpreadsheet,
   getOrCreateSheetAndRowCount,
   appendRowToSpreadsheet,
+  updateRowInSpreadsheet,
   getRowCountInSpreadsheet,
   getSheetsInSpreadsheet,
   getAllRowsFromSpreadsheet,

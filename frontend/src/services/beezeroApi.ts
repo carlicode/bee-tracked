@@ -123,6 +123,7 @@ export const beezeroApi = {
     );
     if (!data.success) throw new Error(data.error || 'Error al obtener carreras');
     const carreras: Carrera[] = (data.carreras || []).map((c) => ({
+      carreraId: c.carreraId,
       fecha: c.fecha,
       cliente: c.cliente,
       horaInicio: c.horaInicio,
@@ -133,9 +134,44 @@ export const beezeroApi = {
       distancia: c.distancia,
       precio: c.precio,
       observaciones: c.observaciones,
+      foto: c.foto,
       aCuenta: c.aCuenta,
       pagoPorQR: c.pagoPorQR,
     }));
     return { carreras };
+  },
+
+  /**
+   * Edita una carrera existente en la pestaña del driver.
+   */
+  async editarCarrera(
+    abejita: string,
+    carreraId: string,
+    carrera: Partial<Carrera> & { fechaCreacion?: string; horaCreacion?: string }
+  ): Promise<void> {
+    if (!API_BASE) throw new Error('Backend no configurado (VITE_API_URL)');
+    const { data } = await axios.put<{ success: boolean; error?: string }>(
+      `${API_BASE}/api/beezero/carreras/${encodeURIComponent(abejita)}/${encodeURIComponent(carreraId)}`,
+      {
+        fecha: carrera.fecha,
+        cliente: carrera.cliente,
+        horaInicio: carrera.horaInicio || '',
+        horaFin: carrera.horaFin || '',
+        lugarRecojo: carrera.porHora ? '' : (carrera.lugarRecojo ?? ''),
+        lugarDestino: carrera.porHora ? '' : (carrera.lugarDestino ?? ''),
+        tiempo: carrera.tiempo || '',
+        distancia: carrera.porHora ? 0 : (carrera.distancia ?? 0),
+        precio: carrera.precio ?? 0,
+        porHora: carrera.porHora ?? false,
+        aCuenta: carrera.aCuenta ?? false,
+        pagoPorQR: carrera.pagoPorQR ?? false,
+        observaciones: carrera.observaciones || '',
+        foto: carrera.foto || '',
+        fechaCreacion: carrera.fechaCreacion || '',
+        horaCreacion: carrera.horaCreacion || '',
+      },
+      { headers: { ...authHeaders(), 'Content-Type': 'application/json' }, timeout: 30000 }
+    );
+    if (!data.success) throw new Error(data.error || 'Error al editar la carrera');
   },
 };
