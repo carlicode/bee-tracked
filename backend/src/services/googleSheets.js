@@ -278,10 +278,11 @@ async function getOrCreateSheetInSpreadsheet(spreadsheetId, sheetTitle, headers)
  * Agrega una fila a una hoja de un spreadsheet por ID (para Carreras_bikers).
  */
 /**
- * Actualiza una fila completa en un spreadsheet buscándola por el valor de la columna A (carreraId).
+ * Actualiza una fila completa en un spreadsheet usando el carreraId para calcular la fila.
+ * carreraId es 0-indexed y la fila 1 es el header, por lo que rowNumber = carreraId + 2.
  * @param {string} spreadsheetId
  * @param {string} sheetName - Nombre de la pestaña (tab del driver)
- * @param {string|number} carreraId - Valor en columna A que identifica la fila
+ * @param {string|number} carreraId - ID 0-indexed de la carrera
  * @param {any[]} values - Arreglo de valores para reemplazar toda la fila
  */
 async function updateRowInSpreadsheet(spreadsheetId, sheetName, carreraId, values) {
@@ -290,20 +291,16 @@ async function updateRowInSpreadsheet(spreadsheetId, sheetName, carreraId, value
     return { skipped: true };
   }
   const sheets = await getSheetsClient();
-  const colRes = await sheets.spreadsheets.values.get({
-    spreadsheetId,
-    range: `${sheetName}!A:A`,
-  });
-  const colValues = colRes.data.values || [];
-  const rowIndex = colValues.findIndex((row) => String(row[0]) === String(carreraId));
-  if (rowIndex === -1) {
-    throw new Error(`CarreraId ${carreraId} no encontrada en la hoja "${sheetName}"`);
+  // carreraId es 0-based; fila 1 = header → la carrera N está en la fila N+2
+  const rowNumber = parseInt(carreraId, 10) + 2;
+  if (isNaN(rowNumber) || rowNumber < 2) {
+    throw new Error(`carreraId inválido: ${carreraId}`);
   }
-  const rowNumber = rowIndex + 1;
-  const lastCol = String.fromCharCode(64 + values.length); // A=65; 18 cols → R
+  const lastCol = String.fromCharCode(64 + values.length); // A=65; 18 cols→R, 19→S
+  const quotedSheet = `'${String(sheetName).replace(/'/g, "''")}'`;
   await sheets.spreadsheets.values.update({
     spreadsheetId,
-    range: `${sheetName}!A${rowNumber}:${lastCol}${rowNumber}`,
+    range: `${quotedSheet}!A${rowNumber}:${lastCol}${rowNumber}`,
     valueInputOption: 'USER_ENTERED',
     resource: { values: [values] },
   });

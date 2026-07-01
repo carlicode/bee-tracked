@@ -9,6 +9,7 @@ const {
   getAllRowsFromSpreadsheet,
   getSheetsInSpreadsheet,
 } = require('../services/googleSheets');
+// getAllRowsFromSpreadsheet se usa en GET /carreras/:driverName
 const { uploadBeezeroCarreraPhoto } = require('../services/s3Upload');
 const { resolvePhotoField } = require('../services/photoUrl');
 const { saveCarreraToDynamo } = require('../services/dualWrite');
@@ -262,6 +263,8 @@ router.put('/carreras/:driverName/:carreraId', async (req, res) => {
       fecha, cliente, horaInicio, horaFin, lugarRecojo, lugarDestino,
       tiempo, distancia, precio, observaciones, porHora, aCuenta, pagoPorQR,
       foto, fechaCreacion, horaCreacion,
+      // original* enviados por el frontend para construir el log sin releer el sheet
+      originalData, logPrevio,
     } = body;
 
     if (!driverName || carreraId == null) {
@@ -270,41 +273,28 @@ router.put('/carreras/:driverName/:carreraId', async (req, res) => {
 
     const esPorHora = porHora === true || porHora === 'true' || String(porHora || '').toLowerCase() === 'si';
 
-    const newRow = [
-      carreraId,
-      String(driverName).trim(),
-      String(fecha || '').trim(),
-      String(cliente || '').trim(),
-      horaInicio ? String(horaInicio).trim() : '',
-      horaFin ? String(horaFin).trim() : '',
-      esPorHora ? '' : String(lugarRecojo || '').trim(),
-      esPorHora ? '' : String(lugarDestino || '').trim(),
-      tiempo ? String(tiempo).trim() : '',
-      esPorHora ? 0 : (distancia != null ? Number(distancia) : 0),
-      precio != null && precio !== '' ? Number(precio) : 0,
-      observaciones ? String(observaciones).trim() : '',
-      foto || '',
-      fechaCreacion || '',
-      horaCreacion || '',
-      esPorHora ? 'si' : 'no',
-      (aCuenta === true || aCuenta === 'true' || String(aCuenta || '').toLowerCase() === 'si') ? 'si' : 'no',
-      (pagoPorQR === true || pagoPorQR === 'true' || String(pagoPorQR || '').toLowerCase() === 'si') ? 'si' : 'no',
-    ];
+    const newValues = {
+      fecha: String(fecha || '').trim(),
+      cliente: String(cliente || '').trim(),
+      horaInicio: horaInicio ? String(horaInicio).trim() : '',
+      horaFin: horaFin ? String(horaFin).trim() : '',
+      lugarRecojo: esPorHora ? '' : String(lugarRecojo || '').trim(),
+      lugarDestino: esPorHora ? '' : String(lugarDestino || '').trim(),
+      tiempo: tiempo ? String(tiempo).trim() : '',
+      distancia: esPorHora ? '0' : String(distancia != null ? Number(distancia) : 0),
+      precio: String(precio != null && precio !== '' ? Number(precio) : 0),
+      observaciones: observaciones ? String(observaciones).trim() : '',
+      porHora: esPorHora ? 'si' : 'no',
+      aCuenta: (aCuenta === true || aCuenta === 'true' || String(aCuenta || '').toLowerCase() === 'si') ? 'si' : 'no',
+      pagoPorQR: (pagoPorQR === true || pagoPorQR === 'true' || String(pagoPorQR || '').toLowerCase() === 'si') ? 'si' : 'no',
+    };
 
-    // Leer fila actual para construir el log de cambios
-    const todosRows = await getAllRowsFromSpreadsheet(spreadsheetId, driverName);
-    const oldRow = todosRows.find((r) => String(r[0]) === String(carreraId)) || [];
+    // Construir log comparando con originalData enviado por el frontend
+    const orig = originalData || {};
+    const cambios = Object.entries(newValues)
+      .filter(([k, v]) => String(orig[k] ?? '') !== String(v))
+      .map(([k, v]) => ({ campo: k, antes: String(orig[k] ?? ''), despues: String(v) }));
 
-    const cambios = [];
-    for (let i = 2; i < newRow.length; i++) {
-      const antes = String(oldRow[i] ?? '');
-      const despues = String(newRow[i] ?? '');
-      if (antes !== despues && CARRERAS_COL_LABELS[i]) {
-        cambios.push({ columna: CARRERAS_COL_LABELS[i], antes, despues });
-      }
-    }
-
-    // Construir entrada de log y acumular sobre el log anterior
     const ahora = new Date();
     const nuevaEntrada = {
       fecha: ahora.toLocaleDateString('en-CA', { timeZone: 'America/La_Paz' }),
@@ -312,10 +302,30 @@ router.put('/carreras/:driverName/:carreraId', async (req, res) => {
       editor: String(driverName).trim(),
       cambios,
     };
-    const logPrevio = oldRow[18] ? (() => { try { return JSON.parse(oldRow[18]); } catch { return []; } })() : [];
-    const logActualizado = [...(Array.isArray(logPrevio) ? logPrevio : [logPrevio]), nuevaEntrada];
+    const historialLog = Array.isArray(logPrevio) ? logPrevio : [];
+    const logActualizado = [...historialLog, nuevaEntrada];
 
-    const row = [...newRow, JSON.stringify(logActualizado)];
+    const row = [
+      carreraId,
+      String(driverName).trim(),
+      newValues.fecha,
+      newValues.cliente,
+      newValues.horaInicio,
+      newValues.horaFin,
+      newValues.lugarRecojo,
+      newValues.lugarDestino,
+      newValues.tiempo,
+      esPorHora ? 0 : (distancia != null ? Number(distancia) : 0),
+      precio != null && precio !== '' ? Number(precio) : 0,
+      newValues.observaciones,
+      foto || '',
+      fechaCreacion || '',
+      horaCreacion || '',
+      newValues.porHora,
+      newValues.aCuenta,
+      newValues.pagoPorQR,
+      JSON.stringify(logActualizado),
+    ];
 
     await updateRowInSpreadsheet(spreadsheetId, driverName, carreraId, row);
 
