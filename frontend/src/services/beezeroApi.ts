@@ -153,9 +153,26 @@ export const beezeroApi = {
   async editarCarrera(
     abejita: string,
     carreraId: string,
-    carrera: Partial<Carrera> & { fechaCreacion?: string; horaCreacion?: string }
+    carrera: Partial<Carrera> & { fechaCreacion?: string; horaCreacion?: string },
+    original: Carrera
   ): Promise<void> {
     if (!API_BASE) throw new Error('Backend no configurado (VITE_API_URL)');
+    const esPorHora = carrera.porHora ?? false;
+    const originalData = {
+      fecha: original.fecha || '',
+      cliente: original.cliente || '',
+      horaInicio: original.horaInicio || '',
+      horaFin: original.horaFin || '',
+      lugarRecojo: original.porHora ? '' : (original.lugarRecojo || ''),
+      lugarDestino: original.porHora ? '' : (original.lugarDestino || ''),
+      tiempo: original.tiempo || '',
+      distancia: String(original.porHora ? 0 : (original.distancia ?? 0)),
+      precio: String(original.precio ?? 0),
+      observaciones: original.observaciones || '',
+      porHora: original.porHora ? 'si' : 'no',
+      aCuenta: original.aCuenta ? 'si' : 'no',
+      pagoPorQR: original.pagoPorQR ? 'si' : 'no',
+    };
     const { data } = await axios.put<{ success: boolean; error?: string }>(
       `${API_BASE}/api/beezero/carreras/${encodeURIComponent(abejita)}/${encodeURIComponent(carreraId)}`,
       {
@@ -163,18 +180,20 @@ export const beezeroApi = {
         cliente: carrera.cliente,
         horaInicio: carrera.horaInicio || '',
         horaFin: carrera.horaFin || '',
-        lugarRecojo: carrera.porHora ? '' : (carrera.lugarRecojo ?? ''),
-        lugarDestino: carrera.porHora ? '' : (carrera.lugarDestino ?? ''),
+        lugarRecojo: esPorHora ? '' : (carrera.lugarRecojo ?? ''),
+        lugarDestino: esPorHora ? '' : (carrera.lugarDestino ?? ''),
         tiempo: carrera.tiempo || '',
-        distancia: carrera.porHora ? 0 : (carrera.distancia ?? 0),
+        distancia: esPorHora ? 0 : (carrera.distancia ?? 0),
         precio: carrera.precio ?? 0,
-        porHora: carrera.porHora ?? false,
+        porHora: esPorHora,
         aCuenta: carrera.aCuenta ?? false,
         pagoPorQR: carrera.pagoPorQR ?? false,
         observaciones: carrera.observaciones || '',
         foto: carrera.foto || '',
         fechaCreacion: carrera.fechaCreacion || '',
         horaCreacion: carrera.horaCreacion || '',
+        originalData,
+        logPrevio: [],
       },
       { headers: { ...authHeaders(), 'Content-Type': 'application/json' }, timeout: 30000 }
     );

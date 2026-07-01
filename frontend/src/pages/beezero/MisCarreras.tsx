@@ -15,7 +15,7 @@ import type { Carrera } from '../../types';
 // ─── Edit modal ──────────────────────────────────────────────────────────────
 
 interface EditModalProps {
-  carrera: Carrera;
+  carrera: Carrera;      // datos originales (para el log)
   driverName: string;
   onClose: () => void;
   onSaved: () => void;
@@ -43,11 +43,12 @@ function EditModal({ carrera, driverName, onClose, onSaved }: EditModalProps) {
     if (!form.cliente) { toast.show('Ingresá el cliente', 'error'); return; }
     setSaving(true);
     try {
-      await beezeroApi.editarCarrera(driverName, carrera.carreraId, {
-        ...form,
-        precio: parseFloat(precioStr) || 0,
-        distancia: parseFloat(distanciaStr) || 0,
-      });
+      await beezeroApi.editarCarrera(
+        driverName,
+        carrera.carreraId,
+        { ...form, precio: parseFloat(precioStr) || 0, distancia: parseFloat(distanciaStr) || 0 },
+        carrera
+      );
       toast.show('Carrera actualizada correctamente', 'success');
       onSaved();
     } catch (err) {
