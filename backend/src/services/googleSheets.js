@@ -276,10 +276,9 @@ async function updateRowInSpreadsheet(spreadsheetId, sheetName, carreraId, value
     return { skipped: true };
   }
   const sheets = await getSheetsClient();
-  const quotedName = quoteSheetName(sheetName);
   const colRes = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: `${quotedName}!A:A`,
+    range: `${sheetName}!A:A`,
   });
   const colValues = colRes.data.values || [];
   const rowIndex = colValues.findIndex((row) => String(row[0]) === String(carreraId));
@@ -290,7 +289,7 @@ async function updateRowInSpreadsheet(spreadsheetId, sheetName, carreraId, value
   const lastCol = String.fromCharCode(64 + values.length); // A=65; 18 cols → R
   await sheets.spreadsheets.values.update({
     spreadsheetId,
-    range: `${quotedName}!A${rowNumber}:${lastCol}${rowNumber}`,
+    range: `${sheetName}!A${rowNumber}:${lastCol}${rowNumber}`,
     valueInputOption: 'USER_ENTERED',
     resource: { values: [values] },
   });
