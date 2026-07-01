@@ -1,6 +1,7 @@
 const { google } = require('googleapis');
 const fs = require('fs');
 const path = require('path');
+const { isSheetsWriteEnabled } = require('./dynamoUtils');
 
 let sheetsClient = null;
 let auth = null;
