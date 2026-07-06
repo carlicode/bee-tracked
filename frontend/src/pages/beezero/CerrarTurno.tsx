@@ -25,7 +25,6 @@ type GastoCierreInput = {
 };
 
 const TIPOS_GASTO = [
-  'QR',
   'Sueldo',
   'Peaje/Estacionamiento',
   'Carga de auto',
@@ -41,6 +40,8 @@ const TIPOS_GASTO = [
   'Electrolinera',
   'Parchado',
   'Inflado/Air',
+  'Entregué dinero a la operador@',
+  'Entregué dinero a Miguel',
   'Otro',
 ] as const;
 
