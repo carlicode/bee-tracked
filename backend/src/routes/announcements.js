@@ -28,11 +28,11 @@ function isActiveAnnouncement(item, today) {
 }
 
 function matchesAudience(item, userType) {
+  // operadores no reciben anuncios de drivers
+  if (userType === 'operador') return false;
   if (item.audience === 'all') return true;
   if (item.audience === 'beezero') return userType === 'beezero';
-  if (item.audience === 'ecodelivery') {
-    return userType === 'ecodelivery' || userType === 'operador';
-  }
+  if (item.audience === 'ecodelivery') return userType === 'ecodelivery';
   return false;
 }
 
