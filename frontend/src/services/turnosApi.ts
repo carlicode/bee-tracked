@@ -15,7 +15,10 @@ function sheetRowToTurno(row: Record<string, unknown>): Turno {
     aperturaCaja: parseFloat(String(row['Apertura Caja (Bs)'] || '0')) || 0,
     totalGastos: row['Total Gastos'] ? parseFloat(String(row['Total Gastos'])) : undefined,
     kilometraje: row['Kilometraje Inicio'] ? parseInt(String(row['Kilometraje Inicio'])) : undefined,
-    bateria: row.Bateria ? parseFloat(String(row.Bateria)) : undefined,
+    bateria: (() => {
+      const val = row['Bateria Inicio'] ?? row.Bateria;
+      return val != null && val !== '' ? parseFloat(String(val)) : undefined;
+    })(),
     danosAuto: (row['Daños Auto Inicio'] as string) || 'ninguno',
     fotoPantalla: (row['Foto Tablero Inicio'] as string) || '',
     fotoExterior: (row['Foto Exterior Inicio'] as string) || '',

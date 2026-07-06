@@ -109,7 +109,6 @@ export const CerrarTurno = () => {
           auto: turno.auto,
           aperturaCaja: turno.aperturaCaja,
           kilometraje: turno.kilometraje,
-          bateria: turno.bateria,
           danosAuto: turno.danosAuto || 'ninguno',
           observaciones: turno.observaciones || '',
         }));
