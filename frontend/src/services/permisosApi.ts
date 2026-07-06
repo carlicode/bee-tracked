@@ -19,6 +19,9 @@ export interface Permiso {
   respondidoPor?: string | null;
   respondidoEn?: number | null;
   razonRechazo?: string | null;
+  reemplazo?: string;
+  horaInicio?: string;
+  horaFin?: string;
 }
 
 export interface SolicitarPermisoInput {
@@ -26,6 +29,9 @@ export interface SolicitarPermisoInput {
   motivo: PermisoMotivo;
   nota?: string;
   comprobante?: string;
+  reemplazo?: string;
+  horaInicio?: string;
+  horaFin?: string;
 }
 
 function authHeaders(): Record<string, string> {

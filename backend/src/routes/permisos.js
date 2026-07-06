@@ -10,7 +10,7 @@ router.post('/solicitar', sessionAuth, async (req, res) => {
   const log = createRequestLogger(req);
 
   try {
-    const { fecha, motivo, nota, comprobante } = req.body || {};
+    const { fecha, motivo, nota, comprobante, reemplazo, horaInicio, horaFin } = req.body || {};
     if (!fecha || !motivo) {
       return res.status(400).json({
         success: false,
@@ -28,6 +28,9 @@ router.post('/solicitar', sessionAuth, async (req, res) => {
       motivo,
       nota,
       comprobante,
+      reemplazo,
+      horaInicio,
+      horaFin,
     });
 
     log.info('Permiso solicitado', { permisoId: permiso.permisoId, userId });

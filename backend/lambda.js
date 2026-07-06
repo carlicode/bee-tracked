@@ -28,6 +28,11 @@ const permisosRouter = require('./src/routes/permisos');
 const uploadRouter = require('./src/routes/upload');
 const adminUsersRouter = require('./src/routes/adminUsers');
 const { userRouter: onboardingRouter, adminRouter: adminOnboardingRouter } = require('./src/routes/onboarding');
+const adminKilometrajeRouter = require('./src/routes/adminKilometraje');
+const calendariosRouter = require('./src/routes/calendarios');
+const extraordinariosRouter = require('./src/routes/extraordinarios');
+const asistenciaRouter = require('./src/routes/asistencia');
+const multasRouter = require('./src/routes/multas');
 const { sessionAuth, requireAdmin } = require('./src/middleware/sessionAuth');
 
 app.use('/api/auth', authRouter);
@@ -39,10 +44,15 @@ app.use('/api/admin/usuarios', sessionAuth, requireAdmin, adminUsersRouter);
 app.use('/api/admin/anuncios', adminAnunciosRouter);
 app.use('/api/onboarding', onboardingRouter);
 app.use('/api/admin/onboarding', adminOnboardingRouter);
+app.use('/api/admin/kilometraje', adminKilometrajeRouter);
 app.use('/api/andi', andiRouter);
 app.use('/api/announcements', announcementsRouter);
 app.use('/api/push', pushRouter);
 app.use('/api/permisos', permisosRouter);
+app.use('/api/calendarios', calendariosRouter);
+app.use('/api/extraordinarios', extraordinariosRouter);
+app.use('/api/asistencia', asistenciaRouter);
+app.use('/api/multas', multasRouter);
 app.use('/api/upload', uploadRouter);
 
 app.get('/api/health', (req, res) => {
@@ -75,6 +85,12 @@ app.use((req, res) => {
 // Strip stage para que Express reciba /api/...
 const slsHandler = serverless(app);
 module.exports.handler = async (event, context) => {
+  // Ping de warmup desde EventBridge (evita cold starts en hora pico de turnos)
+  if (event.warmup) {
+    console.log('[warmup] Lambda caliente');
+    return { statusCode: 200, body: JSON.stringify({ warm: true }) };
+  }
+
   const stage = event?.requestContext?.stage;
   if (stage) {
     if (event.path?.startsWith(`/${stage}/`)) {

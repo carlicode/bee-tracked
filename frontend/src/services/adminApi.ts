@@ -79,6 +79,7 @@ export interface AdminUser {
   nombre: string;
   usuario: string;
   rol: string;
+  enabled: boolean;
 }
 
 export interface CreateAdminUserInput {
@@ -357,6 +358,16 @@ export const adminApi = {
     );
     if (!data.success) throw new Error(data.error || 'Error al crear usuario');
     return data.user;
+  },
+
+  async toggleUser(username: string, enable: boolean): Promise<void> {
+    if (!API_BASE) throw new Error('Backend no configurado (VITE_API_URL)');
+    const { data } = await axios.patch<{ success: boolean; error?: string }>(
+      `${API_BASE}/api/admin/usuarios/${encodeURIComponent(username)}/toggle`,
+      { enable },
+      { headers: authHeaders(), timeout: 10000 }
+    );
+    if (!data.success) throw new Error(data.error || 'Error al actualizar usuario');
   },
 
   async getRendimiento(params: {

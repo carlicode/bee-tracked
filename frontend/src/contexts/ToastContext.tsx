@@ -3,6 +3,7 @@ import {
   useContext,
   useState,
   useCallback,
+  useMemo,
   type ReactNode,
 } from 'react';
 import { useAuth } from '../services/auth';
@@ -147,7 +148,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToast(null);
   }, []);
 
-  const value: ToastContextValue = { show };
+  const value = useMemo<ToastContextValue>(() => ({ show }), [show]);
 
   return (
     <ToastContext.Provider value={value}>

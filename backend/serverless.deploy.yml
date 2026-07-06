@@ -1,5 +1,20 @@
 # Config para deploy (sin serverless-offline que causa conflicto)
+# Prod:  npx serverless deploy --stage prod --config serverless.deploy.yml
+# Stage: npx serverless deploy --stage staging --config serverless.deploy.yml
 service: bee-tracked-backend
+
+params:
+  prod:
+    frontendUrl: 'https://d19ls0k7de9u6w.cloudfront.net'
+    sheetsWriteEnabled: 'true'
+    warmupEnabled: true
+    nodeEnv: production
+  staging:
+    # Actualizar tras crear CloudFront de staging (ver docs/STAGING_ENVIRONMENT.md)
+    frontendUrl: 'https://STAGING_CLOUDFRONT_URL.cloudfront.net'
+    sheetsWriteEnabled: 'false'
+    warmupEnabled: false
+    nodeEnv: staging
 
 custom:
   sessionsTableName: bee-tracked-sessions-${sls:stage}
@@ -13,18 +28,22 @@ custom:
   auditTableName: bee-tracked-audit-${sls:stage}
   pushSubsTableName: bee-tracked-push-subs-${sls:stage}
   onboardingTableName: bee-tracked-onboarding-${sls:stage}
+  calendariosTableName: bee-tracked-calendarios-${sls:stage}
+  extraordinariosTableName: bee-tracked-extraordinarios-${sls:stage}
+  multasTableName: bee-tracked-multas-${sls:stage}
 
 provider:
   name: aws
   runtime: nodejs18.x
   region: us-east-1
-  stage: prod
+  stage: ${opt:stage, 'prod'}
   timeout: 30
   memorySize: 512
   environment:
-    NODE_ENV: production
+    NODE_ENV: ${param:nodeEnv}
     STAGE: ${sls:stage}
-    FRONTEND_URL: 'https://d19ls0k7de9u6w.cloudfront.net'
+    FRONTEND_URL: ${param:frontendUrl}
+    SHEETS_WRITE_ENABLED: ${param:sheetsWriteEnabled}
     SESSION_STORE: dynamodb
     SESSIONS_TABLE_NAME: ${self:custom.sessionsTableName}
     TURNOS_TABLE: ${self:custom.turnosTableName}
@@ -37,6 +56,9 @@ provider:
     AUDIT_TABLE: ${self:custom.auditTableName}
     PUSH_SUBS_TABLE: ${self:custom.pushSubsTableName}
     ONBOARDING_TABLE: ${self:custom.onboardingTableName}
+    CALENDARIOS_TABLE: ${self:custom.calendariosTableName}
+    EXTRAORDINARIOS_TABLE: ${self:custom.extraordinariosTableName}
+    MULTAS_TABLE: ${self:custom.multasTableName}
     VAPID_SUBJECT: 'mailto:admin@beezero.com'
     GOOGLE_SHEET_ID: '1L69tZzVSHlhuKGP9MCdcezOGPsYyjC2Mm-i03Hm5tM8'
     CARRERAS_BIKERS_SHEET_ID: '1OkM4FLSe0CsLo8w4o50xcVdzsUcHVzpaYRqhGBwJRcs'
@@ -96,6 +118,12 @@ provider:
             - !GetAtt AuditTable.Arn
             - !GetAtt PushSubsTable.Arn
             - !GetAtt OnboardingTable.Arn
+            - !GetAtt CalendariosTable.Arn
+            - Fn::Join: ['', [!GetAtt CalendariosTable.Arn, '/index/*']]
+            - !GetAtt ExtraordinariosTable.Arn
+            - Fn::Join: ['', [!GetAtt ExtraordinariosTable.Arn, '/index/*']]
+            - !GetAtt MultasTable.Arn
+            - Fn::Join: ['', [!GetAtt MultasTable.Arn, '/index/*']]
         - Effect: Allow
           Action:
             - cognito-idp:ListUsers
@@ -105,6 +133,8 @@ provider:
             - cognito-idp:AdminAddUserToGroup
             - cognito-idp:AdminRemoveUserFromGroup
             - cognito-idp:AdminUpdateUserAttributes
+            - cognito-idp:AdminEnableUser
+            - cognito-idp:AdminDisableUser
           Resource:
             - arn:aws:cognito-idp:us-east-1:*:userpool/us-east-1_REsVOVqcY
 
@@ -112,6 +142,12 @@ functions:
   api:
     handler: lambda.handler
     events:
+      - schedule:
+          rate: rate(5 minutes)
+          enabled: ${param:warmupEnabled}
+          description: 'Warmup ping para evitar cold starts en horario de turnos'
+          input:
+            warmup: true
       - http:
           path: /
           method: ANY
@@ -399,3 +435,118 @@ resources:
         KeySchema:
           - AttributeName: PK
             KeyType: HASH
+
+    CalendariosTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.calendariosTableName}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: S
+          - AttributeName: semana
+            AttributeType: S
+          - AttributeName: estado
+            AttributeType: S
+          - AttributeName: enviadoEn
+            AttributeType: N
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: semana-index
+            KeySchema:
+              - AttributeName: semana
+                KeyType: HASH
+              - AttributeName: PK
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+          - IndexName: estado-index
+            KeySchema:
+              - AttributeName: estado
+                KeyType: HASH
+              - AttributeName: PK
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+          - IndexName: estado-enviadoEn-index
+            KeySchema:
+              - AttributeName: estado
+                KeyType: HASH
+              - AttributeName: enviadoEn
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+
+    ExtraordinariosTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.extraordinariosTableName}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: S
+          - AttributeName: estado
+            AttributeType: S
+          - AttributeName: fecha
+            AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: estado-fecha-index
+            KeySchema:
+              - AttributeName: estado
+                KeyType: HASH
+              - AttributeName: fecha
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+          - IndexName: userId-index
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+              - AttributeName: PK
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+
+    MultasTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.multasTableName}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: S
+          - AttributeName: entityScope
+            AttributeType: S
+          - AttributeName: fecha
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: fecha-index
+            KeySchema:
+              - AttributeName: entityScope
+                KeyType: HASH
+              - AttributeName: fecha
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL

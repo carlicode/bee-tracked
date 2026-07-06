@@ -182,8 +182,7 @@ export const IniciarTurno = () => {
         } catch (backendError) {
           console.error('Error al iniciar turno en el servidor:', backendError);
           if ((backendError as { statusCode?: number }).statusCode === 401) {
-            toast.show('Tu sesión expiró. Iniciá sesión de nuevo para iniciar el turno.', 'error');
-            setTimeout(() => relogin(), 2500);
+            toast.show('Tu sesión expiró. Iniciá sesión de nuevo para iniciar el turno.', 'error', { onClose: relogin });
             return;
           }
           console.error('Backend tardó o falló, turno guardado localmente:', backendError);

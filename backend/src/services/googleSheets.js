@@ -84,6 +84,10 @@ async function initializeSheetsClient() {
  * @param {Array} values - Array de valores para la fila
  */
 async function appendRow(sheetName, values) {
+  if (!isSheetsWriteEnabled()) {
+    console.log('[sheets] skip appendRow (SHEETS_WRITE_ENABLED=false)', sheetName);
+    return { skipped: true };
+  }
   const sheets = await initializeSheetsClient();
   const spreadsheetId = process.env.GOOGLE_SHEET_ID;
 
@@ -111,6 +115,10 @@ async function appendRow(sheetName, values) {
  * @param {Array} values - Nuevos valores para la fila
  */
 async function updateRowById(sheetName, id, values) {
+  if (!isSheetsWriteEnabled()) {
+    console.log('[sheets] skip updateRowById (SHEETS_WRITE_ENABLED=false)', sheetName, id);
+    return { skipped: true };
+  }
   const sheets = await initializeSheetsClient();
   const spreadsheetId = process.env.GOOGLE_SHEET_ID;
 
@@ -238,6 +246,11 @@ async function getOrCreateSheetInSpreadsheet(spreadsheetId, sheetTitle, headers)
 
   if (existing) return safeTitle;
 
+  if (!isSheetsWriteEnabled()) {
+    console.log('[sheets] skip create sheet (SHEETS_WRITE_ENABLED=false)', safeTitle);
+    return safeTitle;
+  }
+
   const addSheetRes = await sheets.spreadsheets.batchUpdate({
     spreadsheetId,
     resource: {
@@ -300,6 +313,10 @@ async function updateRowInSpreadsheet(spreadsheetId, sheetName, carreraId, value
 }
 
 async function appendRowToSpreadsheet(spreadsheetId, sheetName, values) {
+  if (!isSheetsWriteEnabled()) {
+    console.log('[sheets] skip appendRowToSpreadsheet (SHEETS_WRITE_ENABLED=false)', sheetName);
+    return { skipped: true };
+  }
   const sheets = await getSheetsClient();
   try {
     await sheets.spreadsheets.values.append({

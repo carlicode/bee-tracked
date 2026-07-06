@@ -46,6 +46,7 @@ export function SolicitarPermiso({ variant }: SolicitarPermisoProps) {
   const [fecha, setFecha] = useState(tomorrowDate());
   const [motivo, setMotivo] = useState<PermisoMotivo>('Personal');
   const [nota, setNota] = useState('');
+  const [reemplazo, setReemplazo] = useState('');
   const [comprobanteUrl, setComprobanteUrl] = useState('');
   const [comprobantePreview, setComprobantePreview] = useState<string | undefined>();
   const [comprobanteUploading, setComprobanteUploading] = useState(false);
@@ -118,8 +119,10 @@ export function SolicitarPermiso({ variant }: SolicitarPermisoProps) {
         motivo,
         nota: nota.trim() || undefined,
         comprobante: comprobanteUrl || undefined,
+        reemplazo: reemplazo.trim() || undefined,
       });
       setNota('');
+      setReemplazo('');
       setComprobanteUrl('');
       if (comprobantePreview) uploadApi.revokePreview(comprobantePreview);
       setComprobantePreview(undefined);
@@ -198,6 +201,18 @@ export function SolicitarPermiso({ variant }: SolicitarPermisoProps) {
               </option>
             ))}
           </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Reemplazo (opcional)</label>
+          <input
+            type="text"
+            maxLength={120}
+            value={reemplazo}
+            onChange={(e) => setReemplazo(e.target.value)}
+            placeholder="Nombre de quien te cubre"
+            className="w-full border-2 border-gray-200 rounded-lg px-3 py-2"
+          />
         </div>
 
         <div>

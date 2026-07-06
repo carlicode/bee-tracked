@@ -15,6 +15,13 @@ function isDynamoReadEnabled() {
   return isTruthyEnv(process.env.DYNAMO_READ_ENABLED);
 }
 
+/** false en staging para no escribir en Google Sheets de producción */
+function isSheetsWriteEnabled() {
+  const val = process.env.SHEETS_WRITE_ENABLED;
+  if (val === undefined || val === '') return true;
+  return isTruthyEnv(val);
+}
+
 function slugUserId(name) {
   if (!name) return 'unknown';
   return String(name)
@@ -56,6 +63,7 @@ module.exports = {
   dynamo,
   isDynamoWriteEnabled,
   isDynamoReadEnabled,
+  isSheetsWriteEnabled,
   slugUserId,
   normalizeEstado,
   estadoToSheet,

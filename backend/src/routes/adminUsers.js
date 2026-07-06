@@ -2,6 +2,7 @@ const express = require('express');
 const {
   listAllCognitoUsers,
   createCognitoUser,
+  toggleCognitoUser,
   ROL_TO_GROUP,
 } = require('../services/cognitoUsersService');
 
@@ -72,6 +73,38 @@ router.post('/', async (req, res) => {
     res.status(code).json({
       success: false,
       error: err.message || 'Error al crear usuario en Cognito',
+    });
+  }
+});
+
+router.patch('/:username/toggle', async (req, res) => {
+  try {
+    const username = String(req.params.username || '').trim();
+    const { enable } = req.body || {};
+
+    if (!username) {
+      return res.status(400).json({
+        success: false,
+        error: 'Usuario requerido',
+        code: 'VALIDATION_ERROR',
+      });
+    }
+
+    if (typeof enable !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        error: 'El campo enable debe ser booleano',
+        code: 'VALIDATION_ERROR',
+      });
+    }
+
+    await toggleCognitoUser(username, enable);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('adminUsers PATCH toggle:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message || 'Error al actualizar estado del usuario',
     });
   }
 });
