@@ -246,7 +246,8 @@ router.post('/iniciar', optionalAuth, validateSession, async (req, res) => {
 /**
  * POST /api/turnos/:id/cerrar
  * Cerrar un turno existente
- * Fórmula diferencia: Cierre + Pagos QR - Apertura - Total Gastos
+ * Fórmula Total Caja (col R "Diferencia"): Cierre - Apertura - Total Gastos
+ * Pagos QR se almacena por separado en col N
  */
 router.post('/:id/cerrar', optionalAuth, validateSession, async (req, res) => {
   try {
@@ -294,11 +295,11 @@ router.post('/:id/cerrar', optionalAuth, validateSession, async (req, res) => {
     const gastosNormalizados = normalizeGastos(gastos);
     const totalGastos = gastosNormalizados.reduce((acc, gasto) => acc + gasto.monto, 0);
 
-    // Diferencia = Cierre + Pagos QR - Apertura - Total Gastos
+    // Total Caja = Cierre - Apertura - Total Gastos (Pagos QR se guarda en col N por separado)
     const apertura = parseFloat(turnoExistente['Apertura Caja (Bs)']) || 0;
     const cierre = parseFloat(cierreCaja) || 0;
     const pagosQRNum = parseFloat(pagosQR) || 0;
-    const diferencia = cierre + pagosQRNum - apertura - totalGastos;
+    const diferencia = cierre - apertura - totalGastos;
 
     // Guardar gastos en BeeZero_Gastos (1 fila por gasto)
     const gastoIds = gastosNormalizados.map((_, i) => `${id}-${i + 1}`);

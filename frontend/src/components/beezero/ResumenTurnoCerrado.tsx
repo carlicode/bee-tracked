@@ -88,12 +88,6 @@ export function ResumenTurnoCerrado({ data, onAccept }: Props) {
               <span className="text-gray-600">Cierre caja</span>
               <span className="font-semibold">Bs {data.cierreCaja}</span>
             </div>
-            {data.pagosQR > 0 && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">Pagos QR</span>
-                <span className="font-semibold text-green-700">+ Bs {data.pagosQR.toFixed(2)}</span>
-              </div>
-            )}
             {data.totalGastos > 0 && (
               <div className="flex justify-between">
                 <span className="text-gray-600">Total gastos</span>
@@ -101,11 +95,17 @@ export function ResumenTurnoCerrado({ data, onAccept }: Props) {
               </div>
             )}
             <div className="flex justify-between border-t pt-2">
-              <span className="font-bold text-black">Diferencia</span>
+              <span className="font-bold text-black">Total Caja</span>
               <span className={`font-bold ${data.diferencia >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 Bs {data.diferencia.toFixed(2)}
               </span>
             </div>
+            {data.pagosQR > 0 && (
+              <div className="flex justify-between pt-2 border-t border-dashed border-gray-300">
+                <span className="text-gray-600">Pagos por QR</span>
+                <span className="font-semibold text-green-700">Bs {data.pagosQR.toFixed(2)}</span>
+              </div>
+            )}
           </div>
 
           {(data.kilometrajeInicio != null || data.kilometrajeCierre != null) && (

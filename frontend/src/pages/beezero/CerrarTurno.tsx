@@ -244,13 +244,13 @@ export const CerrarTurno = () => {
     }
   };
 
-  // Diferencia = Cierre + Pagos QR - Apertura - Total Gastos
+  // Total Caja = Cierre - Apertura - Total Gastos (Pagos QR se muestra por separado)
   const pagosQRNum = formData.pagosQR ?? (parseFloat((formData as { pagosQRStr?: string }).pagosQRStr ?? '') || 0);
 
   const calcularDiferencia = () => {
     const apertura = formData.aperturaCaja || 0;
     const cierre = formData.cierreCaja ?? (parseFloat((formData as { cierreCajaStr?: string }).cierreCajaStr ?? '') || 0);
-    return cierre + pagosQRNum - apertura - totalGastos;
+    return cierre - apertura - totalGastos;
   };
 
   const totalGastos = gastosCierre.reduce((acc, gasto) => acc + (gasto.monto || 0), 0);
@@ -753,12 +753,6 @@ export const CerrarTurno = () => {
               <span className="text-gray-700">Apertura:</span>
               <span className="font-semibold text-red-600">- Bs {formData.aperturaCaja}</span>
             </div>
-            {pagosQRNum > 0 && (
-              <div className="flex justify-between mb-2">
-                <span className="text-gray-700">Pagos QR:</span>
-                <span className="font-semibold text-green-600">+ Bs {pagosQRNum.toFixed(2)}</span>
-              </div>
-            )}
             {totalGastos > 0 && (
               <div className="flex justify-between mb-2">
                 <span className="text-gray-700">Total Gastos:</span>
@@ -766,11 +760,17 @@ export const CerrarTurno = () => {
               </div>
             )}
             <div className="border-t pt-2 mt-2 flex justify-between">
-              <span className="font-bold text-black">Diferencia:</span>
+              <span className="font-bold text-black">Total Caja:</span>
               <span className={`font-bold ${calcularDiferencia() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 Bs {calcularDiferencia().toFixed(2)}
               </span>
             </div>
+            {pagosQRNum > 0 && (
+              <div className="flex justify-between mt-2 pt-2 border-t border-dashed border-gray-300">
+                <span className="text-gray-700">Pagos por QR:</span>
+                <span className="font-semibold text-green-600">Bs {pagosQRNum.toFixed(2)}</span>
+              </div>
+            )}
           </div>
         )}
 
