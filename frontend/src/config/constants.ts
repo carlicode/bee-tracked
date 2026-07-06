@@ -86,6 +86,7 @@ export const PLACAS_AUTO_ABEJITA = [
   '6423 DLK',
   '6430 CKX',
   '6445 SLA',
+  '6682 DGX',
   '6788 GXD',
   '6788 NRT',
   '7275 FHE',
