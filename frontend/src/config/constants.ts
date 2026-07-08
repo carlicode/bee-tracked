@@ -78,8 +78,9 @@ export const DEFAULT_CLIENTES = [
 
 /** Placas de autos disponibles para conductores BeeZero (Abejita). Formato: número + espacio + letras. Orden alfabético. */
 export const PLACAS_AUTO_ABEJITA = [
-  '6265 LYR',
   '6265 LUH',
+  '6265 LXL',
+  '6265 LYR',
   '6419 DKG',
   '6419 DLK',
   '6422 DLK',
