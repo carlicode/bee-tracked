@@ -4,6 +4,7 @@ const { appendRow, updateRowById, getRowById, getAllRows } = require('../service
 const { uploadBeezeroPhoto, uploadBeezeroGastoPhoto } = require('../services/s3Upload');
 const { resolvePhotoField } = require('../services/photoUrl');
 const { saveTurnoToDynamo } = require('../services/dualWrite');
+const turnosService = require('../services/turnosService');
 const { todayYmdLaPaz, normalizeFechaYmd, isFechaTurnoHoyLaPaz } = require('../utils/dateLaPaz');
 const { optionalAuth } = require('../middleware/auth');
 const { touchSession, isSessionValid } = require('../services/sessionManager');
@@ -404,6 +405,47 @@ router.post('/:id/cerrar', optionalAuth, validateSession, async (req, res) => {
     res.status(500).json({
       success: false,
       error: error.message || 'Error al cerrar turno',
+    });
+  }
+});
+
+/**
+ * GET /api/turnos/activo?usuario=NombreAbejita
+ * Turno INICIADO de hoy (DynamoDB + fallback Sheet). Evita descargar toda la hoja BeeZero.
+ */
+router.get('/activo', async (req, res) => {
+  try {
+    const usuario = String(req.query.usuario || '').trim();
+    if (!usuario) {
+      return res.status(400).json({ success: false, error: 'Parámetro usuario requerido' });
+    }
+
+    let row = await turnosService.getTurnoActivoBeezero(usuario);
+
+    if (!row) {
+      const rows = await getAllRows('BeeZero');
+      const parts = usuario.split(/\s+/).filter(Boolean);
+      const nameCandidates = [
+        usuario,
+        parts.slice(0, 2).join(' '),
+        parts.slice(0, 3).join(' '),
+      ].filter((c, i, arr) => c && arr.indexOf(c) === i);
+
+      for (const name of nameCandidates) {
+        const found = findTurnoIniciadoAbierto(rows, name);
+        if (found?.row) {
+          row = found.row;
+          break;
+        }
+      }
+    }
+
+    return res.json({ success: true, data: row || null });
+  } catch (error) {
+    console.error('[turnos] GET /activo error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Error al obtener turno activo',
     });
   }
 });

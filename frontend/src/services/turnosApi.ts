@@ -61,16 +61,12 @@ export const turnosApi = {
   async getTurnoActivo(driverName: string): Promise<Turno | null> {
     if (!API_BASE || !driverName) return null;
     try {
-      const { data } = await axios.get<{ success: boolean; data?: Record<string, unknown>[] }>(
-        `${API_BASE}/api/turnos`,
-        { timeout: 10000, headers: authHeaders() }
+      const { data } = await axios.get<{ success: boolean; data?: Record<string, unknown> | null }>(
+        `${API_BASE}/api/turnos/activo`,
+        { params: { usuario: driverName }, timeout: 8000, headers: authHeaders() }
       );
-      if (!data.success || !Array.isArray(data.data)) return null;
-      const row = data.data.find(
-        (t: Record<string, unknown>) =>
-          t.Abejita === driverName && t.Estado === 'INICIADO'
-      );
-      return row ? sheetRowToTurno(row) : null;
+      if (!data.success || !data.data) return null;
+      return sheetRowToTurno(data.data);
     } catch (err) {
       console.error('[turnosApi.getTurnoActivo]', err);
       return null;
@@ -102,16 +98,18 @@ export const turnosApi = {
       if (!data.success || !data.data?.id) throw new Error('Respuesta inválida al iniciar turno');
       return { id: data.data.id };
     } catch (err: unknown) {
-      const ax = err && typeof err === 'object' && 'response' in err ? err as { response?: { status?: number; data?: { error?: string } }; message?: string } : null;
+      const ax = err && typeof err === 'object' && 'response' in err ? err as { response?: { status?: number; data?: { error?: string; code?: string } }; message?: string } : null;
       const msg = ax?.response?.data?.error || (err instanceof Error ? err.message : 'Error de conexión');
       const status = ax?.response?.status;
       console.error('[turnosApi.iniciar]', status, msg, ax?.response?.data);
-      if (status === 401) {
-        const e = new Error(msg) as Error & { statusCode: number };
-        e.statusCode = 401;
-        throw e;
-      }
-      throw new Error(status === 404 || (err instanceof Error && err.message.includes('Network Error')) ? 'Servidor no encontrado. ¿Está el backend en marcha en http://localhost:3001?' : msg);
+      const e = new Error(
+        status === 404 || (err instanceof Error && err.message.includes('Network Error'))
+          ? 'Servidor no encontrado. ¿Está el backend en marcha en http://localhost:3001?'
+          : msg
+      ) as Error & { statusCode?: number; code?: string };
+      e.statusCode = status;
+      e.code = ax?.response?.data?.code;
+      throw e;
     }
   },
 

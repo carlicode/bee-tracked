@@ -165,19 +165,33 @@ export const IniciarTurno = () => {
       localStorage.setItem('turno_actual', JSON.stringify(toSave));
 
       if (turnosApi.isEnabled()) {
+        const payload = {
+          abejita: turnoData.abejita!,
+          auto: turnoData.auto!,
+          aperturaCaja: turnoData.aperturaCaja!,
+          kilometraje: turnoData.kilometraje,
+          bateria: turnoData.bateria,
+          danosAuto: danos,
+          fotoPantalla: turnoData.fotoPantalla,
+          fotoExterior: fotoExt,
+          horaInicio,
+          ubicacionInicio: { lat: location.lat, lng: location.lng },
+        };
+        const esTurnoYaActivo = (err: unknown) =>
+          (err as { code?: string }).code === 'TURNO_ACTIVO_EXISTS';
         try {
-          const res = await turnosApi.iniciar({
-            abejita: turnoData.abejita!,
-            auto: turnoData.auto!,
-            aperturaCaja: turnoData.aperturaCaja!,
-            kilometraje: turnoData.kilometraje,
-            bateria: turnoData.bateria,
-            danosAuto: danos,
-            fotoPantalla: turnoData.fotoPantalla,
-            fotoExterior: fotoExt,
-            horaInicio,
-            ubicacionInicio: { lat: location.lat, lng: location.lng },
-          });
+          let res;
+          try {
+            res = await turnosApi.iniciar(payload);
+          } catch (primerError) {
+            if ((primerError as { statusCode?: number }).statusCode === 401 || esTurnoYaActivo(primerError)) {
+              throw primerError;
+            }
+            // Reintento automático: en datos móviles el envío suele fallar de forma transitoria
+            console.error('Error al iniciar turno en el servidor, reintentando:', primerError);
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+            res = await turnosApi.iniciar(payload);
+          }
           localStorage.setItem('turno_actual', JSON.stringify({ ...toSave, id: res.id }));
         } catch (backendError) {
           console.error('Error al iniciar turno en el servidor:', backendError);
@@ -185,7 +199,21 @@ export const IniciarTurno = () => {
             toast.show('Tu sesión expiró. Iniciá sesión de nuevo para iniciar el turno.', 'error', { onClose: relogin });
             return;
           }
-          console.error('Backend tardó o falló, turno guardado localmente:', backendError);
+          if (esTurnoYaActivo(backendError)) {
+            // El turno ya existe en el servidor (p. ej. un intento anterior sí llegó):
+            // el dashboard lo muestra al sincronizar.
+            toast.show('Ya tenías un turno activo registrado.', 'info', {
+              onClose: () => navigate('/beezero/dashboard'),
+            });
+            return;
+          }
+          // El turno NO quedó registrado: sin respaldo local fantasma ni éxito falso.
+          localStorage.removeItem('turno_actual');
+          toast.show(
+            'No se pudo registrar el turno. Revisá tu señal y tocá "Iniciar Turno" otra vez: tus datos siguen cargados.',
+            'error'
+          );
+          return;
         }
       }
 

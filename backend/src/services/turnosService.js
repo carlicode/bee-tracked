@@ -1,6 +1,7 @@
 const { PutItemCommand, QueryCommand } = require('@aws-sdk/client-dynamodb');
 const { marshall, unmarshall } = require('@aws-sdk/util-dynamodb');
 const config = require('../config');
+const { todayYmdLaPaz } = require('../utils/dateLaPaz');
 const {
   dynamo,
   slugUserId,
@@ -175,6 +176,49 @@ async function getTurno(userIdOrName, turnoId) {
   return raw ? unmarshall(raw) : null;
 }
 
+function buildSlugCandidates(nombre) {
+  const trimmed = String(nombre || '').trim();
+  const parts = trimmed.split(/\s+/).filter(Boolean);
+  const candidates = [
+    trimmed,
+    parts.slice(0, 2).join(' '),
+    parts.slice(0, 3).join(' '),
+  ].filter(Boolean);
+  return [...new Set(candidates.map((c) => slugUserId(c)).filter(Boolean))];
+}
+
+async function queryTurnoActivoDynamo(userId, tipo) {
+  const res = await dynamo.send(
+    new QueryCommand({
+      TableName: config.dynamo.turnosTable,
+      KeyConditionExpression: 'PK = :pk',
+      FilterExpression: '#est = :activo AND #tipo = :tipo',
+      ExpressionAttributeNames: { '#est': 'estado', '#tipo': 'tipo' },
+      ExpressionAttributeValues: marshall({
+        ':pk': `USER#${userId}`,
+        ':activo': 'activo',
+        ':tipo': tipo,
+      }),
+      ScanIndexForward: false,
+    })
+  );
+  return (res.Items || []).map((item) => unmarshall(item))[0] || null;
+}
+
+/**
+ * Turno INICIADO de hoy para un driver BeeZero (DynamoDB primero, sin descargar todo el Sheet).
+ */
+async function getTurnoActivoBeezero(nombre) {
+  const hoy = todayYmdLaPaz();
+  for (const userId of buildSlugCandidates(nombre)) {
+    const item = await queryTurnoActivoDynamo(userId, 'beezero');
+    if (item && normalizeFechaYmd(item.fecha) === hoy) {
+      return beezeroToAdminRow(item);
+    }
+  }
+  return null;
+}
+
 async function listTurnosForAdmin(tipo) {
   const items = [];
   let lastKey;
@@ -211,6 +255,8 @@ async function listTurnosForAdmin(tipo) {
 module.exports = {
   putTurno,
   getTurno,
+  getTurnoActivoBeezero,
   listTurnosForAdmin,
   buildTurnoItem,
+  beezeroToAdminRow,
 };
