@@ -97,57 +97,54 @@ export const DashboardBeezero = () => {
   usePushSubscription(turnosApi.isEnabled());
 
   useEffect(() => {
+    const leerTurnoLocal = (): Turno | null => {
+      const turnoLocal = localStorage.getItem('turno_actual');
+      if (!turnoLocal) return null;
+      try {
+        const turno = JSON.parse(turnoLocal) as Turno;
+        if (turno?.turnoIniciado && !turno?.turnoCerrado) return turno;
+      } catch {
+        // ignore
+      }
+      return null;
+    };
+
+    const guardarTurnoLocal = (turno: Turno) => {
+      const toSave = { ...turno };
+      delete (toSave as Record<string, unknown>).fotoPantalla;
+      delete (toSave as Record<string, unknown>).fotoExterior;
+      localStorage.setItem('turno_actual', JSON.stringify(toSave));
+    };
+
     const cargarTurnoActual = async () => {
       try {
         // Siempre consultar backend primero cuando está habilitado (fuente de verdad)
         if (turnosApi.isEnabled() && user?.driverName) {
           const turno = await turnosApi.getTurnoActivo(user.driverName);
           if (turno) {
-            const toSave = { ...turno };
-            delete (toSave as Record<string, unknown>).fotoPantalla;
-            delete (toSave as Record<string, unknown>).fotoExterior;
-            localStorage.setItem('turno_actual', JSON.stringify(toSave));
+            guardarTurnoLocal(turno);
             setTurnoActual(turno);
-            setLoading(false);
             return;
           }
-          // Backend respondió null → no hay turno activo. Limpiar localStorage
-          // para evitar mostrar datos stale de sesiones anteriores.
+
+          // Si el backend no respondió turno, conservar localStorage (timeout/red)
+          // antes de asumir que no hay sesión activa.
+          const turnoLocal = leerTurnoLocal();
+          if (turnoLocal) {
+            setTurnoActual(turnoLocal);
+            return;
+          }
+
           localStorage.removeItem('turno_actual');
           setTurnoActual(null);
-          setLoading(false);
           return;
         }
 
         // Fallback: localStorage solo cuando el backend no está disponible (modo demo)
-        const turnoLocal = localStorage.getItem('turno_actual');
-        if (turnoLocal) {
-          const turno = JSON.parse(turnoLocal) as Turno;
-          if (turno?.turnoIniciado && !turno?.turnoCerrado) {
-            setTurnoActual(turno);
-            setLoading(false);
-            return;
-          }
-        }
-
-        setTurnoActual(null);
+        setTurnoActual(leerTurnoLocal());
       } catch (error) {
         console.error('Error cargando turno actual:', error);
-        // Fallback a localStorage si el backend falla
-        const turnoLocal = localStorage.getItem('turno_actual');
-        if (turnoLocal) {
-          try {
-            const turno = JSON.parse(turnoLocal) as Turno;
-            if (turno?.turnoIniciado && !turno?.turnoCerrado) {
-              setTurnoActual(turno);
-              setLoading(false);
-              return;
-            }
-          } catch {
-            // ignore
-          }
-        }
-        setTurnoActual(null);
+        setTurnoActual(leerTurnoLocal());
       } finally {
         setLoading(false);
       }
