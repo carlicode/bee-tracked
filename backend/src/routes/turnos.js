@@ -5,7 +5,7 @@ const { uploadBeezeroPhoto, uploadBeezeroGastoPhoto } = require('../services/s3U
 const { resolvePhotoField } = require('../services/photoUrl');
 const { saveTurnoToDynamo } = require('../services/dualWrite');
 const turnosService = require('../services/turnosService');
-const { todayYmdLaPaz, normalizeFechaYmd, isFechaTurnoHoyLaPaz } = require('../utils/dateLaPaz');
+const { todayYmdLaPaz, normalizeFechaYmd, isFechaTurnoHoyLaPaz, laPazDateTimeToUtcMs } = require('../utils/dateLaPaz');
 const { optionalAuth } = require('../middleware/auth');
 const { touchSession, isSessionValid } = require('../services/sessionManager');
 
@@ -114,7 +114,13 @@ function findTurnoIniciadoAbierto(rows, abejita) {
     const nombre = String(obj.Abejita || '').trim().toLowerCase();
     if (nombre !== abejitaNorm) continue;
     const fecha = normalizeFechaYmd(obj['Fecha Inicio'] || '');
-    if (!isFechaTurnoHoyLaPaz(fecha)) continue;
+    if (!isFechaTurnoHoyLaPaz(fecha)) {
+      // Turno de ayer que cruza la medianoche (p.ej. inicio 11:37, cierre 00:40):
+      // sigue vigente/cerrable si empezó hace menos de 16h.
+      const inicioMs = Date.parse(obj['Timestamp Creación'] || '')
+        || laPazDateTimeToUtcMs(fecha, obj['Hora Inicio']);
+      if (!Number.isFinite(inicioMs) || Date.now() - inicioMs >= turnosService.VENTANA_TURNO_ABIERTO_MS) continue;
+    }
     const id = obj.ID ?? obj.Id ?? '';
     const idNum = Number(id);
     if (!best || idNum > Number(best.id)) {
