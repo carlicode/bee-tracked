@@ -205,14 +205,24 @@ async function queryTurnoActivoDynamo(userId, tipo) {
   return (res.Items || []).map((item) => unmarshall(item))[0] || null;
 }
 
+/** Turnos que cruzan la medianoche (p.ej. inicio 11:37, cierre 00:40) siguen siendo cerrables. */
+const VENTANA_TURNO_ABIERTO_MS = 16 * 60 * 60 * 1000;
+
+function esTurnoAbiertoVigente(item, hoy) {
+  if (normalizeFechaYmd(item.fecha) === hoy) return true;
+  const created = Number(item.createdAt);
+  return Number.isFinite(created) && created > 0 && Date.now() - created < VENTANA_TURNO_ABIERTO_MS;
+}
+
 /**
- * Turno INICIADO de hoy para un driver BeeZero (DynamoDB primero, sin descargar todo el Sheet).
+ * Turno INICIADO vigente para un driver BeeZero (DynamoDB primero, sin descargar todo el Sheet).
+ * Vigente = de hoy, o iniciado hace menos de 16h (turno que cruza medianoche).
  */
 async function getTurnoActivoBeezero(nombre) {
   const hoy = todayYmdLaPaz();
   for (const userId of buildSlugCandidates(nombre)) {
     const item = await queryTurnoActivoDynamo(userId, 'beezero');
-    if (item && normalizeFechaYmd(item.fecha) === hoy) {
+    if (item && esTurnoAbiertoVigente(item, hoy)) {
       return beezeroToAdminRow(item);
     }
   }
@@ -259,4 +269,5 @@ module.exports = {
   listTurnosForAdmin,
   buildTurnoItem,
   beezeroToAdminRow,
+  VENTANA_TURNO_ABIERTO_MS,
 };
