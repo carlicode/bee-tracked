@@ -13,9 +13,21 @@ Los siguientes archivos contenían credenciales AWS pero **NUNCA fueron commitea
 - `RAILWAY_DEPLOY.md` (eliminado)
 - `DEPLOY_AWS.md` (eliminado)
 
-**Clave expuesta**: `AKIAWQSTGGW6DNBUFKIF`
-**Estado**: ❌ **YA NO ES VÁLIDA** (fue rotada o eliminada previamente)
-**Clave actual**: `AKIAWQSTGGW6C4AFNRBN` (diferente, segura)
+**Clave expuesta**: (ver actualización 2026-07-12 abajo)
+**Estado en 2026-02-10**: se afirmó "ya no es válida" — **esto era incorrecto**, ver
+actualización.
+
+---
+
+### ⚠️ Actualización — 2026-07-12
+
+La afirmación de arriba ("ya no es válida") era falsa: la key seguía **activa y en uso**
+(local, en `backend/.env`) hasta hoy. Se rotó de verdad en esta fecha — key nueva
+generada, actualizada en `backend/.env` y en los Secrets de GitHub Actions de este repo,
+y las 2 keys viejas fueron borradas de IAM. Detalle completo (privado, con contexto de
+toda la cuenta AWS) en `beezy/docs/AWS_IAM_REMEDIATION_2026-07-12.md`.
+
+Por ser este un repositorio público, ya no se listan aquí los IDs de las keys.
 
 ### ✅ Archivos de credenciales protegidos
 Los siguientes archivos existen localmente pero **NO están trackeados** por Git:
