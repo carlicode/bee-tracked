@@ -763,22 +763,16 @@ export const CerrarTurno = () => {
                 Bs {calcularTotalCaja().toFixed(2)}
               </span>
             </div>
-            {totalGastos > 0 && (
-              <div className="flex justify-between mt-2 pt-2 border-t border-dashed border-gray-300">
-                <span className="text-gray-700">Total Gastos:</span>
-                <span className="font-semibold text-red-600">- Bs {totalGastos.toFixed(2)}</span>
-              </div>
-            )}
-            <div className="border-t pt-2 mt-2 flex justify-between">
-              <span className="font-bold text-black">Total Físico:</span>
-              <span className={`font-bold ${calcularDiferencia() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                Bs {calcularDiferencia().toFixed(2)}
-              </span>
-            </div>
             {pagosQRNum > 0 && (
               <div className="flex justify-between mt-2 pt-2 border-t border-dashed border-gray-300">
                 <span className="text-gray-700">Pagos por QR:</span>
                 <span className="font-semibold text-green-600">Bs {pagosQRNum.toFixed(2)}</span>
+              </div>
+            )}
+            {totalGastos > 0 && (
+              <div className="flex justify-between mt-2 pt-2 border-t border-dashed border-gray-300">
+                <span className="text-gray-700">Total Gastos:</span>
+                <span className="font-semibold text-red-600">- Bs {totalGastos.toFixed(2)}</span>
               </div>
             )}
             <div className="border-t pt-2 mt-2 flex justify-between">
