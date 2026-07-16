@@ -244,14 +244,18 @@ export const CerrarTurno = () => {
     }
   };
 
-  // Total Caja = Cierre - Apertura - Total Gastos (Pagos QR se muestra por separado)
+  // Total Caja = Apertura - Cierre; Total Físico = Total Caja - Total Gastos; Total Día = Total Físico + Pagos QR
   const pagosQRNum = formData.pagosQR ?? (parseFloat((formData as { pagosQRStr?: string }).pagosQRStr ?? '') || 0);
 
-  const calcularDiferencia = () => {
+  const calcularTotalCaja = () => {
     const apertura = formData.aperturaCaja || 0;
     const cierre = formData.cierreCaja ?? (parseFloat((formData as { cierreCajaStr?: string }).cierreCajaStr ?? '') || 0);
-    return cierre - apertura - totalGastos;
+    return apertura - cierre;
   };
+
+  const calcularDiferencia = () => calcularTotalCaja() - totalGastos;
+
+  const calcularTotalDia = () => calcularDiferencia() + pagosQRNum;
 
   const totalGastos = gastosCierre.reduce((acc, gasto) => acc + (gasto.monto || 0), 0);
 
@@ -746,21 +750,27 @@ export const CerrarTurno = () => {
         {(formData.cierreCaja ?? parseFloat((formData as { cierreCajaStr?: string }).cierreCajaStr ?? '')) > 0 && (
           <div className="bg-gray-50 rounded-lg p-4">
             <div className="flex justify-between mb-2">
-              <span className="text-gray-700">Cierre:</span>
-              <span className="font-semibold">Bs {formData.cierreCaja ?? parseFloat((formData as { cierreCajaStr?: string }).cierreCajaStr ?? '')}</span>
+              <span className="text-gray-700">Apertura:</span>
+              <span className="font-semibold">Bs {formData.aperturaCaja}</span>
             </div>
             <div className="flex justify-between mb-2">
-              <span className="text-gray-700">Apertura:</span>
-              <span className="font-semibold text-red-600">- Bs {formData.aperturaCaja}</span>
+              <span className="text-gray-700">Cierre:</span>
+              <span className="font-semibold text-red-600">- Bs {formData.cierreCaja ?? parseFloat((formData as { cierreCajaStr?: string }).cierreCajaStr ?? '')}</span>
+            </div>
+            <div className="border-t pt-2 mt-2 flex justify-between">
+              <span className="font-bold text-black">Total Caja:</span>
+              <span className={`font-bold ${calcularTotalCaja() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                Bs {calcularTotalCaja().toFixed(2)}
+              </span>
             </div>
             {totalGastos > 0 && (
-              <div className="flex justify-between mb-2">
+              <div className="flex justify-between mt-2 pt-2 border-t border-dashed border-gray-300">
                 <span className="text-gray-700">Total Gastos:</span>
                 <span className="font-semibold text-red-600">- Bs {totalGastos.toFixed(2)}</span>
               </div>
             )}
             <div className="border-t pt-2 mt-2 flex justify-between">
-              <span className="font-bold text-black">Total Caja:</span>
+              <span className="font-bold text-black">Total Físico:</span>
               <span className={`font-bold ${calcularDiferencia() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 Bs {calcularDiferencia().toFixed(2)}
               </span>
@@ -771,6 +781,12 @@ export const CerrarTurno = () => {
                 <span className="font-semibold text-green-600">Bs {pagosQRNum.toFixed(2)}</span>
               </div>
             )}
+            <div className="border-t pt-2 mt-2 flex justify-between">
+              <span className="font-bold text-black">Total Día:</span>
+              <span className={`font-bold ${calcularTotalDia() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                Bs {calcularTotalDia().toFixed(2)}
+              </span>
+            </div>
           </div>
         )}
 
