@@ -38,13 +38,14 @@ export const DetalleTurno = () => {
     }
   };
 
-  // Diferencia = Apertura - Cierre - Total Gastos
+  // Total Final = Cierre - Apertura - Total Gastos + Pagos QR
   const calcularDiferenciaCaja = () => {
     if (!turno) return 0;
     const apertura = turno.aperturaCaja || 0;
     const cierre = turno.cierreCaja || 0;
     const totalGastos = turno.totalGastos || (turno.gastosCierre || []).reduce((acc, g) => acc + (g.monto || 0), 0);
-    return apertura - cierre - totalGastos;
+    const pagosQR = turno.pagosQR || 0;
+    return cierre - apertura - totalGastos + pagosQR;
   };
 
 
@@ -207,10 +208,10 @@ export const DetalleTurno = () => {
                 <p className="font-bold text-black text-2xl">Bs {turno.cierreCaja}</p>
               </div>
 
-              {turno.qr && turno.qr > 0 && (
+              {turno.pagosQR != null && turno.pagosQR > 0 && (
                 <div>
                   <p className="text-sm text-gray-600">QR</p>
-                  <p className="font-semibold text-black text-xl">Bs {turno.qr}</p>
+                  <p className="font-semibold text-black text-xl">Bs {turno.pagosQR}</p>
                 </div>
               )}
 
@@ -221,8 +222,14 @@ export const DetalleTurno = () => {
                 </div>
                 <div className="flex justify-between mb-2">
                   <span className="text-gray-700">Cierre:</span>
-                  <span className="font-semibold">- Bs {turno.cierreCaja}</span>
+                  <span className="font-semibold">Bs {turno.cierreCaja}</span>
                 </div>
+                {turno.pagosQR != null && turno.pagosQR > 0 && (
+                  <div className="flex justify-between mb-2">
+                    <span className="text-gray-700">Pagos QR:</span>
+                    <span className="font-semibold text-green-600">+ Bs {turno.pagosQR.toFixed(2)}</span>
+                  </div>
+                )}
                 {totalGastos > 0 && (
                   <div className="flex justify-between mb-2">
                     <span className="text-gray-700">Total Gastos:</span>
@@ -230,7 +237,7 @@ export const DetalleTurno = () => {
                   </div>
                 )}
                 <div className="border-t pt-2 mt-2 flex justify-between">
-                  <span className="font-bold text-black">Diferencia:</span>
+                  <span className="font-bold text-black">Total Final:</span>
                   <span className={`font-bold text-lg ${diferencia >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                     Bs {diferencia.toFixed(2)}
                   </span>
