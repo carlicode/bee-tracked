@@ -396,6 +396,7 @@ router.post('/:id/cerrar', optionalAuth, validateSession, async (req, res) => {
           ubicacionCierreLat: ubicacionFin?.lat || '',
           ubicacionCierreLng: ubicacionFin?.lng || '',
           observaciones: observaciones || '',
+          log: turnoExistente.Log || '',
           estado: 'CERRADO',
           createdAt: Date.parse(turnoExistente['Timestamp Creación']) || Date.now(),
           updatedAt: Date.now(),
@@ -423,6 +424,186 @@ router.post('/:id/cerrar', optionalAuth, validateSession, async (req, res) => {
     res.status(500).json({
       success: false,
       error: error.message || 'Error al cerrar turno',
+    });
+  }
+});
+
+/**
+ * Campos que el conductor puede corregir: SOLO datos ingresados manualmente.
+ * Hora, fecha, ubicación GPS, fotos, estado y gastos NO son editables desde aquí.
+ * `cierre: true` = solo corregible cuando el turno ya está CERRADO.
+ */
+const CAMPOS_EDITABLES = {
+  aperturaCaja:      { header: 'Apertura Caja (Bs)',  num: true,  cierre: false },
+  cierreCaja:        { header: 'Cierre Caja (Bs)',    num: true,  cierre: true },
+  pagosQR:           { header: 'Pagos QR (Bs)',       num: true,  cierre: true },
+  kilometrajeInicio: { header: 'Kilometraje Inicio',  num: true,  cierre: false },
+  kilometrajeCierre: { header: 'Kilometraje Cierre',  num: true,  cierre: true },
+  bateriaInicio:     { header: 'Bateria Inicio',      num: true,  cierre: false },
+  bateriaCierre:     { header: 'Bateria Cierre',      num: true,  cierre: true },
+  danosAutoInicio:   { header: 'Daños Auto Inicio',   num: false, cierre: false },
+  danosAutoCierre:   { header: 'Daños Auto Cierre',   num: false, cierre: true },
+  observaciones:     { header: 'Observaciones',       num: false, cierre: false },
+};
+
+/**
+ * POST /api/turnos/:id/editar
+ * Corrección de datos manuales de un turno BeeZero por el conductor.
+ * Cada corrección se acumula como entrada JSON en la columna Log (Sheet col AF / attr `log` en Dynamo):
+ * [{ "t": "<ISO>", "por": "<abejita>", "cambios": { "<campo>": { "de": "<antes>", "a": "<después>" } } }]
+ */
+router.post('/:id/editar', optionalAuth, validateSession, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { abejita, cambios } = req.body;
+
+    if (!cambios || typeof cambios !== 'object' || Array.isArray(cambios) || Object.keys(cambios).length === 0) {
+      return res.status(400).json({ success: false, error: 'Debes enviar los cambios a aplicar' });
+    }
+
+    const prohibidos = Object.keys(cambios).filter((k) => !CAMPOS_EDITABLES[k]);
+    if (prohibidos.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: `Campos no editables: ${prohibidos.join(', ')}. Solo se pueden corregir datos ingresados manualmente.`,
+      });
+    }
+
+    // DynamoDB primero; fallback Sheet (mismo criterio que /cerrar)
+    let turnoExistente = abejita ? await turnosService.getTurnoByIdBeezero(abejita, id) : null;
+    if (!turnoExistente) {
+      turnoExistente = await getRowById('BeeZero', id);
+    }
+    if (!turnoExistente) {
+      return res.status(404).json({ success: false, error: 'Turno no encontrado' });
+    }
+
+    // Compatibilidad con filas viejas que usaban la columna 'Bateria'
+    if (!turnoExistente['Bateria Inicio'] && turnoExistente['Bateria']) {
+      turnoExistente['Bateria Inicio'] = turnoExistente['Bateria'];
+    }
+
+    const cerrado = String(turnoExistente.Estado || '').toUpperCase() === 'CERRADO';
+
+    // Aplicar solo lo que realmente cambia (comparación numérica para montos: '60.00' == '60')
+    const diff = {};
+    for (const [campo, valorNuevo] of Object.entries(cambios)) {
+      const def = CAMPOS_EDITABLES[campo];
+      if (def.cierre && !cerrado) {
+        return res.status(400).json({
+          success: false,
+          error: `No puedes corregir ${campo} de un turno que aún no está cerrado`,
+        });
+      }
+      const actualStr = String(turnoExistente[def.header] ?? '');
+      let nuevoStr;
+      if (def.num) {
+        const num = parseFloat(valorNuevo);
+        if (valorNuevo == null || valorNuevo === '' || isNaN(num) || num < 0) {
+          return res.status(400).json({ success: false, error: `Valor inválido para ${campo}` });
+        }
+        const actualNum = parseFloat(actualStr);
+        if (Number.isFinite(actualNum) && actualNum === num) continue;
+        nuevoStr = String(num);
+      } else {
+        nuevoStr = String(valorNuevo ?? '').trim().slice(0, 500);
+        if (campo.startsWith('danosAuto') && nuevoStr === '') nuevoStr = 'ninguno';
+        if (nuevoStr === actualStr) continue;
+      }
+      diff[campo] = { de: actualStr, a: nuevoStr };
+      turnoExistente[def.header] = nuevoStr;
+    }
+
+    if (Object.keys(diff).length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'No hay cambios: los valores enviados son iguales a los actuales',
+      });
+    }
+
+    // Recalcular Diferencia si cambió la caja (gastos no son editables desde aquí)
+    if (cerrado && (diff.aperturaCaja || diff.cierreCaja || diff.pagosQR)) {
+      const apertura = parseFloat(turnoExistente['Apertura Caja (Bs)']) || 0;
+      const cierre = parseFloat(turnoExistente['Cierre Caja (Bs)']) || 0;
+      const qr = parseFloat(turnoExistente['Pagos QR (Bs)']) || 0;
+      const gastosTot = parseFloat(turnoExistente['Total Gastos (Bs)']) || 0;
+      turnoExistente['Diferencia (Bs)'] = (cierre - apertura - gastosTot + qr).toFixed(2);
+    }
+
+    // Acumular la corrección en el Log
+    let logEntries = [];
+    try {
+      const parsed = JSON.parse(turnoExistente.Log || '[]');
+      if (Array.isArray(parsed)) logEntries = parsed;
+    } catch {
+      // Log previo corrupto: se reinicia, la edición no se pierde
+    }
+    logEntries.push({
+      t: new Date().toISOString(),
+      por: abejita || req.user?.name || req.user?.username || 'desconocido',
+      cambios: diff,
+    });
+    const logStr = JSON.stringify(logEntries);
+    turnoExistente.Log = logStr;
+    turnoExistente['Timestamp Actualización'] = new Date().toISOString();
+
+    const rowValues = turnosService.BEEZERO_HEADERS.map((h) => turnoExistente[h] ?? '');
+
+    await hybridWrite.write({
+      dynamo: () =>
+        turnosService.putTurno({
+          turnoId: id,
+          nombre: turnoExistente.Abejita,
+          tipo: 'beezero',
+          fecha: turnoExistente['Fecha Inicio'],
+          fechaCierre: turnoExistente['Fecha Cierre'],
+          horaInicio: turnoExistente['Hora Inicio'],
+          horaCierre: turnoExistente['Hora Cierre'],
+          placa: turnoExistente['Auto (Placa)'],
+          kmInicio: turnoExistente['Kilometraje Inicio'],
+          kmFin: turnoExistente['Kilometraje Cierre'],
+          bateriaInicio: turnoExistente['Bateria Inicio'],
+          bateriaCierre: turnoExistente['Bateria Cierre'],
+          aperturaCaja: turnoExistente['Apertura Caja (Bs)'],
+          pagosQR: turnoExistente['Pagos QR (Bs)'],
+          cierreCaja: turnoExistente['Cierre Caja (Bs)'],
+          gastoIds: turnoExistente['ID Gastos'],
+          totalGastos: turnoExistente['Total Gastos (Bs)'],
+          diferencia: turnoExistente['Diferencia (Bs)'],
+          danosAutoInicio: turnoExistente['Daños Auto Inicio'],
+          danosAutoCierre: turnoExistente['Daños Auto Cierre'],
+          fotoTableroInicio: turnoExistente['Foto Tablero Inicio'],
+          fotoExteriorInicio: turnoExistente['Foto Exterior Inicio'],
+          fotoTableroCierre: turnoExistente['Foto Tablero Cierre'],
+          fotoExteriorCierre: turnoExistente['Foto Exterior Cierre'],
+          ubicacionInicioLat: turnoExistente['Ubicación Inicio (Lat)'],
+          ubicacionInicioLng: turnoExistente['Ubicación Inicio (Lng)'],
+          ubicacionCierreLat: turnoExistente['Ubicación Cierre (Lat)'],
+          ubicacionCierreLng: turnoExistente['Ubicación Cierre (Lng)'],
+          observaciones: turnoExistente.Observaciones,
+          log: logStr,
+          estado: turnoExistente.Estado,
+          createdAt: Date.parse(turnoExistente['Timestamp Creación']) || Date.now(),
+          updatedAt: Date.now(),
+        }),
+      sheets: () => updateRowById('BeeZero', id, rowValues),
+      context: `turno:editar:beezero:${id}`,
+    });
+
+    res.json({
+      success: true,
+      message: 'Corrección guardada',
+      data: {
+        id,
+        cambios: diff,
+        turno: turnoExistente,
+      },
+    });
+  } catch (error) {
+    console.error('Error editando turno:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Error al guardar la corrección',
     });
   }
 });

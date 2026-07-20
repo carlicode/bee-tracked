@@ -116,6 +116,46 @@ export const turnosApi = {
   },
 
   /**
+   * Corregir datos manuales de un turno (inicio o cierre). Solo campos manuales:
+   * el backend rechaza hora/fecha/ubicación/fotos/estado. Devuelve el turno actualizado
+   * en formato fila de Sheet.
+   */
+  async editar(
+    id: string,
+    payload: { abejita?: string; cambios: Record<string, string | number> }
+  ): Promise<Record<string, string>> {
+    try {
+      const { data } = await axios.post<{
+        success: boolean;
+        error?: string;
+        data?: { turno?: Record<string, string> };
+      }>(`${API_BASE}/api/turnos/${encodeURIComponent(id)}/editar`, payload, {
+        timeout: 40000,
+        headers: authHeaders(),
+      });
+      if (!data.success) throw new Error(data.error || 'No se pudo guardar la corrección');
+      return data.data?.turno || {};
+    } catch (err: unknown) {
+      const ax = axios.isAxiosError(err) ? err : null;
+      const respData = ax?.response?.data as { error?: string } | undefined;
+      const msg = respData?.error || (err instanceof Error ? err.message : 'Error de conexión');
+      const status = ax?.response?.status;
+      console.error('[turnosApi.editar]', status, msg);
+      if (status === 401) {
+        const e = new Error(msg) as Error & { statusCode: number };
+        e.statusCode = 401;
+        throw e;
+      }
+      const sinRespuesta = Boolean(ax) && !ax?.response;
+      throw new Error(
+        sinRespuesta
+          ? 'No se pudo conectar con el servidor. Revisa tu señal e intenta de nuevo.'
+          : msg
+      );
+    }
+  },
+
+  /**
    * Cerrar turno en el backend (actualiza la fila en la hoja BeeZero).
    */
   async cerrar(
