@@ -362,6 +362,7 @@ export const CerrarTurno = () => {
         }
         try {
           await turnosApi.cerrar(turnoId, {
+            abejita: formData.abejita || turnoInicio?.abejita,
             cierreCaja: cierreCajaNum,
             pagosQR,
             gastos: gastosPayload,
