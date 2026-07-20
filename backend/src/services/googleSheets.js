@@ -11,6 +11,20 @@ function isSheetsWriteEnabled() {
 let sheetsClient = null;
 let auth = null;
 
+// Sin esto, un cuelgue de la API de Google consume los 30s del timeout de Lambda
+// y el conductor recibe un "Network Error" genérico (visto 2026-07-18 ~16:00 Bolivia).
+const SHEETS_TIMEOUT_MS = parseInt(process.env.SHEETS_TIMEOUT_MS || '10000', 10);
+
+function withTimeout(promise, label) {
+  let timer;
+  const limite = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error(`Google Sheets no respondió a tiempo (${label}). Intenta de nuevo en unos segundos.`));
+    }, SHEETS_TIMEOUT_MS);
+  });
+  return Promise.race([promise, limite]).finally(() => clearTimeout(timer));
+}
+
 /**
  * Obtener credenciales desde AWS Secrets Manager, variable de entorno o archivo
  */
@@ -92,14 +106,17 @@ async function appendRow(sheetName, values) {
   const spreadsheetId = process.env.GOOGLE_SHEET_ID;
 
   try {
-    const response = await sheets.spreadsheets.values.append({
-      spreadsheetId,
-      range: `${sheetName}!A:AE`,
-      valueInputOption: 'USER_ENTERED',
-      resource: {
-        values: [values],
-      },
-    });
+    const response = await withTimeout(
+      sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range: `${sheetName}!A:AE`,
+        valueInputOption: 'USER_ENTERED',
+        resource: {
+          values: [values],
+        },
+      }),
+      `appendRow:${sheetName}`
+    );
 
     return response.data;
   } catch (error) {
@@ -124,10 +141,13 @@ async function updateRowById(sheetName, id, values) {
 
   try {
     // Buscar la fila que contiene el ID
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: `${sheetName}!A:A`,
-    });
+    const response = await withTimeout(
+      sheets.spreadsheets.values.get({
+        spreadsheetId,
+        range: `${sheetName}!A:A`,
+      }),
+      `updateRowById:get:${sheetName}`
+    );
 
     const rows = response.data.values || [];
     const rowIndex = rows.findIndex((row) => row[0] == id);
@@ -137,14 +157,17 @@ async function updateRowById(sheetName, id, values) {
     }
 
     // Actualizar la fila (rowIndex + 1 porque las filas empiezan en 1)
-    const updateResponse = await sheets.spreadsheets.values.update({
-      spreadsheetId,
-      range: `${sheetName}!A${rowIndex + 1}:AE${rowIndex + 1}`,
-      valueInputOption: 'USER_ENTERED',
-      resource: {
-        values: [values],
-      },
-    });
+    const updateResponse = await withTimeout(
+      sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range: `${sheetName}!A${rowIndex + 1}:AE${rowIndex + 1}`,
+        valueInputOption: 'USER_ENTERED',
+        resource: {
+          values: [values],
+        },
+      }),
+      `updateRowById:update:${sheetName}`
+    );
 
     return updateResponse.data;
   } catch (error) {
@@ -162,10 +185,13 @@ async function getAllRows(sheetName) {
   const spreadsheetId = process.env.GOOGLE_SHEET_ID;
 
   try {
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: `${sheetName}!A:AE`,
-    });
+    const response = await withTimeout(
+      sheets.spreadsheets.values.get({
+        spreadsheetId,
+        range: `${sheetName}!A:AE`,
+      }),
+      `getAllRows:${sheetName}`
+    );
 
     return response.data.values || [];
   } catch (error) {

@@ -98,17 +98,19 @@ export const turnosApi = {
       if (!data.success || !data.data?.id) throw new Error('Respuesta inválida al iniciar turno');
       return { id: data.data.id };
     } catch (err: unknown) {
-      const ax = err && typeof err === 'object' && 'response' in err ? err as { response?: { status?: number; data?: { error?: string; code?: string } }; message?: string } : null;
-      const msg = ax?.response?.data?.error || (err instanceof Error ? err.message : 'Error de conexión');
+      const ax = axios.isAxiosError(err) ? err : null;
+      const data = ax?.response?.data as { error?: string; code?: string } | undefined;
+      const msg = data?.error || (err instanceof Error ? err.message : 'Error de conexión');
       const status = ax?.response?.status;
-      console.error('[turnosApi.iniciar]', status, msg, ax?.response?.data);
+      console.error('[turnosApi.iniciar]', status, msg, data);
+      const sinRespuesta = Boolean(ax) && !ax?.response;
       const e = new Error(
-        status === 404 || (err instanceof Error && err.message.includes('Network Error'))
-          ? 'Servidor no encontrado. ¿Está el backend en marcha en http://localhost:3001?'
+        sinRespuesta
+          ? 'No se pudo conectar con el servidor. Revisa tu señal e intenta de nuevo en unos segundos.'
           : msg
       ) as Error & { statusCode?: number; code?: string };
       e.statusCode = status;
-      e.code = ax?.response?.data?.code;
+      e.code = data?.code;
       throw e;
     }
   },
@@ -132,25 +134,58 @@ export const turnosApi = {
       observaciones?: string;
     }
   ): Promise<void> {
-    try {
+    const post = async () => {
       const { data } = await axios.post<{ success: boolean }>(
         `${API_BASE}/api/turnos/${encodeURIComponent(id)}/cerrar`,
         payload,
         { timeout: 40000, headers: authHeaders() }
       );
       if (!data.success) throw new Error('Error al cerrar turno');
+    };
+
+    const clasificar = (err: unknown) => {
+      const ax = axios.isAxiosError(err) ? err : null;
+      const data = ax?.response?.data as { error?: string } | undefined;
+      return {
+        status: ax?.response?.status,
+        msg: data?.error || (err instanceof Error ? err.message : 'Error de conexión'),
+        // Error axios sin respuesta = falla de red / timeout (el request pudo o no haber llegado)
+        sinRespuesta: Boolean(ax) && !ax?.response,
+      };
+    };
+
+    const lanzarConStatus = (msg: string, status?: number): never => {
+      const e = new Error(msg) as Error & { statusCode?: number };
+      e.statusCode = status;
+      throw e;
+    };
+
+    try {
+      await post();
+      return;
     } catch (err: unknown) {
-      const ax = err && typeof err === 'object' && 'response' in err ? err as { response?: { status?: number; data?: { error?: string } }; message?: string } : null;
-      const status = ax?.response?.status;
-      const msg = ax?.response?.data?.error || (err instanceof Error ? err.message : 'Error de conexión');
-      console.error('[turnosApi.cerrar]', status, msg, ax?.response?.data);
-      // Preservar status 401 para que el caller pueda hacer relogin
-      if (status === 401) {
-        const e = new Error(msg) as Error & { statusCode: number };
-        e.statusCode = 401;
-        throw e;
+      const e1 = clasificar(err);
+      console.error('[turnosApi.cerrar] intento 1', e1.status, e1.msg);
+      if (e1.status === 401) lanzarConStatus(e1.msg, 401);
+      if (!e1.sinRespuesta) throw new Error(e1.msg);
+    }
+
+    // Falla de red: reintentar una vez tras 2s (el patrón que ya usa iniciar turno)
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    try {
+      await post();
+    } catch (err: unknown) {
+      const e2 = clasificar(err);
+      console.error('[turnosApi.cerrar] intento 2', e2.status, e2.msg);
+      // Si el primer intento sí llegó al servidor, el reintento responde "ya está cerrado": es éxito
+      if (e2.status === 400 && e2.msg.toLowerCase().includes('ya está cerrado')) return;
+      if (e2.status === 401) lanzarConStatus(e2.msg, 401);
+      if (e2.sinRespuesta) {
+        throw new Error(
+          'No se pudo conectar con el servidor. Tus datos siguen en el formulario: revisa tu señal e intenta de nuevo.'
+        );
       }
-      throw new Error(status === 404 || (err instanceof Error && err.message.includes('Network Error')) ? 'Servidor no encontrado. ¿Está el backend en marcha?' : msg);
+      throw new Error(e2.msg);
     }
   },
 };
