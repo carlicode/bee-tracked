@@ -4,6 +4,7 @@ const { appendRow, updateRowById, getRowById, getAllRows } = require('../service
 const { uploadBeezeroPhoto, uploadBeezeroGastoPhoto } = require('../services/s3Upload');
 const { resolvePhotoField } = require('../services/photoUrl');
 const { saveTurnoToDynamo } = require('../services/dualWrite');
+const hybridWrite = require('../services/hybridWrite');
 const turnosService = require('../services/turnosService');
 const { todayYmdLaPaz, normalizeFechaYmd, isFechaTurnoHoyLaPaz, laPazDateTimeToUtcMs } = require('../utils/dateLaPaz');
 const { optionalAuth } = require('../middleware/auth');
@@ -261,6 +262,7 @@ router.post('/:id/cerrar', optionalAuth, validateSession, async (req, res) => {
   try {
     const { id } = req.params;
     const {
+      abejita,
       cierreCaja,
       pagosQR,
       kilometraje,
@@ -281,7 +283,12 @@ router.post('/:id/cerrar', optionalAuth, validateSession, async (req, res) => {
       });
     }
 
-    const turnoExistente = await getRowById('BeeZero', id);
+    // DynamoDB primero (fuente de verdad); Sheet como fallback si no vino `abejita`
+    // o el turno no está en Dynamo (turnos viejos, o si Dynamo tuvo problemas al iniciar).
+    let turnoExistente = abejita ? await turnosService.getTurnoByIdBeezero(abejita, id) : null;
+    if (!turnoExistente) {
+      turnoExistente = await getRowById('BeeZero', id);
+    }
 
     if (!turnoExistente) {
       return res.status(404).json({
@@ -356,41 +363,45 @@ router.post('/:id/cerrar', optionalAuth, validateSession, async (req, res) => {
       'CERRADO',                                                            // AE: Estado
     ];
 
-    await updateRowById('BeeZero', id, rowValues);
-
-    await saveTurnoToDynamo({
-      turnoId: id,
-      nombre: turnoExistente.Abejita,
-      tipo: 'beezero',
-      fecha: turnoExistente['Fecha Inicio'],
-      fechaCierre,
-      horaInicio: turnoExistente['Hora Inicio'],
-      horaCierre: horaCierre || '',
-      placa: turnoExistente['Auto (Placa)'],
-      kmInicio: turnoExistente['Kilometraje Inicio'],
-      kmFin: kilometraje || '',
-      bateriaInicio: turnoExistente['Bateria Inicio'] || turnoExistente['Bateria'] || '',
-      bateriaCierre: bateria ?? '',
-      aperturaCaja: turnoExistente['Apertura Caja (Bs)'],
-      pagosQR: pagosQRNum > 0 ? pagosQRNum.toFixed(2) : '',
-      cierreCaja,
-      totalGastos: totalGastos.toFixed(2),
-      diferencia: diferencia.toFixed(2),
-      gastoIds: gastoIds.length > 0 ? gastoIds.join(', ') : '',
-      danosAutoInicio: turnoExistente['Daños Auto Inicio'],
-      danosAutoCierre: danosAuto || 'ninguno',
-      fotoTableroInicio: turnoExistente['Foto Tablero Inicio'],
-      fotoExteriorInicio: turnoExistente['Foto Exterior Inicio'],
-      fotoTableroCierre: urlFotoTableroCierre,
-      fotoExteriorCierre: urlFotoExteriorCierre,
-      ubicacionInicioLat: turnoExistente['Ubicación Inicio (Lat)'],
-      ubicacionInicioLng: turnoExistente['Ubicación Inicio (Lng)'],
-      ubicacionCierreLat: ubicacionFin?.lat || '',
-      ubicacionCierreLng: ubicacionFin?.lng || '',
-      observaciones: observaciones || '',
-      estado: 'CERRADO',
-      createdAt: Date.parse(turnoExistente['Timestamp Creación']) || Date.now(),
-      updatedAt: Date.now(),
+    // DynamoDB obligatorio (fuente de verdad); Sheet best-effort (si falla, no bloquea al conductor).
+    await hybridWrite.write({
+      dynamo: () =>
+        turnosService.putTurno({
+          turnoId: id,
+          nombre: turnoExistente.Abejita,
+          tipo: 'beezero',
+          fecha: turnoExistente['Fecha Inicio'],
+          fechaCierre,
+          horaInicio: turnoExistente['Hora Inicio'],
+          horaCierre: horaCierre || '',
+          placa: turnoExistente['Auto (Placa)'],
+          kmInicio: turnoExistente['Kilometraje Inicio'],
+          kmFin: kilometraje || '',
+          bateriaInicio: turnoExistente['Bateria Inicio'] || turnoExistente['Bateria'] || '',
+          bateriaCierre: bateria ?? '',
+          aperturaCaja: turnoExistente['Apertura Caja (Bs)'],
+          pagosQR: pagosQRNum > 0 ? pagosQRNum.toFixed(2) : '',
+          cierreCaja,
+          totalGastos: totalGastos.toFixed(2),
+          diferencia: diferencia.toFixed(2),
+          gastoIds: gastoIds.length > 0 ? gastoIds.join(', ') : '',
+          danosAutoInicio: turnoExistente['Daños Auto Inicio'],
+          danosAutoCierre: danosAuto || 'ninguno',
+          fotoTableroInicio: turnoExistente['Foto Tablero Inicio'],
+          fotoExteriorInicio: turnoExistente['Foto Exterior Inicio'],
+          fotoTableroCierre: urlFotoTableroCierre,
+          fotoExteriorCierre: urlFotoExteriorCierre,
+          ubicacionInicioLat: turnoExistente['Ubicación Inicio (Lat)'],
+          ubicacionInicioLng: turnoExistente['Ubicación Inicio (Lng)'],
+          ubicacionCierreLat: ubicacionFin?.lat || '',
+          ubicacionCierreLng: ubicacionFin?.lng || '',
+          observaciones: observaciones || '',
+          estado: 'CERRADO',
+          createdAt: Date.parse(turnoExistente['Timestamp Creación']) || Date.now(),
+          updatedAt: Date.now(),
+        }),
+      sheets: () => updateRowById('BeeZero', id, rowValues),
+      context: `turno:cerrar:beezero:${id}`,
     });
 
     res.json({

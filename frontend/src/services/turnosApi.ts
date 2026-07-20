@@ -121,6 +121,7 @@ export const turnosApi = {
   async cerrar(
     id: string,
     payload: {
+      abejita?: string;
       cierreCaja: number;
       pagosQR?: number;
       gastos?: { tipo: string; monto: number; descripcion?: string }[];

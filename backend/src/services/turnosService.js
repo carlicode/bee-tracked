@@ -229,6 +229,19 @@ async function getTurnoActivoBeezero(nombre) {
   return null;
 }
 
+/**
+ * Turno por ID exacto de un driver BeeZero (tolerante a variaciones del nombre,
+ * mismo criterio de slug que getTurnoActivoBeezero). Devuelve forma de fila de Sheet
+ * (vía beezeroToAdminRow) para que el caller no tenga que distinguir el origen del dato.
+ */
+async function getTurnoByIdBeezero(nombre, turnoId) {
+  for (const userId of buildSlugCandidates(nombre)) {
+    const item = await getTurno(userId, turnoId);
+    if (item) return beezeroToAdminRow(item);
+  }
+  return null;
+}
+
 async function listTurnosForAdmin(tipo) {
   const items = [];
   let lastKey;
@@ -266,6 +279,7 @@ module.exports = {
   putTurno,
   getTurno,
   getTurnoActivoBeezero,
+  getTurnoByIdBeezero,
   listTurnosForAdmin,
   buildTurnoItem,
   beezeroToAdminRow,
