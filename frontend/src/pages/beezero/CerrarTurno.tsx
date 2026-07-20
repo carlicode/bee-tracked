@@ -67,11 +67,14 @@ export const CerrarTurno = () => {
 
   const [deseaRegistrarDano, setDeseaRegistrarDano] = useState<boolean>(false);
   const [resumenFinal, setResumenFinal] = useState<ResumenTurnoData | null>(null);
-  const [formData, setFormData] = useState<Partial<Turno> & { cierreCajaStr?: string; pagosQRStr?: string }>({
+  const [formData, setFormData] = useState<
+    Partial<Turno> & { cierreCajaStr?: string; pagosQRStr?: string; kilometrajeStr?: string }
+  >({
     cierreCaja: undefined,
     pagosQR: 0,
     cierreCajaStr: '',
     pagosQRStr: '',
+    kilometrajeStr: '',
     kilometraje: undefined,
     bateria: undefined,
     danosAuto: 'ninguno',
@@ -108,7 +111,6 @@ export const CerrarTurno = () => {
           abejita: turno.abejita,
           auto: turno.auto,
           aperturaCaja: turno.aperturaCaja,
-          kilometraje: turno.kilometraje,
           danosAuto: turno.danosAuto || 'ninguno',
           observaciones: turno.observaciones || '',
         }));
@@ -244,13 +246,13 @@ export const CerrarTurno = () => {
     }
   };
 
-  // Total Caja = Apertura - Cierre; Total Físico = Total Caja - Total Gastos; Total Día = Total Físico + Pagos QR
+  // Total Caja = Cierre - Apertura; Total = Total Caja + Pagos QR; Total Final = Total - Total Gastos
   const pagosQRNum = formData.pagosQR ?? (parseFloat((formData as { pagosQRStr?: string }).pagosQRStr ?? '') || 0);
 
   const calcularTotalCaja = () => {
     const apertura = formData.aperturaCaja || 0;
     const cierre = formData.cierreCaja ?? (parseFloat((formData as { cierreCajaStr?: string }).cierreCajaStr ?? '') || 0);
-    return apertura - cierre;
+    return cierre - apertura;
   };
 
   const calcularDiferencia = () => calcularTotalCaja() - totalGastos;
@@ -294,6 +296,19 @@ export const CerrarTurno = () => {
     if (cierreNum == null || isNaN(cierreNum) || cierreNum <= 0) {
       toast.show('Por favor ingresa el cierre de caja', 'info');
       return;
+    }
+
+    const kmCierreNum = formData.kilometraje;
+    if (kmCierreNum == null || isNaN(kmCierreNum)) {
+      toast.show('Por favor ingresa el kilometraje de cierre', 'info');
+      return;
+    }
+    const kmInicioNum = turnoInicio?.kilometraje != null ? Number(turnoInicio.kilometraje) : undefined;
+    if (kmInicioNum != null && !isNaN(kmInicioNum) && kmCierreNum <= kmInicioNum) {
+      const confirmar = window.confirm(
+        `El kilometraje de cierre (${kmCierreNum}) es menor o igual al de inicio (${kmInicioNum}). ¿Confirmas que es correcto?`
+      );
+      if (!confirmar) return;
     }
 
     if (!location) {
@@ -755,7 +770,7 @@ export const CerrarTurno = () => {
             </div>
             <div className="flex justify-between mb-2">
               <span className="text-gray-700">Cierre:</span>
-              <span className="font-semibold text-red-600">- Bs {formData.cierreCaja ?? parseFloat((formData as { cierreCajaStr?: string }).cierreCajaStr ?? '')}</span>
+              <span className="font-semibold">Bs {formData.cierreCaja ?? parseFloat((formData as { cierreCajaStr?: string }).cierreCajaStr ?? '')}</span>
             </div>
             <div className="border-t pt-2 mt-2 flex justify-between">
               <span className="font-bold text-black">Total Caja:</span>
@@ -764,10 +779,18 @@ export const CerrarTurno = () => {
               </span>
             </div>
             {pagosQRNum > 0 && (
-              <div className="flex justify-between mt-2 pt-2 border-t border-dashed border-gray-300">
-                <span className="text-gray-700">Pagos por QR:</span>
-                <span className="font-semibold text-green-600">Bs {pagosQRNum.toFixed(2)}</span>
-              </div>
+              <>
+                <div className="flex justify-between mt-2 pt-2 border-t border-dashed border-gray-300">
+                  <span className="text-gray-700">Pagos por QR:</span>
+                  <span className="font-semibold text-green-600">+ Bs {pagosQRNum.toFixed(2)}</span>
+                </div>
+                <div className="border-t pt-2 mt-2 flex justify-between">
+                  <span className="font-bold text-black">Total:</span>
+                  <span className={`font-bold ${calcularTotalCaja() + pagosQRNum >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    Bs {(calcularTotalCaja() + pagosQRNum).toFixed(2)}
+                  </span>
+                </div>
+              </>
             )}
             {totalGastos > 0 && (
               <div className="flex justify-between mt-2 pt-2 border-t border-dashed border-gray-300">
@@ -775,8 +798,8 @@ export const CerrarTurno = () => {
                 <span className="font-semibold text-red-600">- Bs {totalGastos.toFixed(2)}</span>
               </div>
             )}
-            <div className="border-t pt-2 mt-2 flex justify-between">
-              <span className="font-bold text-black">Total Día:</span>
+            <div className="border-t-2 border-black pt-2 mt-2 flex justify-between">
+              <span className="font-bold text-black">Total Final:</span>
               <span className={`font-bold ${calcularTotalDia() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 Bs {calcularTotalDia().toFixed(2)}
               </span>
@@ -802,21 +825,29 @@ export const CerrarTurno = () => {
         {/* Kilometraje - texto libre */}
         <div>
           <label htmlFor="kilometraje" className="block text-sm font-medium text-black mb-1">
-            Kilometraje
+            Kilometraje de cierre {turnoInicio?.kilometraje != null && (
+              <span className="font-normal text-gray-500">(inicio: {turnoInicio.kilometraje})</span>
+            )}
           </label>
           <input
             type="text"
+            inputMode="decimal"
             id="kilometraje"
-            value={formData.kilometraje != null ? String(formData.kilometraje) : ''}
+            value={formData.kilometrajeStr ?? ''}
             onChange={(e) => {
-              const str = e.target.value;
+              const raw = e.target.value.replace(',', '.');
+              const soloNumeros = raw.replace(/[^0-9.]/g, '');
+              const partes = soloNumeros.split('.');
+              const valida = partes.length <= 2;
+              const str = valida ? soloNumeros : (formData.kilometrajeStr ?? '');
               const num = parseFloat(str);
               setFormData((prev) => ({
                 ...prev,
+                kilometrajeStr: str,
                 kilometraje: str === '' ? undefined : (isNaN(num) ? undefined : num),
               }));
             }}
-            placeholder="Km"
+            placeholder="Ej: 122850"
             className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
           />
         </div>

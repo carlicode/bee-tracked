@@ -46,11 +46,13 @@ export const MisTurnos = () => {
     }
   };
 
+  // Total Final = Cierre - Apertura - Total Gastos + Pagos QR
   const calcularDiferenciaCaja = (turno: Turno) => {
     const apertura = turno.aperturaCaja || 0;
     const cierre = turno.cierreCaja || 0;
-    const qr = turno.qr || 0;
-    return cierre - apertura - qr;
+    const pagosQR = turno.pagosQR || 0;
+    const totalGastos = turno.totalGastos || (turno.gastosCierre || []).reduce((acc, g) => acc + (g.monto || 0), 0);
+    return cierre - apertura - totalGastos + pagosQR;
   };
 
   const cerrados = turnos.filter((t) => t.turnoCerrado);
@@ -194,15 +196,15 @@ export const MisTurnos = () => {
                       <p className="font-semibold text-black">Bs {turno.cierreCaja}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-600">Diferencia</p>
+                      <p className="text-xs text-gray-600">Total Final</p>
                       <p className={`font-bold ${diferencia >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         Bs {diferencia.toFixed(2)}
                       </p>
                     </div>
-                    {turno.qr && turno.qr > 0 && (
+                    {turno.pagosQR != null && turno.pagosQR > 0 && (
                       <div>
                         <p className="text-xs text-gray-600">QR</p>
-                        <p className="font-semibold text-black">Bs {turno.qr}</p>
+                        <p className="font-semibold text-black">Bs {turno.pagosQR}</p>
                       </div>
                     )}
                   </div>
