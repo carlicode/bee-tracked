@@ -125,8 +125,20 @@ async function appendRow(sheetName, values) {
   }
 }
 
+/** Número de columna (1-based) a letra A1: 1→A, 27→AA, 31→AE, 32→AF */
+function colToLetter(n) {
+  let s = '';
+  while (n > 0) {
+    const r = (n - 1) % 26;
+    s = String.fromCharCode(65 + r) + s;
+    n = Math.floor((n - 1) / 26);
+  }
+  return s;
+}
+
 /**
- * Actualizar una fila en la hoja (busca por ID en columna A)
+ * Actualizar una fila en la hoja (busca por ID en columna A).
+ * El rango se calcula según values.length (31 valores → A:AE, 32 → A:AF con Log).
  * @param {string} sheetName - Nombre de la hoja
  * @param {string} id - ID del registro a actualizar
  * @param {Array} values - Nuevos valores para la fila
@@ -157,10 +169,11 @@ async function updateRowById(sheetName, id, values) {
     }
 
     // Actualizar la fila (rowIndex + 1 porque las filas empiezan en 1)
+    const lastCol = colToLetter(values.length);
     const updateResponse = await withTimeout(
       sheets.spreadsheets.values.update({
         spreadsheetId,
-        range: `${sheetName}!A${rowIndex + 1}:AE${rowIndex + 1}`,
+        range: `${sheetName}!A${rowIndex + 1}:${lastCol}${rowIndex + 1}`,
         valueInputOption: 'USER_ENTERED',
         resource: {
           values: [values],
@@ -188,7 +201,7 @@ async function getAllRows(sheetName) {
     const response = await withTimeout(
       sheets.spreadsheets.values.get({
         spreadsheetId,
-        range: `${sheetName}!A:AE`,
+        range: `${sheetName}!A:AF`,
       }),
       `getAllRows:${sheetName}`
     );

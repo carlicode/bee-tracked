@@ -55,7 +55,7 @@ await appendRow(sheet, row);
 await saveTurnoToDynamo({...});  // non-blocking, won't fail request
 ```
 
-New code should use `hybridWrite.write()`. Old routes (`ecodelivery.js`, `turnos.js`) still use the legacy `dualWrite.js` pattern.
+New code should use `hybridWrite.write()`. `POST /api/turnos/:id/cerrar` (BeeZero) uses hybridWrite since 2026-07-20: reads the turno from DynamoDB first (`getTurnoByIdBeezero`, needs `abejita` in the payload; falls back to the Sheet), writes DynamoDB as mandatory and the Sheet as best-effort — a Sheets outage no longer blocks closing a turno. Still on the legacy `dualWrite.js` pattern: `ecodelivery.js` and `POST /api/turnos/iniciar` (needs the Sheet row count for the next ID).
 
 ### Backend: CommonJS, Express + Lambda
 

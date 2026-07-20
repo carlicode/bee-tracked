@@ -3,13 +3,42 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import type { Turno } from '../../types/turno';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { formatters } from '../../utils/formatters';
+import { turnosApi } from '../../services/turnosApi';
+import { useToast } from '../../contexts/ToastContext';
 
+/** Campos del formulario de corrección; string vacío = no cambiar ese campo */
+type FormCorreccion = {
+  aperturaCaja: string;
+  cierreCaja: string;
+  pagosQR: string;
+  kilometrajeInicio: string;
+  kilometrajeCierre: string;
+  bateriaInicio: string;
+  bateriaCierre: string;
+  observaciones: string;
+};
+
+const FORM_VACIO: FormCorreccion = {
+  aperturaCaja: '',
+  cierreCaja: '',
+  pagosQR: '',
+  kilometrajeInicio: '',
+  kilometrajeCierre: '',
+  bateriaInicio: '',
+  bateriaCierre: '',
+  observaciones: '',
+};
 
 export const DetalleTurno = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const toast = useToast();
   const [turno, setTurno] = useState<Turno | null>(null);
   const [loading, setLoading] = useState(true);
+  const [historialIndex, setHistorialIndex] = useState<number>(-1);
+  const [editando, setEditando] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+  const [form, setForm] = useState<FormCorreccion>(FORM_VACIO);
 
   useEffect(() => {
     loadTurno();
@@ -18,7 +47,7 @@ export const DetalleTurno = () => {
   const loadTurno = () => {
     try {
       setLoading(true);
-      
+
       if (id === 'actual') {
         // Cargar turno actual
         const turnoActualData = localStorage.getItem('turno_actual');
@@ -26,15 +55,95 @@ export const DetalleTurno = () => {
           setTurno(JSON.parse(turnoActualData));
         }
       } else {
-        // Cargar del historial
-        const turnosHistorial = JSON.parse(localStorage.getItem('turnos_historial') || '[]');
-        const turnoEncontrado = turnosHistorial[parseInt(id || '0')] || null;
-        setTurno(turnoEncontrado);
+        // El param puede ser el ID real del turno (backend) o, para datos viejos, el índice del historial
+        const turnosHistorial = JSON.parse(localStorage.getItem('turnos_historial') || '[]') as Turno[];
+        const idxPorId = turnosHistorial.findIndex((t) => t?.id != null && String(t.id) === id);
+        const idx = idxPorId !== -1 ? idxPorId : parseInt(id || '0');
+        setHistorialIndex(idx);
+        setTurno(turnosHistorial[idx] || null);
       }
     } catch (error) {
       console.error('Error cargando turno:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const abrirEdicion = () => {
+    setForm({ ...FORM_VACIO, observaciones: turno?.observaciones || '' });
+    setEditando(true);
+  };
+
+  const soloDecimal = (valor: string) => {
+    const raw = valor.replace(',', '.').replace(/[^0-9.]/g, '');
+    const partes = raw.split('.');
+    return partes.length <= 2 ? raw : partes[0] + '.' + partes.slice(1).join('');
+  };
+
+  const guardarCorreccion = async () => {
+    if (!turno?.id) return;
+
+    const cambios: Record<string, string> = {};
+    if (form.aperturaCaja !== '') cambios.aperturaCaja = form.aperturaCaja;
+    if (form.kilometrajeInicio !== '') cambios.kilometrajeInicio = form.kilometrajeInicio;
+    if (form.bateriaInicio !== '') cambios.bateriaInicio = form.bateriaInicio;
+    if (turno.turnoCerrado) {
+      if (form.cierreCaja !== '') cambios.cierreCaja = form.cierreCaja;
+      if (form.pagosQR !== '') cambios.pagosQR = form.pagosQR;
+      if (form.kilometrajeCierre !== '') cambios.kilometrajeCierre = form.kilometrajeCierre;
+      if (form.bateriaCierre !== '') cambios.bateriaCierre = form.bateriaCierre;
+    }
+    if (form.observaciones !== (turno.observaciones || '')) cambios.observaciones = form.observaciones;
+
+    if (Object.keys(cambios).length === 0) {
+      toast.show('No hay cambios que guardar: llena solo los campos que quieras corregir', 'info');
+      return;
+    }
+
+    try {
+      setGuardando(true);
+      const actualizado = await turnosApi.editar(String(turno.id), {
+        abejita: turno.abejita,
+        cambios,
+      });
+
+      // Reflejar en el estado local y en localStorage (el detalle se lee de ahí)
+      const turnoActualizado: Turno = {
+        ...turno,
+        aperturaCaja: cambios.aperturaCaja != null ? parseFloat(cambios.aperturaCaja) : turno.aperturaCaja,
+        cierreCaja: cambios.cierreCaja != null ? parseFloat(cambios.cierreCaja) : turno.cierreCaja,
+        pagosQR: cambios.pagosQR != null ? parseFloat(cambios.pagosQR) : turno.pagosQR,
+        kilometraje: turno.turnoCerrado
+          ? (cambios.kilometrajeCierre != null ? parseFloat(cambios.kilometrajeCierre) : turno.kilometraje)
+          : (cambios.kilometrajeInicio != null ? parseFloat(cambios.kilometrajeInicio) : turno.kilometraje),
+        bateria: turno.turnoCerrado
+          ? (cambios.bateriaCierre != null ? parseFloat(cambios.bateriaCierre) : turno.bateria)
+          : (cambios.bateriaInicio != null ? parseFloat(cambios.bateriaInicio) : turno.bateria),
+        observaciones: cambios.observaciones != null ? cambios.observaciones : turno.observaciones,
+        diferencia: actualizado['Diferencia (Bs)'] !== undefined && actualizado['Diferencia (Bs)'] !== ''
+          ? parseFloat(actualizado['Diferencia (Bs)'])
+          : turno.diferencia,
+        updatedAt: new Date().toISOString(),
+      };
+
+      if (id === 'actual') {
+        localStorage.setItem('turno_actual', JSON.stringify(turnoActualizado));
+      } else if (historialIndex >= 0) {
+        const historial = JSON.parse(localStorage.getItem('turnos_historial') || '[]') as Turno[];
+        if (historial[historialIndex]) {
+          historial[historialIndex] = turnoActualizado;
+          localStorage.setItem('turnos_historial', JSON.stringify(historial));
+        }
+      }
+
+      setTurno(turnoActualizado);
+      setEditando(false);
+      toast.show('Corrección guardada correctamente', 'success');
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'No se pudo guardar la corrección';
+      toast.show(msg, 'error');
+    } finally {
+      setGuardando(false);
     }
   };
 
@@ -85,9 +194,157 @@ export const DetalleTurno = () => {
           Volver atrás
         </button>
       </div>
-      <div className="mb-6">
+      <div className="mb-6 flex items-center justify-between gap-3">
         <h2 className="text-2xl font-bold text-black">Detalle del Turno</h2>
+        {turno.id != null && !editando && (
+          <button
+            type="button"
+            onClick={abrirEdicion}
+            className="border-2 border-black text-black px-4 py-2 rounded-lg hover:bg-gray-50 transition font-semibold text-sm whitespace-nowrap"
+          >
+            ✏️ Corregir datos
+          </button>
+        )}
       </div>
+
+      {editando && (
+        <div className="bg-white rounded-lg shadow-md p-6 border-2 border-beezero-yellow mb-6">
+          <h3 className="text-lg font-bold text-black mb-1">Corregir datos del turno</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Llena <strong>solo</strong> los campos que quieras corregir; deja vacío lo demás.
+            Las horas y ubicaciones GPS no se pueden modificar. Toda corrección queda registrada.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-black mb-1">
+                Apertura caja (Bs) <span className="font-normal text-gray-500">(actual: {turno.aperturaCaja})</span>
+              </label>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={form.aperturaCaja}
+                onChange={(e) => setForm((p) => ({ ...p, aperturaCaja: soloDecimal(e.target.value) }))}
+                placeholder="Sin cambio"
+                className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
+              />
+            </div>
+
+            {turno.turnoCerrado && (
+              <div>
+                <label className="block text-sm font-medium text-black mb-1">
+                  Cierre caja (Bs) <span className="font-normal text-gray-500">(actual: {turno.cierreCaja ?? '—'})</span>
+                </label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={form.cierreCaja}
+                  onChange={(e) => setForm((p) => ({ ...p, cierreCaja: soloDecimal(e.target.value) }))}
+                  placeholder="Sin cambio"
+                  className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
+                />
+              </div>
+            )}
+
+            {turno.turnoCerrado && (
+              <div>
+                <label className="block text-sm font-medium text-black mb-1">
+                  Pagos por QR (Bs) <span className="font-normal text-gray-500">(actual: {turno.pagosQR ?? 0})</span>
+                </label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={form.pagosQR}
+                  onChange={(e) => setForm((p) => ({ ...p, pagosQR: soloDecimal(e.target.value) }))}
+                  placeholder="Sin cambio"
+                  className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
+                />
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium text-black mb-1">Kilometraje de inicio</label>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={form.kilometrajeInicio}
+                onChange={(e) => setForm((p) => ({ ...p, kilometrajeInicio: soloDecimal(e.target.value) }))}
+                placeholder="Sin cambio"
+                className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
+              />
+            </div>
+
+            {turno.turnoCerrado && (
+              <div>
+                <label className="block text-sm font-medium text-black mb-1">Kilometraje de cierre</label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={form.kilometrajeCierre}
+                  onChange={(e) => setForm((p) => ({ ...p, kilometrajeCierre: soloDecimal(e.target.value) }))}
+                  placeholder="Sin cambio"
+                  className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
+                />
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium text-black mb-1">Batería de inicio</label>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={form.bateriaInicio}
+                onChange={(e) => setForm((p) => ({ ...p, bateriaInicio: soloDecimal(e.target.value) }))}
+                placeholder="Sin cambio"
+                className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
+              />
+            </div>
+
+            {turno.turnoCerrado && (
+              <div>
+                <label className="block text-sm font-medium text-black mb-1">Batería de cierre</label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={form.bateriaCierre}
+                  onChange={(e) => setForm((p) => ({ ...p, bateriaCierre: soloDecimal(e.target.value) }))}
+                  placeholder="Sin cambio"
+                  className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
+                />
+              </div>
+            )}
+
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-medium text-black mb-1">Observaciones</label>
+              <textarea
+                value={form.observaciones}
+                onChange={(e) => setForm((p) => ({ ...p, observaciones: e.target.value }))}
+                rows={2}
+                className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-beezero-yellow focus:border-beezero-yellow"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3 mt-4">
+            <button
+              type="button"
+              onClick={() => setEditando(false)}
+              disabled={guardando}
+              className="flex-1 border-2 border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition font-semibold disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={() => void guardarCorreccion()}
+              disabled={guardando}
+              className="flex-1 bg-beezero-yellow text-black px-4 py-2 rounded-lg hover:bg-beezero-yellow-dark transition font-semibold shadow-md disabled:opacity-50"
+            >
+              {guardando ? 'Guardando...' : 'Guardar corrección'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Información General */}
       <div className="bg-beezero-yellow rounded-lg shadow-md p-6 mb-6">

@@ -18,6 +18,7 @@ const BEEZERO_HEADERS = [
   'Daños Auto Cierre', 'Foto Tablero Cierre', 'Foto Exterior Cierre',
   'Ubicación Inicio (Lat)', 'Ubicación Inicio (Lng)', 'Ubicación Cierre (Lat)',
   'Ubicación Cierre (Lng)', 'Observaciones', 'Timestamp Actualización', 'Estado',
+  'Log',
 ];
 
 const ECODELIVERY_HEADERS = [
@@ -75,6 +76,7 @@ function buildTurnoItem(data) {
     fotoInicio: data.fotoInicio || '',
     fotoCierre: data.fotoCierre || '',
     observaciones: data.observaciones || '',
+    log: data.log || '',
     estado,
     createdAt,
     updatedAt: data.updatedAt != null ? Number(data.updatedAt) : createdAt,
@@ -117,6 +119,7 @@ function beezeroToAdminRow(item) {
     Observaciones: item.observaciones || '',
     'Timestamp Actualización': tsUpdate,
     Estado: estadoToSheet(item.estado),
+    Log: item.log || '',
   };
 }
 
@@ -276,6 +279,7 @@ async function listTurnosForAdmin(tipo) {
 }
 
 module.exports = {
+  BEEZERO_HEADERS,
   putTurno,
   getTurno,
   getTurnoActivoBeezero,
