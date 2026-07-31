@@ -434,6 +434,7 @@ router.post('/:id/cerrar', optionalAuth, validateSession, async (req, res) => {
  * `cierre: true` = solo corregible cuando el turno ya está CERRADO.
  */
 const CAMPOS_EDITABLES = {
+  placa:             { header: 'Auto (Placa)',        num: false, cierre: false },
   aperturaCaja:      { header: 'Apertura Caja (Bs)',  num: true,  cierre: false },
   cierreCaja:        { header: 'Cierre Caja (Bs)',    num: true,  cierre: true },
   pagosQR:           { header: 'Pagos QR (Bs)',       num: true,  cierre: true },
